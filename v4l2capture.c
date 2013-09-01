@@ -377,7 +377,7 @@ static PyObject *Video_device_queue_all_buffers(Video_device *self)
   Py_RETURN_NONE;
 }
 
-static PyObject *Video_device_read_internal(Video_device *self, int queue)
+static PyObject *Video_device_read_internal(Video_device *self, int queue, int return_timestamp)
 {
   if(!self->buffers)
     {
@@ -444,22 +444,47 @@ static PyObject *Video_device_read_internal(Video_device *self, int queue)
 #undef CLAMP
 #endif
 
+  PyObject *out = result;
+
+  if(return_timestamp)
+  {
+    out = PyTuple_New(4);
+    PyTuple_SetItem(out, 0, result);
+    PyTuple_SetItem(out, 1, PyInt_FromLong(buffer.timestamp.tv_sec));
+    PyTuple_SetItem(out, 2, PyInt_FromLong(buffer.timestamp.tv_usec));
+    PyTuple_SetItem(out, 3, PyInt_FromLong(buffer.sequence));
+  }
+
   if(queue && my_ioctl(self->fd, VIDIOC_QBUF, &buffer))
     {
       return NULL;
     }
 
-  return result;
+  return out;
 }
 
-static PyObject *Video_device_read(Video_device *self)
+static PyObject *Video_device_read(Video_device *self, PyObject *args)
 {
-  return Video_device_read_internal(self, 0);
+  int return_timestamp=0;
+
+  if(!PyArg_ParseTuple(args, "|i", &return_timestamp))
+    {
+      return NULL;
+    }
+
+  return Video_device_read_internal(self, 0, return_timestamp);
 }
 
-static PyObject *Video_device_read_and_queue(Video_device *self)
+static PyObject *Video_device_read_and_queue(Video_device *self, PyObject *args)
 {
-  return Video_device_read_internal(self, 1);
+  int return_timestamp=0;
+
+  if(!PyArg_ParseTuple(args, "|i", &return_timestamp))
+    {
+      return NULL;
+    }
+
+  return Video_device_read_internal(self, 1, return_timestamp);
 }
 
 static PyMethodDef Video_device_methods[] = {
@@ -499,14 +524,16 @@ static PyMethodDef Video_device_methods[] = {
        METH_NOARGS,
        "queue_all_buffers()\n\n"
        "Let the video device fill all buffers created."},
-  {"read", (PyCFunction)Video_device_read, METH_NOARGS,
-       "read() -> string\n\n"
+  {"read", (PyCFunction)Video_device_read, METH_VARARGS,
+       "read(get_timestamp) -> string or tuple\n\n"
        "Reads image data from a buffer that has been filled by the video "
-       "device. The image data is in RGB och YUV420 format as decided by "
+       "device. The image data is in RGB or YUV420 format as decided by "
        "'set_format'. The buffer is removed from the queue. Fails if no buffer "
-       "is filled. Use select.select to check for filled buffers."},
-  {"read_and_queue", (PyCFunction)Video_device_read_and_queue, METH_NOARGS,
-       "read_and_queue()\n\n"
+       "is filled. Use select.select to check for filled buffers. If "
+       "get_timestamp is true, a tuple is turned containing (sec, microsec, "
+       "sequence number)"},
+  {"read_and_queue", (PyCFunction)Video_device_read_and_queue, METH_VARARGS,
+       "read_and_queue(get_timestamp)\n\n"
        "Same as 'read', but adds the buffer back to the queue so the video "
        "device can fill it again."},
   {NULL}
