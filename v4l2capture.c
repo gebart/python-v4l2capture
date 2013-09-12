@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <linux/videodev2.h>
 #include <sys/mman.h>
+#include <string.h>
 
 #ifdef USE_LIBV4L
 #include <libv4l2.h>
@@ -205,9 +206,9 @@ static PyObject *Video_device_set_format(Video_device *self, PyObject *args)
 {
   int size_x;
   int size_y;
-  int yuv420 = 0;
+  const char *fmt = NULL;
 
-  if(!PyArg_ParseTuple(args, "ii|i", &size_x, &size_y, &yuv420))
+  if(!PyArg_ParseTuple(args, "ii|s", &size_x, &size_y, &fmt))
     {
       return NULL;
     }
@@ -217,12 +218,17 @@ static PyObject *Video_device_set_format(Video_device *self, PyObject *args)
   format.fmt.pix.width = size_x;
   format.fmt.pix.height = size_y;
 #ifdef USE_LIBV4L
-  format.fmt.pix.pixelformat =
-    yuv420 ? V4L2_PIX_FMT_YUV420 : V4L2_PIX_FMT_RGB24;
+  format.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24;
+  if(fmt != NULL && strcmp(fmt, "MJPEG")==0)
+    format.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
+  if(fmt != NULL && strcmp(fmt, "RGB24")==0)
+    format.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24;
+  if(fmt != NULL && strcmp(fmt, "YUV420")==0)
+    format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUV420;
 #else
   format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
 #endif
-  format.fmt.pix.field = V4L2_FIELD_INTERLACED;
+  format.fmt.pix.field = V4L2_FIELD_NONE;
   format.fmt.pix.bytesperline = 0;
 
   if(my_ioctl(self->fd, VIDIOC_S_FMT, &format))
