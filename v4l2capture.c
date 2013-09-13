@@ -507,11 +507,10 @@ static PyMethodDef Video_device_methods[] = {
        "set containing strings identifying the capabilities of the video "
        "device."},
   {"set_format", (PyCFunction)Video_device_set_format, METH_VARARGS,
-       "set_format(size_x, size_y, yuv420 = 0) -> size_x, size_y\n\n"
+       "set_format(size_x, size_y, pixel_format='RGB24') -> size_x, size_y\n\n"
        "Request the video device to set image size and format. The device may "
        "choose another size than requested and will return its choice. The "
-       "image format will be RGB24 if yuv420 is false (default) or YUV420 if "
-       "yuv420 is true."},
+       "pixel format may be either RGB24, YUV420 or MJPEG."},
   {"set_fps", (PyCFunction)Video_device_set_fps, METH_VARARGS,
        "set_fps(fps) -> fps \n\n"
        "Request the video device to set frame per seconds.The device may "
@@ -533,7 +532,7 @@ static PyMethodDef Video_device_methods[] = {
   {"read", (PyCFunction)Video_device_read, METH_VARARGS,
        "read(get_timestamp) -> string or tuple\n\n"
        "Reads image data from a buffer that has been filled by the video "
-       "device. The image data is in RGB or YUV420 format as decided by "
+       "device. The image data is in RGB24, YUV420 or MJPEG format as decided by "
        "'set_format'. The buffer is removed from the queue. Fails if no buffer "
        "is filled. Use select.select to check for filled buffers. If "
        "get_timestamp is true, a tuple is turned containing (sec, microsec, "
