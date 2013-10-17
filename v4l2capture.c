@@ -16,6 +16,7 @@
 #include <linux/videodev2.h>
 #include <sys/mman.h>
 #include <string.h>
+#include <stdio.h> //Only used for debugging
 
 #ifdef USE_LIBV4L
 #include <libv4l2.h>
@@ -255,6 +256,19 @@ static PyObject *Video_device_set_fps(Video_device *self, PyObject *args)
   	return NULL;
   }
   return Py_BuildValue("i",setfps.parm.capture.timeperframe.denominator);
+}
+
+static PyObject *Video_device_get_format(Video_device *self)
+{
+
+	struct v4l2_format format;
+	format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	if(my_ioctl(self->fd, VIDIOC_G_FMT, &format))
+	{
+		return NULL;
+	}
+	return Py_BuildValue("ii", format.fmt.pix.width, format.fmt.pix.height);
+
 }
 
 static PyObject *Video_device_start(Video_device *self)
@@ -511,6 +525,8 @@ static PyMethodDef Video_device_methods[] = {
        "Request the video device to set image size and format. The device may "
        "choose another size than requested and will return its choice. The "
        "pixel format may be either RGB24, YUV420 or MJPEG."},
+  {"get_format", (PyCFunction)Video_device_get_format, METH_NOARGS,
+       "get_format() -> size_x, size_y\n\n"},
   {"set_fps", (PyCFunction)Video_device_set_fps, METH_VARARGS,
        "set_fps(fps) -> fps \n\n"
        "Request the video device to set frame per seconds.The device may "
