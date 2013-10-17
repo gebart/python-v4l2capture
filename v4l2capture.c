@@ -267,7 +267,32 @@ static PyObject *Video_device_get_format(Video_device *self)
 	{
 		return NULL;
 	}
-	return Py_BuildValue("ii", format.fmt.pix.width, format.fmt.pix.height);
+
+	PyObject *out = PyTuple_New(3);
+	PyTuple_SetItem(out, 0, PyInt_FromLong(format.fmt.pix.width));
+	PyTuple_SetItem(out, 1, PyInt_FromLong(format.fmt.pix.height));
+
+	PyObject *pixFormatStr = NULL;
+	switch(format.fmt.pix.pixelformat)
+	{
+	case V4L2_PIX_FMT_MJPEG:
+		pixFormatStr = PyString_FromString("MJPEG");
+		break;
+	case V4L2_PIX_FMT_RGB24:
+		pixFormatStr = PyString_FromString("RGB24");
+		break;
+	case V4L2_PIX_FMT_YUV420:
+		pixFormatStr = PyString_FromString("YUV420");
+		break;
+	case V4L2_PIX_FMT_YUYV:
+		pixFormatStr = PyString_FromString("YUYV");
+		break;
+	default:
+		pixFormatStr = PyString_FromString("Unknown");
+		break;
+	}
+	PyTuple_SetItem(out, 2, pixFormatStr);
+	return out;
 
 }
 
