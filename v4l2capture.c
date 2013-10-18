@@ -532,6 +532,231 @@ static PyObject *Video_device_read_and_queue(Video_device *self, PyObject *args)
   return Video_device_read_internal(self, 1, return_timestamp);
 }
 
+// *********************************************************************
+
+#define HUFFMAN_SEGMENT_LEN 420
+
+const char huffmanSegment[HUFFMAN_SEGMENT_LEN+1] =
+	"\xFF\xC4\x01\xA2\x00\x00\x01\x05\x01\x01\x01\x01"
+	"\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x01\x02"
+	"\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x01\x00\x03"
+	"\x01\x01\x01\x01\x01\x01\x01\x01\x01\x00\x00\x00"
+	"\x00\x00\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09"
+	"\x0A\x0B\x10\x00\x02\x01\x03\x03\x02\x04\x03\x05"
+	"\x05\x04\x04\x00\x00\x01\x7D\x01\x02\x03\x00\x04"
+	"\x11\x05\x12\x21\x31\x41\x06\x13\x51\x61\x07\x22"
+	"\x71\x14\x32\x81\x91\xA1\x08\x23\x42\xB1\xC1\x15"
+	"\x52\xD1\xF0\x24\x33\x62\x72\x82\x09\x0A\x16\x17"
+	"\x18\x19\x1A\x25\x26\x27\x28\x29\x2A\x34\x35\x36"
+	"\x37\x38\x39\x3A\x43\x44\x45\x46\x47\x48\x49\x4A"
+	"\x53\x54\x55\x56\x57\x58\x59\x5A\x63\x64\x65\x66"
+	"\x67\x68\x69\x6A\x73\x74\x75\x76\x77\x78\x79\x7A"
+	"\x83\x84\x85\x86\x87\x88\x89\x8A\x92\x93\x94\x95"
+	"\x96\x97\x98\x99\x9A\xA2\xA3\xA4\xA5\xA6\xA7\xA8"
+	"\xA9\xAA\xB2\xB3\xB4\xB5\xB6\xB7\xB8\xB9\xBA\xC2"
+	"\xC3\xC4\xC5\xC6\xC7\xC8\xC9\xCA\xD2\xD3\xD4\xD5"
+	"\xD6\xD7\xD8\xD9\xDA\xE1\xE2\xE3\xE4\xE5\xE6\xE7"
+	"\xE8\xE9\xEA\xF1\xF2\xF3\xF4\xF5\xF6\xF7\xF8\xF9"
+	"\xFA\x11\x00\x02\x01\x02\x04\x04\x03\x04\x07\x05"
+	"\x04\x04\x00\x01\x02\x77\x00\x01\x02\x03\x11\x04"
+	"\x05\x21\x31\x06\x12\x41\x51\x07\x61\x71\x13\x22"
+	"\x32\x81\x08\x14\x42\x91\xA1\xB1\xC1\x09\x23\x33"
+	"\x52\xF0\x15\x62\x72\xD1\x0A\x16\x24\x34\xE1\x25"
+	"\xF1\x17\x18\x19\x1A\x26\x27\x28\x29\x2A\x35\x36"
+	"\x37\x38\x39\x3A\x43\x44\x45\x46\x47\x48\x49\x4A"
+	"\x53\x54\x55\x56\x57\x58\x59\x5A\x63\x64\x65\x66"
+	"\x67\x68\x69\x6A\x73\x74\x75\x76\x77\x78\x79\x7A"
+	"\x82\x83\x84\x85\x86\x87\x88\x89\x8A\x92\x93\x94"
+	"\x95\x96\x97\x98\x99\x9A\xA2\xA3\xA4\xA5\xA6\xA7"
+	"\xA8\xA9\xAA\xB2\xB3\xB4\xB5\xB6\xB7\xB8\xB9\xBA"
+	"\xC2\xC3\xC4\xC5\xC6\xC7\xC8\xC9\xCA\xD2\xD3\xD4"
+	"\xD5\xD6\xD7\xD8\xD9\xDA\xE2\xE3\xE4\xE5\xE6\xE7"
+	"\xE8\xE9\xEA\xF2\xF3\xF4\xF5\xF6\xF7\xF8\xF9\xFA";
+
+int ReadJpegFrame(const unsigned char *data, unsigned offset, const unsigned char **twoBytesOut, unsigned *frameStartPosOut, unsigned *cursorOut)
+{
+	//Based on http://www.gdcl.co.uk/2013/05/02/Motion-JPEG.html
+	//and https://en.wikipedia.org/wiki/JPEG
+
+	*twoBytesOut = NULL;
+	*frameStartPosOut = 0;
+	*cursorOut = 0;
+	unsigned cursor = offset;
+	//Check frame start
+	unsigned frameStartPos = offset;
+	const unsigned char *twoBytes = &data[cursor];
+
+	if (twoBytes[0] != 0xff)
+	{
+		//print "Error: found header", map(hex,twoBytes),"at position",cursor
+		return 0;
+	}
+
+	cursor = 2 + cursor;
+
+	//Handle padding
+	int paddingByte = (twoBytes[0] == 0xff && twoBytes[1] == 0xff);
+	if(paddingByte)
+	{
+		*twoBytesOut = twoBytes;
+		*frameStartPosOut = frameStartPos;
+		*cursorOut = cursor;
+		return 1;
+	}
+
+	//Structure markers with 2 byte length
+	int markHeader = (twoBytes[0] == 0xff && twoBytes[1] >= 0xd0 && twoBytes[1] <= 0xd9);
+	if (markHeader)
+	{
+		*twoBytesOut = twoBytes;
+		*frameStartPosOut = frameStartPos;
+		*cursorOut = cursor;
+		return 1;
+	}
+
+	//Determine length of compressed (entropy) data
+	int compressedDataStart = (twoBytes[0] == 0xff && twoBytes[1] == 0xda);
+	if (compressedDataStart)
+	{
+		unsigned sosLength = ((data[cursor] << 8) + data[cursor+1]);
+		cursor += sosLength;
+
+		//Seek through frame
+		int run = 1;
+		while(run)
+		{
+			unsigned char byte = data[cursor];
+			cursor += 1;
+			
+			if(byte == 0xff)
+			{
+				unsigned char byte2 = data[cursor];
+				cursor += 1;
+				if(byte2 != 0x00)
+				{
+					if(byte2 >= 0xd0 && byte2 <= 0xd8)
+					{
+						//Found restart structure
+						//print hex(byte), hex(byte2)
+					}
+					else
+					{
+						//End of frame
+						run = 0;
+						cursor -= 2;
+					}
+				}
+				else
+				{
+					//Add escaped 0xff value in entropy data
+				}	
+			}
+			else
+			{
+				
+			}
+		}
+
+		*twoBytesOut = twoBytes;
+		*frameStartPosOut = frameStartPos;
+		*cursorOut = cursor;
+		return 1;
+	}
+
+	//More cursor for all other segment types
+	unsigned segLength = (data[cursor] << 8) + data[cursor+1];
+	cursor += segLength;
+	*twoBytesOut = twoBytes;
+	*frameStartPosOut = frameStartPos;
+	*cursorOut = cursor;
+	return 1;
+}
+
+static PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
+{
+	/* This converts an MJPEG frame into a standard JPEG binary
+	MJPEG images omit the huffman table if the standard table
+	is used. If it is missing, this function adds the table
+	into the file structure. */
+
+	if(PyTuple_Size(args) < 1)
+	{
+		PyErr_BadArgument();
+		PyErr_Format(PyExc_TypeError, "Function requires 1 argument");
+ 		return NULL;
+	}
+
+	PyObject *inBuffer = PyTuple_GetItem(args, 0);
+
+	if(!PyString_Check(inBuffer))
+	{
+		PyErr_BadArgument();
+		PyErr_Format(PyExc_TypeError, "Argument 1 must be a string.");
+		//PyObject* type = PyObject_Type(inBuffer);
+		//PyObject_Print(type, stdout, Py_PRINT_RAW);
+		//Py_CLEAR(type);
+		
+ 		return NULL;
+	}
+
+	int parsing = 1;
+	int frameStartPos = 0;
+	int huffFound = 0;
+	unsigned char* inBufferPtr = PyString_AsString(inBuffer);
+	Py_ssize_t inBufferLen = PyString_Size(inBuffer);
+
+	PyObject *outBuffer = PyString_FromString("");
+	_PyString_Resize(&outBuffer, inBufferLen + HUFFMAN_SEGMENT_LEN);
+
+	while(parsing)
+	{
+		//Check if we should stop
+		if (frameStartPos >= inBufferLen)
+		{
+			parsing = 0;
+			continue;
+		}
+
+		//Read the next segment
+		const unsigned char *twoBytes = NULL;
+		unsigned frameStartPos=0, frameEndPos=0;
+		int ok = ReadJpegFrame(inBufferPtr, frameStartPos, &twoBytes, &frameStartPos, &frameEndPos);
+		//if(verbose)
+		//	print map(hex, twoBytes), frameStartPos, frameEndPos;
+
+		//Stop if there is a serious error
+		if(!ok)
+		{
+			parsing = 0;
+			continue;
+		}
+	
+		//Check if this segment is the compressed data
+		if(twoBytes[0] == 0xff && twoBytes[1] == 0xda && !huffFound)
+		{
+			PyObject *substr = PyString_FromStringAndSize(huffmanSegment, HUFFMAN_SEGMENT_LEN);
+			PyFile_WriteObject(substr, outBuffer, Py_PRINT_RAW);
+			Py_CLEAR(substr);
+		}
+
+		//Check the type of frame
+		if(twoBytes[0] == 0xff && twoBytes[1] == 0xc4)
+			huffFound = 1;
+
+		//Write current structure to output
+		PyObject *substr = PyString_FromStringAndSize(&inBufferPtr[frameStartPos], frameEndPos - frameStartPos);
+		PyFile_WriteObject(substr, outBuffer, Py_PRINT_RAW);
+		Py_CLEAR(substr);
+
+		//Move cursor
+		frameStartPos = frameEndPos;
+	}
+	
+	return outBuffer;
+}
+
+// *********************************************************************
+
 static PyMethodDef Video_device_methods[] = {
   {"close", (PyCFunction)Video_device_close, METH_NOARGS,
        "close()\n\n"
@@ -597,7 +822,8 @@ static PyTypeObject Video_device_type = {
 };
 
 static PyMethodDef module_methods[] = {
-  {NULL}
+	{ "InsertHuffmanTable", (PyCFunction)InsertHuffmanTable, METH_VARARGS, NULL },
+	{ NULL, NULL, 0, NULL }
 };
 
 PyMODINIT_FUNC initv4l2capture(void)
