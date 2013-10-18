@@ -2,6 +2,7 @@
 // Python extension to capture video with video4linux2
 //
 // 2009, 2010, 2011 Fredrik Portstrom
+// 2013, Tim Sheerman-Chase
 //
 // I, the copyright holder of this file, hereby release it into the
 // public domain. This applies worldwide. In case this is not legally
@@ -16,7 +17,6 @@
 #include <linux/videodev2.h>
 #include <sys/mman.h>
 #include <string.h>
-#include <stdio.h> //Only used for debugging
 
 #ifdef USE_LIBV4L
 #include <libv4l2.h>
@@ -700,13 +700,12 @@ static PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 	}
 
 	int parsing = 1;
-	int frameStartPos = 0;
+	unsigned frameStartPos = 0;
 	int huffFound = 0;
-	unsigned char* inBufferPtr = PyString_AsString(inBuffer);
+	unsigned char* inBufferPtr = (unsigned char*)PyString_AsString(inBuffer);
 	Py_ssize_t inBufferLen = PyString_Size(inBuffer);
 
 	PyObject *outBuffer = PyString_FromString("");
-	_PyString_Resize(&outBuffer, inBufferLen + HUFFMAN_SEGMENT_LEN);
 
 	while(parsing)
 	{
@@ -719,8 +718,10 @@ static PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 
 		//Read the next segment
 		const unsigned char *twoBytes = NULL;
-		unsigned frameStartPos=0, frameEndPos=0;
+		unsigned frameEndPos=0;
+	
 		int ok = ReadJpegFrame(inBufferPtr, frameStartPos, &twoBytes, &frameStartPos, &frameEndPos);
+
 		//if(verbose)
 		//	print map(hex, twoBytes), frameStartPos, frameEndPos;
 
@@ -735,8 +736,7 @@ static PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 		if(twoBytes[0] == 0xff && twoBytes[1] == 0xda && !huffFound)
 		{
 			PyObject *substr = PyString_FromStringAndSize(huffmanSegment, HUFFMAN_SEGMENT_LEN);
-			PyFile_WriteObject(substr, outBuffer, Py_PRINT_RAW);
-			Py_CLEAR(substr);
+			PyString_ConcatAndDel(&outBuffer, substr);
 		}
 
 		//Check the type of frame
@@ -744,14 +744,13 @@ static PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 			huffFound = 1;
 
 		//Write current structure to output
-		PyObject *substr = PyString_FromStringAndSize(&inBufferPtr[frameStartPos], frameEndPos - frameStartPos);
-		PyFile_WriteObject(substr, outBuffer, Py_PRINT_RAW);
-		Py_CLEAR(substr);
+		PyObject *substr = PyString_FromStringAndSize((char *)&inBufferPtr[frameStartPos], frameEndPos - frameStartPos);
+		PyString_ConcatAndDel(&outBuffer, substr);
 
 		//Move cursor
 		frameStartPos = frameEndPos;
 	}
-	
+
 	return outBuffer;
 }
 
