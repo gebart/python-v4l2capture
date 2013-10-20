@@ -805,7 +805,7 @@ public:
 	int stopped;
 	pthread_mutex_t lock;
 	std::vector<std::string> openDeviceFlag;
-	std::vector<std::string> startDeviceFlag;
+	std::vector<int> startDeviceFlag;
 	int stopDeviceFlag;
 	int closeDeviceFlag;
 	int deviceStarted;
@@ -871,10 +871,10 @@ public:
 		pthread_mutex_unlock(&this->lock);
 	};
 
-	void StartDevice()
+	void StartDevice(int buffer_count)
 	{
 		pthread_mutex_lock(&this->lock);
-		this->startDeviceFlag.push_back(this->devName.c_str());
+		this->startDeviceFlag.push_back(buffer_count);
 		pthread_mutex_unlock(&this->lock);
 	};
 
@@ -993,7 +993,35 @@ public:
 		return 1;
 	}
 
-	int StartDeviceInternal()
+	int SetFormat(int size_x, int size_y, const char *fmt)
+	{
+		struct v4l2_format format;
+		format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		format.fmt.pix.width = size_x;
+		format.fmt.pix.height = size_y;
+	#ifdef USE_LIBV4L
+		format.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24;
+		if(fmt != NULL && strcmp(fmt, "MJPEG")==0)
+			format.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
+		if(fmt != NULL && strcmp(fmt, "RGB24")==0)
+			format.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24;
+		if(fmt != NULL && strcmp(fmt, "YUV420")==0)
+			format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUV420;
+	#else
+		format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
+	#endif
+		format.fmt.pix.field = V4L2_FIELD_NONE;
+		format.fmt.pix.bytesperline = 0;
+
+		if(my_ioctl(this->fd, VIDIOC_S_FMT, &format))
+		{
+			return 0;
+		}
+
+		return 1;
+	}
+
+	int StartDeviceInternal(int buffer_count = 10)
 	{
 		printf("StartDeviceInternal\n");
 		//Check this device has not already been start
@@ -1021,7 +1049,6 @@ public:
 		// calling 'start' if v4l2capture is compiled with libv4l2. Otherwise
 		// raises IOError.
 
-		int buffer_count = 10;
 		struct v4l2_requestbuffers reqbuf;
 		reqbuf.count = buffer_count;
 		reqbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -1162,9 +1189,9 @@ public:
 			pthread_mutex_lock(&this->lock);
 			if(this->startDeviceFlag.size() > 0)
 			{
-				std::string devName = this->startDeviceFlag[this->startDeviceFlag.size()-1];
+				int buffer_count = this->startDeviceFlag[this->startDeviceFlag.size()-1];
 				this->startDeviceFlag.pop_back();
-				this->StartDeviceInternal();
+				this->StartDeviceInternal(buffer_count);
 			}
 			pthread_mutex_unlock(&this->lock);
 
@@ -1272,8 +1299,32 @@ static PyObject *Device_manager_open(Device_manager *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+
+static PyObject *Device_manager_set_format(Device_manager *self, PyObject *args)
+{
+	int size_x;
+	int size_y;
+	const char *fmt = NULL;
+
+	if(!PyArg_ParseTuple(args, "ii|s", &size_x, &size_y, &fmt))
+	{
+		Py_RETURN_NONE;
+	}
+
+	const char *devarg = "/dev/video0";
+	if(PyTuple_Size(args) >= 1)
+	{
+		PyObject *pydevarg = PyTuple_GetItem(args, 0);
+		devarg = PyString_AsString(pydevarg);
+	}
+
+	class Device_manager_Worker_thread_args *threadArgs = (*self->threadArgStore)[devarg];
+	int ret = threadArgs->SetFormat(size_x, size_y, fmt);
+
+	return Py_BuildValue("i", ret);
+}
+
 static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
-//	self, dev = None, reqSize=(640, 480), reqFps = 30, fmt = "MJPEG", buffer_count = 10):
 {
 
 	//Process arguments
@@ -1292,7 +1343,7 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 	}
 
 	class Device_manager_Worker_thread_args *threadArgs = (*self->threadArgStore)[devarg];
-	threadArgs->StartDevice();
+	threadArgs->StartDevice(buffer_count);
 	
 	Py_RETURN_NONE;
 }
@@ -1409,6 +1460,11 @@ static PyMethodDef Device_manager_methods[] = {
 	{"open", (PyCFunction)Device_manager_open, METH_VARARGS,
 			 "open(dev = '\\dev\\video0')\n\n"
 			 "Open video capture."},
+	{"set_format", (PyCFunction)Device_manager_set_format, METH_VARARGS,
+			 "set_format(size_x, size_y, pixel_format='RGB24') -> size_x, size_y\n\n"
+			 "Request the video device to set image size and format. The device may "
+			 "choose another size than requested and will return its choice. The "
+			 "pixel format may be either RGB24, YUV420 or MJPEG."},
 	{"start", (PyCFunction)Device_manager_Start, METH_VARARGS,
 			 "start(dev = '\\dev\\video0', reqSize=(640, 480), reqFps = 30, fmt = 'MJPEG\', buffer_count = 10)\n\n"
 			 "Start video capture."},
@@ -1418,6 +1474,7 @@ static PyMethodDef Device_manager_methods[] = {
 	{"close", (PyCFunction)Device_manager_close, METH_VARARGS,
 			 "close(dev = '\\dev\\video0')\n\n"
 			 "Close video device. Subsequent calls to other methods will fail."},
+
 	{NULL}
 };
 
