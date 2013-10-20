@@ -19,6 +19,7 @@
 #include <string.h>
 #include <string>
 #include <map>
+#include <pthread.h>
 
 #ifdef USE_LIBV4L
 #include <libv4l2.h>
@@ -56,6 +57,7 @@ public:
 	std::map<std::string, int> *fd;
 	std::map<std::string, struct buffer *> *buffers;
 	std::map<std::string, int> *buffer_counts;
+	std::map<std::string, class Device_manager_Worker_thread_args *> *threadArgStore;
 };
 typedef Device_manager_cl Device_manager;
 
@@ -109,22 +111,24 @@ static void Video_device_unmap(Video_device *self)
 	int i;
 
 	for(i = 0; i < self->buffer_count; i++)
-		{
-			v4l2_munmap(self->buffers[i].start, self->buffers[i].length);
-		}
+	{
+		v4l2_munmap(self->buffers[i].start, self->buffers[i].length);
+	}
+	free(self->buffers);
+	self->buffers = NULL;
 }
 
 static void Video_device_dealloc(Video_device *self)
 {
 	if(self->fd >= 0)
-		{
-			if(self->buffers)
 	{
-		Video_device_unmap(self);
-	}
-
-			v4l2_close(self->fd);
+		if(self->buffers)
+		{
+			Video_device_unmap(self);
 		}
+
+		v4l2_close(self->fd);
+	}
 
 	self->ob_type->tp_free((PyObject *)self);
 }
@@ -767,11 +771,88 @@ static PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 
 // *********************************************************************
 
+class Device_manager_Worker_thread_args
+{
+public:
+	Device_manager *self;
+	std::string devName;
+	int stop;
+	int stopped;
+	pthread_mutex_t lock;
+
+	Device_manager_Worker_thread_args()
+	{
+		stop = 0;
+		stopped = 1;
+		pthread_mutex_init(&lock, NULL);
+	};
+
+	virtual ~Device_manager_Worker_thread_args()
+	{
+		pthread_mutex_destroy(&lock);
+	};
+
+	void Stop()
+	{
+		pthread_mutex_lock(&this->lock);
+		this->stop = 1;
+		pthread_mutex_unlock(&this->lock);
+	};
+
+	void WaitForStop()
+	{
+		while(1)
+		{
+			pthread_mutex_lock(&this->lock);
+			int s = this->stopped;
+			pthread_mutex_unlock(&this->lock);
+
+			if(s) return;
+			usleep(10000);
+		}
+	};
+};
+
+void *Device_manager_Worker_thread(void *arg)
+{
+	class Device_manager_Worker_thread_args *argobj = (class Device_manager_Worker_thread_args*) arg;
+	printf("Thread started\n");
+	int running = 1;
+	pthread_mutex_lock(&argobj->lock);
+	argobj->stopped = 0;
+	pthread_mutex_unlock(&argobj->lock);
+
+	while(running)
+	{
+		usleep(1000);
+/*	int return_timestamp=0;
+
+	if(!PyArg_ParseTuple(args, "|i", &return_timestamp))
+		{
+			Py_RETURN_NONE;
+		}
+
+	return Video_device_read_internal(self, 1, return_timestamp);*/
+		pthread_mutex_lock(&argobj->lock);
+		running = !argobj->stop;
+		pthread_mutex_unlock(&argobj->lock);
+	}
+	printf("Thread stopping\n");
+	pthread_mutex_lock(&argobj->lock);
+	argobj->stopped = 1;
+	pthread_mutex_unlock(&argobj->lock);
+
+	return NULL;
+}
+
+// **********************************************************************
+
 static void Device_manager_dealloc(Device_manager *self)
 {
 	delete self->fd;
 	delete self->buffers;
 	delete self->buffer_counts;
+	delete self->threadArgStore;
 	self->ob_type->tp_free((PyObject *)self);
 }
 
@@ -781,6 +862,7 @@ static int Device_manager_init(Device_manager *self, PyObject *args,
 	self->fd = new std::map<std::string, int>;
 	self->buffers = new std::map<std::string, struct buffer *>;
 	self->buffer_counts = new std::map<std::string, int>;
+	self->threadArgStore = new std::map<std::string, class Device_manager_Worker_thread_args*>;
 	return 0;
 }
 
@@ -814,7 +896,7 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 		PyErr_Format(PyExc_RuntimeError, "Device already started.");
  		Py_RETURN_NONE;
 	}
-
+	printf("a\n");
 	//Open the video device.
 	int fd = v4l2_open(devarg, O_RDWR | O_NONBLOCK);
 
@@ -823,6 +905,7 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 		PyErr_SetFromErrnoWithFilename(PyExc_IOError, devarg);
 		Py_RETURN_NONE;
 	}
+	printf("b\n");
 
 	(*self->fd)[devarg] = fd;
 	(*self->buffers)[devarg] = NULL;
@@ -853,6 +936,7 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 
 	if(my_ioctl(fd, VIDIOC_REQBUFS, &reqbuf))
 	{
+		PyErr_SetString(PyExc_IOError, "VIDIOC_REQBUFS failed");
 		Py_RETURN_NONE;
 	}
 
@@ -861,6 +945,7 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 		PyErr_SetString(PyExc_IOError, "Not enough buffer memory");
 		Py_RETURN_NONE;
 	}
+	printf("c\n");
 
 	struct buffer *buffs = (struct buffer *)malloc(reqbuf.count * sizeof(struct buffer));
 	(*self->buffers)[devarg] = buffs;
@@ -893,7 +978,7 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 			Py_RETURN_NONE;
 		}
 	}
-
+	printf("d\n");
 	(*self->buffer_counts)[devarg] = reqbuf.count;
 	buffer_count = reqbuf.count;
 
@@ -921,7 +1006,15 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 	{
 		Py_RETURN_NONE;
 	}
+
+	pthread_t thread;
+	Device_manager_Worker_thread_args *threadArgs = new Device_manager_Worker_thread_args;
+	(*self->threadArgStore)[devarg] = threadArgs;
+	threadArgs->self = self;
+	threadArgs->devName = devarg;
+	pthread_create(&thread, NULL, Device_manager_Worker_thread, threadArgs);
 	
+	printf("Create done\n");
 	Py_RETURN_NONE;
 }
 
@@ -940,12 +1033,23 @@ static PyObject *Device_manager_stop(Device_manager *self, PyObject *args)
 		devarg = "/dev/video0";
 	}
 
+	std::map<std::string, int>::iterator it = self->fd->find(devarg);
+	if(it==self->fd->end())
+	{
+		PyErr_Format(PyExc_RuntimeError, "Device not started.");
+ 		Py_RETURN_NONE;
+	}
+
 	if((*self->fd)[devarg] < 0)
 	{
 		PyErr_SetString(PyExc_ValueError, "I/O operation on closed file");
 		Py_RETURN_NONE;
 	}
 
+	//Stop worker thread
+	(*self->threadArgStore)[devarg]->Stop();
+
+	//Signal V4l2 api
 	enum v4l2_buf_type type;
 	type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
@@ -954,9 +1058,69 @@ static PyObject *Device_manager_stop(Device_manager *self, PyObject *args)
 		Py_RETURN_NONE;
 	}
 
+	//Release memeory
+	(*self->threadArgStore)[devarg]->WaitForStop();
+	delete (*self->threadArgStore)[devarg];
+	self->threadArgStore->erase(devarg);
+
 	Py_RETURN_NONE;
 }
 
+static PyObject *Device_manager_close(Device_manager *self, PyObject *args)
+{
+	//Process arguments
+	const char *devarg = NULL;
+	if(PyTuple_Size(args) >= 1)
+	{
+		PyObject *pydevarg = PyTuple_GetItem(args, 0);
+		devarg = PyString_AsString(pydevarg);
+	}
+	else
+	{
+		devarg = "/dev/video0";
+	}
+
+	//Check if thread is still running
+	std::map<std::string, class Device_manager_Worker_thread_args *>::iterator it3 = self->threadArgStore->find(devarg);
+	if(it3 != self->threadArgStore->end())
+	{
+		//Stop thread that is still running
+		Device_manager_stop(self, args);
+	}
+
+	std::map<std::string, int>::iterator it = self->fd->find(devarg);
+	if(it==self->fd->end())
+	{
+		PyErr_Format(PyExc_RuntimeError, "Device not started.");
+ 		Py_RETURN_NONE;
+	}
+
+	int fd = (*self->fd)[devarg];
+
+	std::map<std::string, struct buffer *>::iterator it2 = self->buffers->find(devarg);
+	if(it2 != self->buffers->end())
+	{
+		struct buffer *buffers = (*self->buffers)[devarg];
+		int buffer_count = (*self->buffer_counts)[devarg];
+
+		for(int i = 0; i < buffer_count; i++)
+		{
+			v4l2_munmap(buffers[i].start, buffers[i].length);	
+		}
+		free (buffers);
+
+		//Release memory
+		self->buffers->erase(devarg);
+		self->buffer_counts->erase(devarg);
+	}
+
+	//Release memory
+	v4l2_close(fd);
+	fd = -1;
+	self->fd->erase(devarg);
+
+	Py_RETURN_NONE;
+}
 
 // *********************************************************************
 
@@ -1031,8 +1195,11 @@ static PyMethodDef Device_manager_methods[] = {
 			 "start(dev = '\\dev\\video0', reqSize=(640, 480), reqFps = 30, fmt = 'MJPEG\', buffer_count = 10)\n\n"
 			 "Start video capture."},
 	{"stop", (PyCFunction)Device_manager_stop, METH_VARARGS,
-			 "stop()\n\n"
+			 "stop(dev = '\\dev\\video0')\n\n"
 			 "Stop video capture."},
+	{"close", (PyCFunction)Device_manager_close, METH_VARARGS,
+			 "close(dev = '\\dev\\video0')\n\n"
+			 "Close video device. Subsequent calls to other methods will fail."},
 	{NULL}
 };
 
