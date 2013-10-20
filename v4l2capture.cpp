@@ -35,7 +35,7 @@
 		{									\
 			PyErr_SetString(PyExc_ValueError,					\
 		"I/O operation on closed file");				\
-			return NULL;							\
+			Py_RETURN_NONE;							\
 		}
 
 struct buffer {
@@ -179,14 +179,14 @@ static PyObject *Video_device_get_info(Video_device *self)
 
 	if(my_ioctl(self->fd, VIDIOC_QUERYCAP, &caps))
 		{
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 	PyObject *set = PySet_New(NULL);
 
 	if(!set)
 		{
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 	struct capability *capability = capabilities;
@@ -200,7 +200,7 @@ static PyObject *Video_device_get_info(Video_device *self)
 		if(!s)
 			{
 							Py_DECREF(set);
-				return NULL;
+				Py_RETURN_NONE;
 			}
 
 		PySet_Add(set, s);
@@ -220,7 +220,7 @@ static PyObject *Video_device_set_format(Video_device *self, PyObject *args)
 
 	if(!PyArg_ParseTuple(args, "ii|s", &size_x, &size_y, &fmt))
 		{
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 	struct v4l2_format format;
@@ -243,7 +243,7 @@ static PyObject *Video_device_set_format(Video_device *self, PyObject *args)
 
 	if(my_ioctl(self->fd, VIDIOC_S_FMT, &format))
 		{
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 	return Py_BuildValue("ii", format.fmt.pix.width, format.fmt.pix.height);
@@ -254,7 +254,7 @@ static PyObject *Video_device_set_fps(Video_device *self, PyObject *args)
 	int fps;
 	if(!PyArg_ParseTuple(args, "i", &fps))
 		{
-			return NULL;
+			Py_RETURN_NONE;
 		}
 	struct v4l2_streamparm setfps;
 	memset(&setfps, 0, sizeof(struct v4l2_streamparm));
@@ -262,7 +262,7 @@ static PyObject *Video_device_set_fps(Video_device *self, PyObject *args)
 	setfps.parm.capture.timeperframe.numerator = 1;
 	setfps.parm.capture.timeperframe.denominator = fps;
 	if(my_ioctl(self->fd, VIDIOC_S_PARM, &setfps)){
-		return NULL;
+		Py_RETURN_NONE;
 	}
 	return Py_BuildValue("i",setfps.parm.capture.timeperframe.denominator);
 }
@@ -274,7 +274,7 @@ static PyObject *Video_device_get_format(Video_device *self)
 	format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	if(my_ioctl(self->fd, VIDIOC_G_FMT, &format))
 	{
-		return NULL;
+		Py_RETURN_NONE;
 	}
 
 	PyObject *out = PyTuple_New(3);
@@ -313,7 +313,7 @@ static PyObject *Video_device_start(Video_device *self)
 
 	if(my_ioctl(self->fd, VIDIOC_STREAMON, &type))
 		{
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 	Py_RETURN_NONE;
@@ -327,7 +327,7 @@ static PyObject *Video_device_stop(Video_device *self)
 
 	if(my_ioctl(self->fd, VIDIOC_STREAMOFF, &type))
 		{
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 	Py_RETURN_NONE;
@@ -339,7 +339,7 @@ static PyObject *Video_device_create_buffers(Video_device *self, PyObject *args)
 
 	if(!PyArg_ParseTuple(args, "I", &buffer_count))
 		{
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 	ASSERT_OPEN;
@@ -347,7 +347,7 @@ static PyObject *Video_device_create_buffers(Video_device *self, PyObject *args)
 	if(self->buffers)
 		{
 			PyErr_SetString(PyExc_ValueError, "Buffers are already created");
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 	struct v4l2_requestbuffers reqbuf;
@@ -357,13 +357,13 @@ static PyObject *Video_device_create_buffers(Video_device *self, PyObject *args)
 
 	if(my_ioctl(self->fd, VIDIOC_REQBUFS, &reqbuf))
 		{
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 	if(!reqbuf.count)
 		{
 			PyErr_SetString(PyExc_IOError, "Not enough buffer memory");
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 	self->buffers = (struct buffer *)malloc(reqbuf.count * sizeof(struct buffer));
@@ -371,7 +371,7 @@ static PyObject *Video_device_create_buffers(Video_device *self, PyObject *args)
 	if(!self->buffers)
 		{
 			PyErr_NoMemory();
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 	unsigned int i;
@@ -385,7 +385,7 @@ static PyObject *Video_device_create_buffers(Video_device *self, PyObject *args)
 
 			if(my_ioctl(self->fd, VIDIOC_QUERYBUF, &buffer))
 	{
-		return NULL;
+		Py_RETURN_NONE;
 	}
 
 			self->buffers[i].length = buffer.length;
@@ -395,7 +395,7 @@ static PyObject *Video_device_create_buffers(Video_device *self, PyObject *args)
 			if(self->buffers[i].start == MAP_FAILED)
 	{
 		PyErr_SetFromErrno(PyExc_IOError);
-		return NULL;
+		Py_RETURN_NONE;
 	}
 		}
 
@@ -409,7 +409,7 @@ static PyObject *Video_device_queue_all_buffers(Video_device *self)
 		{
 			ASSERT_OPEN;
 			PyErr_SetString(PyExc_ValueError, "Buffers have not been created");
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 	int i;
@@ -424,7 +424,7 @@ static PyObject *Video_device_queue_all_buffers(Video_device *self)
 
 			if(my_ioctl(self->fd, VIDIOC_QBUF, &buffer))
 	{
-		return NULL;
+		Py_RETURN_NONE;
 	}
 		}
 
@@ -437,7 +437,7 @@ static PyObject *Video_device_read_internal(Video_device *self, int queue, int r
 		{
 			ASSERT_OPEN;
 			PyErr_SetString(PyExc_ValueError, "Buffers have not been created");
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 	struct v4l2_buffer buffer;
@@ -446,7 +446,7 @@ static PyObject *Video_device_read_internal(Video_device *self, int queue, int r
 
 	if(my_ioctl(self->fd, VIDIOC_DQBUF, &buffer))
 		{
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 #ifdef USE_LIBV4L
@@ -455,7 +455,7 @@ static PyObject *Video_device_read_internal(Video_device *self, int queue, int r
 
 	if(!result)
 		{
-			return NULL;
+			Py_RETURN_NONE;
 		}
 #else
 	// Convert buffer from YUYV to RGB.
@@ -466,7 +466,7 @@ static PyObject *Video_device_read_internal(Video_device *self, int queue, int r
 
 	if(!result)
 		{
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 	char *rgb = PyString_AS_STRING(result);
@@ -511,7 +511,7 @@ static PyObject *Video_device_read_internal(Video_device *self, int queue, int r
 
 	if(queue && my_ioctl(self->fd, VIDIOC_QBUF, &buffer))
 		{
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 	return out;
@@ -523,7 +523,7 @@ static PyObject *Video_device_read(Video_device *self, PyObject *args)
 
 	if(!PyArg_ParseTuple(args, "|i", &return_timestamp))
 		{
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 	return Video_device_read_internal(self, 0, return_timestamp);
@@ -535,7 +535,7 @@ static PyObject *Video_device_read_and_queue(Video_device *self, PyObject *args)
 
 	if(!PyArg_ParseTuple(args, "|i", &return_timestamp))
 		{
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 	return Video_device_read_internal(self, 1, return_timestamp);
@@ -844,13 +844,13 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 
 	if(my_ioctl(fd, VIDIOC_REQBUFS, &reqbuf))
 	{
-		return NULL;
+		Py_RETURN_NONE;
 	}
 
 	if(!reqbuf.count)
 	{
 		PyErr_SetString(PyExc_IOError, "Not enough buffer memory");
-		return NULL;
+		Py_RETURN_NONE;
 	}
 
 	struct buffer *buffs = (struct buffer *)malloc(reqbuf.count * sizeof(struct buffer));
@@ -859,12 +859,10 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 	if(!self->buffers[devarg])
 	{
 		PyErr_NoMemory();
-		return NULL;
+		Py_RETURN_NONE;
 	}
 
-	unsigned int i;
-
-	for(i = 0; i < reqbuf.count; i++)
+	for(unsigned int i = 0; i < reqbuf.count; i++)
 	{
 		struct v4l2_buffer buffer;
 		buffer.index = i;
@@ -873,7 +871,7 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 
 		if(my_ioctl(fd, VIDIOC_QUERYBUF, &buffer))
 		{
-			return NULL;
+			Py_RETURN_NONE;
 		}
 
 		buffs[i].length = buffer.length;
@@ -882,22 +880,73 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 
 		if(buffs[i].start == MAP_FAILED)
 		{
-		PyErr_SetFromErrno(PyExc_IOError);
-		return NULL;
+			PyErr_SetFromErrno(PyExc_IOError);
+			Py_RETURN_NONE;
 		}
 	}
 
-	self->buffer_count[devarg] = i;
+	self->buffer_count[devarg] = reqbuf.count;
+	buffer_count = self->buffer_count[devarg];
 
 	// Send the buffer to the device. Some devices require this to be done
 	// before calling 'start'.
-	//self.video.queue_all_buffers()
+
+	for(int i = 0; i < buffer_count; i++)
+	{
+		struct v4l2_buffer buffer;
+		buffer.index = i;
+		buffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		buffer.memory = V4L2_MEMORY_MMAP;
+
+		if(my_ioctl(fd, VIDIOC_QBUF, &buffer))
+		{
+			Py_RETURN_NONE;
+		}
+	}
 
 	// Start the device. This lights the LED if it's a camera that has one.
-	//self.video.start()*/
+	enum v4l2_buf_type type;
+	type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+	if(my_ioctl(fd, VIDIOC_STREAMON, &type))
+	{
+		Py_RETURN_NONE;
+	}
 	
 	Py_RETURN_NONE;
 }
+
+static PyObject *Device_manager_stop(Video_device *self, PyObject *args)
+{
+	//Process arguments
+	const char *devarg = NULL;
+	if(PyTuple_Size(args) < 1)
+	{
+		PyObject *pydevarg = PyTuple_GetItem(args, 0);
+		devarg = PyString_AsString(pydevarg);
+	}
+	else
+	{
+		devarg = "/dev/video0";
+	}
+
+	if(self->fd[devarg] < 0)
+	{
+		PyErr_SetString(PyExc_ValueError, "I/O operation on closed file");
+		Py_RETURN_NONE;
+	}
+
+	enum v4l2_buf_type type;
+	type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+	if(my_ioctl(self->fd[devarg], VIDIOC_STREAMOFF, &type))
+	{
+		Py_RETURN_NONE;
+	}
+
+	Py_RETURN_NONE;
+}
+
 
 // *********************************************************************
 
@@ -969,8 +1018,11 @@ static PyTypeObject Video_device_type = {
 
 static PyMethodDef Device_manager_methods[] = {
 	{"start", (PyCFunction)Device_manager_Start, METH_VARARGS,
-			 "start()\n\n"
+			 "start(dev = '\\dev\\video0', reqSize=(640, 480), reqFps = 30, fmt = 'MJPEG\', buffer_count = 10)\n\n"
 			 "Start video capture."},
+	{"stop", (PyCFunction)Device_manager_stop, METH_NOARGS,
+			 "stop()\n\n"
+			 "Stop video capture."},
 	{NULL}
 };
 
