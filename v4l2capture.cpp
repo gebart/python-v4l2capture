@@ -867,77 +867,86 @@ public:
 
 	int ReadFrame()
 	{
+		printf("ReadFrame\n");
+		if(this->fd<0)
+			throw std::runtime_error("File not open");
+
 		if(this->buffers == NULL)
-		{
 			throw std::runtime_error("Buffers have not been created");
-		}
 
 		struct v4l2_buffer buffer;
 		buffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		buffer.memory = V4L2_MEMORY_MMAP;
-		printf("a %d %ld\n", this->fd, (long) &buffer);
-		if(my_ioctl(fd, VIDIOC_DQBUF, &buffer))
+
+		if(my_ioctl(this->fd, VIDIOC_DQBUF, &buffer))
 		{
 			throw std::runtime_error("VIDIOC_DQBUF failed");
 		}
-		printf("b\n");
+
 		#ifdef USE_LIBV4L
-		printf("Rx %d\n", buffer.bytesused); //self->buffers[buffer.index].start, buffer.bytesused
+			printf("rx %d\n", buffer.bytesused);
+			//PyObject *result = PyString_FromStringAndSize(
+			//		(const char*)self->buffers[buffer.index].start, buffer.bytesused);
 
+			//if(!result)
+			//	{
+			//		Py_RETURN_NONE;
+			//	}
 		#else
-		// Convert buffer from YUYV to RGB.
-		// For the byte order, see: http://v4l2spec.bytesex.org/spec/r4339.htm
-		// For the color conversion, see: http://v4l2spec.bytesex.org/spec/x2123.htm
-		int length = buffer.bytesused * 6 / 4;
-		PyObject *result = PyString_FromStringAndSize(NULL, length);
+			// Convert buffer from YUYV to RGB.
+			// For the byte order, see: http://v4l2spec.bytesex.org/spec/r4339.htm
+			// For the color conversion, see: http://v4l2spec.bytesex.org/spec/x2123.htm
+			int length = buffer.bytesused * 6 / 4;
+			PyObject *result = PyString_FromStringAndSize(NULL, length);
 
-		if(!result)
-		{
-			throw std::runtime_error("String convert failed");
-		}
+			if(!result)
+				{
+					Py_RETURN_NONE;
+				}
 
-		char *rgb = PyString_AS_STRING(result);
-		char *rgb_max = rgb + length;
-		unsigned char *yuyv = self->buffers[buffer.index].start;
+			char *rgb = PyString_AS_STRING(result);
+			char *rgb_max = rgb + length;
+			unsigned char *yuyv = self->buffers[buffer.index].start;
 
 		#define CLAMP(c) ((c) <= 0 ? 0 : (c) >= 65025 ? 255 : (c) >> 8)
-		while(rgb < rgb_max)
-			{
-				int u = yuyv[1] - 128;
-				int v = yuyv[3] - 128;
-				int uv = 100 * u + 208 * v;
-				u *= 516;
-				v *= 409;
+			while(rgb < rgb_max)
+				{
+					int u = yuyv[1] - 128;
+					int v = yuyv[3] - 128;
+					int uv = 100 * u + 208 * v;
+					u *= 516;
+					v *= 409;
 
-				int y = 298 * (yuyv[0] - 16);
-				rgb[0] = CLAMP(y + v);
-				rgb[1] = CLAMP(y - uv);
-				rgb[2] = CLAMP(y + u);
+					int y = 298 * (yuyv[0] - 16);
+					rgb[0] = CLAMP(y + v);
+					rgb[1] = CLAMP(y - uv);
+					rgb[2] = CLAMP(y + u);
 
-				y = 298 * (yuyv[2] - 16);
-				rgb[3] = CLAMP(y + v);
-				rgb[4] = CLAMP(y - uv);
-				rgb[5] = CLAMP(y + u);
+					y = 298 * (yuyv[2] - 16);
+					rgb[3] = CLAMP(y + v);
+					rgb[4] = CLAMP(y - uv);
+					rgb[5] = CLAMP(y + u);
 
-				rgb += 6;
-				yuyv += 4;
-			}
+					rgb += 6;
+					yuyv += 4;
+				}
 		#undef CLAMP
 		#endif
 
-		/*if(1)
+		//PyObject *out = result;
+
+		if(1)
 		{
-			out = PyTuple_New(4);
+			/*out = PyTuple_New(4);
 			PyTuple_SetItem(out, 0, result);
 			PyTuple_SetItem(out, 1, PyInt_FromLong(buffer.timestamp.tv_sec));
 			PyTuple_SetItem(out, 2, PyInt_FromLong(buffer.timestamp.tv_usec));
-			PyTuple_SetItem(out, 3, PyInt_FromLong(buffer.sequence));
-		}*/
+			PyTuple_SetItem(out, 3, PyInt_FromLong(buffer.sequence));*/
+		}
 
-		//Queue next frame read
-		if(my_ioctl(fd, VIDIOC_QBUF, &buffer))
+		if(my_ioctl(this->fd, VIDIOC_QBUF, &buffer))
 		{
-			throw std::runtime_error("VIDIOC_QBUF failed");
+			//Py_RETURN_NONE;
 		}
 
 		return 1;
@@ -1059,11 +1068,13 @@ public:
 		}
 
 		this->deviceStarted = 1;
+		printf("Started ok\n");
 		return 1;
 	}
 
 	void StopDeviceInternal()
 	{
+		printf("StopDeviceInternal\n");
 		if(this->fd==-1)
 		{
 			throw std::runtime_error("Device not started");
@@ -1083,6 +1094,7 @@ public:
 
 	int CloseDeviceInternal()
 	{
+		printf("CloseDeviceInternal\n");
 		if(this->fd == -1)
 		{
 			throw std::runtime_error("Device not open");
