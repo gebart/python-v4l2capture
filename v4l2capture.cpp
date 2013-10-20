@@ -866,6 +866,43 @@ static int Device_manager_init(Device_manager *self, PyObject *args,
 	return 0;
 }
 
+static PyObject *Device_manager_open(Device_manager *self, PyObject *args)
+{
+	//Process arguments
+	const char *devarg = NULL;
+	if(PyTuple_Size(args) >= 1)
+	{
+		PyObject *pydevarg = PyTuple_GetItem(args, 0);
+		devarg = PyString_AsString(pydevarg);
+	}
+	else
+	{
+		devarg = "/dev/video0";
+	}
+
+	//Check this device has not already been opened
+	std::map<std::string, int>::iterator it = self->fd->find(devarg);
+	if(it!=self->fd->end())
+	{
+		PyErr_Format(PyExc_RuntimeError, "Device already opened.");
+ 		Py_RETURN_NONE;
+	}
+
+	//Open the video device.
+	int fd = v4l2_open(devarg, O_RDWR | O_NONBLOCK);
+
+	if(fd < 0)
+	{
+		PyErr_SetFromErrnoWithFilename(PyExc_IOError, devarg);
+		Py_RETURN_NONE;
+	}
+
+	(*self->fd)[devarg] = fd;
+	(*self->buffers)[devarg] = NULL;
+
+	Py_RETURN_NONE;
+}
+
 static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 //	self, dev = None, reqSize=(640, 480), reqFps = 30, fmt = "MJPEG", buffer_count = 10):
 {
@@ -891,24 +928,13 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 
 	//Check this device has not already been start
 	std::map<std::string, int>::iterator it = self->fd->find(devarg);
-	if(it!=self->fd->end())
+	if(it==self->fd->end())
 	{
-		PyErr_Format(PyExc_RuntimeError, "Device already started.");
+		PyErr_Format(PyExc_RuntimeError, "Device not open.");
  		Py_RETURN_NONE;
 	}
-	printf("a\n");
-	//Open the video device.
-	int fd = v4l2_open(devarg, O_RDWR | O_NONBLOCK);
 
-	if(fd < 0)
-	{
-		PyErr_SetFromErrnoWithFilename(PyExc_IOError, devarg);
-		Py_RETURN_NONE;
-	}
-	printf("b\n");
-
-	(*self->fd)[devarg] = fd;
-	(*self->buffers)[devarg] = NULL;
+	int fd = (*self->fd)[devarg];
 
 	//Set other parameters for capture
 	//TODO
@@ -945,7 +971,6 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 		PyErr_SetString(PyExc_IOError, "Not enough buffer memory");
 		Py_RETURN_NONE;
 	}
-	printf("c\n");
 
 	struct buffer *buffs = (struct buffer *)malloc(reqbuf.count * sizeof(struct buffer));
 	(*self->buffers)[devarg] = buffs;
@@ -978,7 +1003,7 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 			Py_RETURN_NONE;
 		}
 	}
-	printf("d\n");
+
 	(*self->buffer_counts)[devarg] = reqbuf.count;
 	buffer_count = reqbuf.count;
 
@@ -1191,6 +1216,9 @@ static PyTypeObject Video_device_type = {
 // *********************************************************************
 
 static PyMethodDef Device_manager_methods[] = {
+	{"open", (PyCFunction)Device_manager_open, METH_VARARGS,
+			 "open(dev = '\\dev\\video0')\n\n"
+			 "Open video capture."},
 	{"start", (PyCFunction)Device_manager_Start, METH_VARARGS,
 			 "start(dev = '\\dev\\video0', reqSize=(640, 480), reqFps = 30, fmt = 'MJPEG\', buffer_count = 10)\n\n"
 			 "Start video capture."},
