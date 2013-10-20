@@ -48,6 +48,13 @@ typedef struct {
   int buffer_count;
 } Video_device;
 
+typedef struct {
+  PyObject_HEAD
+  int fd;
+  struct buffer *buffers;
+  int buffer_count;
+} Device_manager;
+
 struct capability {
   int id;
   const char *name;
@@ -756,6 +763,19 @@ static PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 
 // *********************************************************************
 
+static void Device_manager_dealloc(Device_manager *self)
+{
+	self->ob_type->tp_free((PyObject *)self);
+}
+
+static int Device_manager_init(Device_manager *self, PyObject *args,
+    PyObject *kwargs)
+{
+	return 0;
+}
+
+// *********************************************************************
+
 static PyMethodDef Video_device_methods[] = {
   {"close", (PyCFunction)Video_device_close, METH_NOARGS,
        "close()\n\n"
@@ -820,6 +840,25 @@ static PyTypeObject Video_device_type = {
       (initproc)Video_device_init
 };
 
+// *********************************************************************
+
+static PyMethodDef Device_manager_methods[] = {
+  {NULL}
+};
+
+static PyTypeObject Device_manager_type = {
+  PyObject_HEAD_INIT(NULL)
+      0, "v4l2capture.Device_manager", sizeof(Device_manager), 0,
+      (destructor)Device_manager_dealloc, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, Py_TPFLAGS_DEFAULT, "Video_device(path)\n\nOpens the video device at "
+      "the given path and returns an object that can capture images. The "
+      "constructor and all methods except close may raise IOError.", 0, 0, 0,
+      0, 0, 0, Device_manager_methods, 0, 0, 0, 0, 0, 0, 0,
+      (initproc)Device_manager_init
+};
+
+// *********************************************************************
+
 static PyMethodDef module_methods[] = {
 	{ "InsertHuffmanTable", (PyCFunction)InsertHuffmanTable, METH_VARARGS, NULL },
 	{ NULL, NULL, 0, NULL }
@@ -828,8 +867,14 @@ static PyMethodDef module_methods[] = {
 PyMODINIT_FUNC initv4l2capture(void)
 {
   Video_device_type.tp_new = PyType_GenericNew;
+  Device_manager_type.tp_new = PyType_GenericNew;
 
   if(PyType_Ready(&Video_device_type) < 0)
+    {
+      return;
+    }
+
+  if(PyType_Ready(&Device_manager_type) < 0)
     {
       return;
     }
@@ -844,4 +889,7 @@ PyMODINIT_FUNC initv4l2capture(void)
 
   Py_INCREF(&Video_device_type);
   PyModule_AddObject(module, "Video_device", (PyObject *)&Video_device_type);
+  Py_INCREF(&Device_manager_type);
+  PyModule_AddObject(module, "Device_manager", (PyObject *)&Device_manager_type);
+
 }
