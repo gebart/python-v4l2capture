@@ -14,7 +14,7 @@ from distutils.core import Extension, setup
 setup(
     name = "v4l2capture",
     version = "1.4",
-    author = "Fredrik Portstrom",
+    author = "Fredrik Portstrom, Tim Sheerman-Chase",
     author_email = "fredrik@jemla.se",
     url = "http://fredrik.jemla.eu/v4l2capture",
     description = "Capture video with video4linux2",
@@ -23,6 +23,6 @@ setup(
     license = "Public Domain",
     classifiers = [
         "License :: Public Domain",
-        "Programming Language :: C"],
+        "Programming Language :: C++"],
     ext_modules = [
-        Extension("v4l2capture", ["v4l2capture.c"], libraries = ["v4l2"])])
+        Extension("v4l2capture", ["v4l2capture.cpp"], libraries = ["v4l2"])])

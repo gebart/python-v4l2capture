@@ -17,6 +17,8 @@
 #include <linux/videodev2.h>
 #include <sys/mman.h>
 #include <string.h>
+#include <string>
+#include <map>
 
 #ifdef USE_LIBV4L
 #include <libv4l2.h>
@@ -41,8 +43,6 @@ struct buffer {
   size_t length;
 };
 
-static PyTypeObject Device_manager_type;
-
 typedef struct {
   PyObject_HEAD
   int fd;
@@ -52,9 +52,9 @@ typedef struct {
 
 typedef struct {
   PyObject_HEAD
-  int fd;
-  struct buffer *buffers;
-  int buffer_count;
+  std::map<std::string, int> fd;
+  std::map<std::string, struct buffer *> buffers;
+  std::map<std::string, int> buffer_count;
 } Device_manager;
 
 struct capability {
@@ -191,7 +191,7 @@ static PyObject *Video_device_get_info(Video_device *self)
 
   struct capability *capability = capabilities;
 
-  while((void *)capability < (void *)capabilities + sizeof(capabilities))
+  while(capability < (struct capability *)(capabilities + sizeof(capabilities)))
     {
       if(caps.capabilities & capability->id)
 	{
@@ -366,7 +366,7 @@ static PyObject *Video_device_create_buffers(Video_device *self, PyObject *args)
       return NULL;
     }
 
-  self->buffers = malloc(reqbuf.count * sizeof(struct buffer));
+  self->buffers = (struct buffer *)malloc(reqbuf.count * sizeof(struct buffer));
 
   if(!self->buffers)
     {
@@ -374,7 +374,7 @@ static PyObject *Video_device_create_buffers(Video_device *self, PyObject *args)
       return NULL;
     }
 
-  int i;
+  unsigned int i;
 
   for(i = 0; i < reqbuf.count; i++)
     {
@@ -451,7 +451,7 @@ static PyObject *Video_device_read_internal(Video_device *self, int queue, int r
 
 #ifdef USE_LIBV4L
   PyObject *result = PyString_FromStringAndSize(
-      self->buffers[buffer.index].start, buffer.bytesused);
+      (const char*)self->buffers[buffer.index].start, buffer.bytesused);
 
   if(!result)
     {
@@ -792,10 +792,21 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 	}
 
 	//Open the video device.
-	PyObject *arglist = Py_BuildValue("(s)", devarg);
+	/*PyObject *arglist = Py_BuildValue("(s)", devarg);
 	PyObject *obj = PyObject_CallObject((PyObject *) &Device_manager_type, arglist);
 	Py_DECREF(arglist);
-	Py_DECREF(obj);
+	Py_DECREF(obj);*/
+	int fd = v4l2_open(devarg, O_RDWR | O_NONBLOCK);
+
+	if(fd < 0)
+	{
+		PyErr_SetFromErrnoWithFilename(PyExc_IOError, devarg);
+		Py_RETURN_NONE;
+	}
+
+	//self->fd = fd;
+	//self->buffers = NULL;
+
 	/*
 	//Suggest an image size to the device. The device may choose and
 	//return another size if it doesn't support the suggested one.
