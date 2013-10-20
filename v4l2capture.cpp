@@ -88,20 +88,19 @@ static int my_ioctl(int fd, int request, void *arg)
 	// Retry ioctl until it returns without being interrupted.
 
 	for(;;)
+	{
+		int result = v4l2_ioctl(fd, request, arg);
+
+		if(!result)
+			return 0;
+
+		if(errno != EINTR && errno != EAGAIN)
 		{
-			int result = v4l2_ioctl(fd, request, arg);
-
-			if(!result)
-	{
-		return 0;
-	}
-
-			if(errno != EINTR)
-	{
-		PyErr_SetFromErrno(PyExc_IOError);
-		return 1;
-	}
+			PyErr_SetFromErrno(PyExc_IOError);
+			return 1;
 		}
+		usleep(1000);
+	}
 }
 
 static void Video_device_unmap(Video_device *self)
