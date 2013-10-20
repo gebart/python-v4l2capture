@@ -1458,7 +1458,7 @@ static PyMethodDef Device_manager_methods[] = {
 			 "open(dev = '\\dev\\video0')\n\n"
 			 "Open video capture."},
 	{"set_format", (PyCFunction)Device_manager_set_format, METH_VARARGS,
-			 "set_format(size_x, size_y, pixel_format='RGB24') -> size_x, size_y\n\n"
+			 "set_format(dev, size_x, size_y, pixel_format='RGB24') -> size_x, size_y\n\n"
 			 "Request the video device to set image size and format. The device may "
 			 "choose another size than requested and will return its choice. The "
 			 "pixel format may be either RGB24, YUV420 or MJPEG."},
