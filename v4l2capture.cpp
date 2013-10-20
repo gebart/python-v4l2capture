@@ -83,18 +83,46 @@ static struct capability capabilities[] = {
 	{ V4L2_CAP_VIDEO_OVERLAY, "video_overlay" }
 };
 
-static int my_ioctl(int fd, int request, void *arg)
+static int my_ioctl(int fd, int request, void *arg, int utimeout = -1)
 {
 	// Retry ioctl until it returns without being interrupted.
 
 	for(;;)
 	{
+		// Wait for frame until time out
+		if(utimeout >= 0)
+		{
+
+			fd_set fds;
+			FD_ZERO (&fds);
+			FD_SET (fd, &fds);
+
+			struct timeval tv;
+		    tv.tv_sec = 0;
+		    tv.tv_usec = utimeout;
+			int r = select(fd+1, &fds, NULL, NULL, &tv);
+			
+			if(r == 0)
+				return 1; //Timed out
+		}
+
+		//printf("call\n");
 		int result = v4l2_ioctl(fd, request, arg);
+		//printf("%d\n", result);
 
 		if(!result)
+		{
+			//printf("ret\n");
 			return 0;
+		}
 
-		if(errno != EINTR && errno != EAGAIN)
+		if(errno == EAGAIN)
+		{
+			//printf("ret\n");
+			return 1;
+		}
+
+		if(errno != EINTR)
 		{
 			PyErr_SetFromErrno(PyExc_IOError);
 			return 1;
@@ -866,7 +894,6 @@ public:
 
 	int ReadFrame()
 	{
-		printf("ReadFrame\n");
 		if(this->fd<0)
 			throw std::runtime_error("File not open");
 
@@ -877,9 +904,9 @@ public:
 		buffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		buffer.memory = V4L2_MEMORY_MMAP;
 
-		if(my_ioctl(this->fd, VIDIOC_DQBUF, &buffer))
+		if(my_ioctl(this->fd, VIDIOC_DQBUF, &buffer, 10000))
 		{
-			throw std::runtime_error("VIDIOC_DQBUF failed");
+			return 0;
 		}
 
 		#ifdef USE_LIBV4L
@@ -1127,6 +1154,7 @@ public:
 		{
 		while(running)
 		{
+			//printf("Sleep\n");
 			usleep(1000);
 
 			if(deviceStarted) this->ReadFrame();
@@ -1170,9 +1198,9 @@ public:
 			pthread_mutex_unlock(&this->lock);
 		}
 		}
-		catch(std::exception)
+		catch(std::exception &err)
 		{
-
+			printf("An exception has occured: %s\n", err.what());
 		}
 
 		printf("Thread stopping\n");
