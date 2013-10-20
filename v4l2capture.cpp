@@ -909,7 +909,7 @@ public:
 			usleep(1000);
 			try
 			{
-				this->ReadFrame();
+				//this->ReadFrame();
 			}
 			catch(std::exception)
 			{
@@ -1256,6 +1256,102 @@ static PyObject *Device_manager_close(Device_manager *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+static PyObject *Test(Device_manager *self, PyObject *args)
+{
+	//Process arguments
+	const char *devarg = NULL;
+	if(PyTuple_Size(args) >= 1)
+	{
+		PyObject *pydevarg = PyTuple_GetItem(args, 0);
+		devarg = PyString_AsString(pydevarg);
+	}
+	else
+	{
+		devarg = "/dev/video0";
+	}
+
+		std::map<std::string, struct buffer *>::iterator it = self->buffers->find(devarg);
+		if(it == self->buffers->end())
+		{
+			throw std::runtime_error("Buffers have not been created");
+			Py_RETURN_NONE;
+		}
+
+		struct v4l2_buffer buffer;
+		buffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		buffer.memory = V4L2_MEMORY_MMAP;
+		int fd = (*self->fd)[devarg];
+		printf("a %d\n", fd);
+		if(my_ioctl(fd, VIDIOC_DQBUF, &buffer))
+		{
+			throw std::runtime_error("VIDIOC_DQBUF failed");
+			Py_RETURN_NONE;
+		}
+		printf("b\n");
+		#ifdef USE_LIBV4L
+		printf("Rx %d\n", buffer.bytesused); //self->buffers[buffer.index].start, buffer.bytesused
+
+		#else
+		// Convert buffer from YUYV to RGB.
+		// For the byte order, see: http://v4l2spec.bytesex.org/spec/r4339.htm
+		// For the color conversion, see: http://v4l2spec.bytesex.org/spec/x2123.htm
+		int length = buffer.bytesused * 6 / 4;
+		PyObject *result = PyString_FromStringAndSize(NULL, length);
+
+		if(!result)
+		{
+			throw std::runtime_error("String convert failed");
+			Py_RETURN_NONE;
+		}
+
+		char *rgb = PyString_AS_STRING(result);
+		char *rgb_max = rgb + length;
+		unsigned char *yuyv = self->buffers[buffer.index].start;
+
+		#define CLAMP(c) ((c) <= 0 ? 0 : (c) >= 65025 ? 255 : (c) >> 8)
+		while(rgb < rgb_max)
+			{
+				int u = yuyv[1] - 128;
+				int v = yuyv[3] - 128;
+				int uv = 100 * u + 208 * v;
+				u *= 516;
+				v *= 409;
+
+				int y = 298 * (yuyv[0] - 16);
+				rgb[0] = CLAMP(y + v);
+				rgb[1] = CLAMP(y - uv);
+				rgb[2] = CLAMP(y + u);
+
+				y = 298 * (yuyv[2] - 16);
+				rgb[3] = CLAMP(y + v);
+				rgb[4] = CLAMP(y - uv);
+				rgb[5] = CLAMP(y + u);
+
+				rgb += 6;
+				yuyv += 4;
+			}
+		#undef CLAMP
+		#endif
+
+		/*if(1)
+		{
+			out = PyTuple_New(4);
+			PyTuple_SetItem(out, 0, result);
+			PyTuple_SetItem(out, 1, PyInt_FromLong(buffer.timestamp.tv_sec));
+			PyTuple_SetItem(out, 2, PyInt_FromLong(buffer.timestamp.tv_usec));
+			PyTuple_SetItem(out, 3, PyInt_FromLong(buffer.sequence));
+		}*/
+
+		//Queue next frame read
+		if(my_ioctl(fd, VIDIOC_QBUF, &buffer))
+		{
+			throw std::runtime_error("VIDIOC_QBUF failed");
+			Py_RETURN_NONE;
+		}
+
+		Py_RETURN_NONE;
+}
+
 // *********************************************************************
 
 static PyMethodDef Video_device_methods[] = {
@@ -1337,6 +1433,9 @@ static PyMethodDef Device_manager_methods[] = {
 	{"close", (PyCFunction)Device_manager_close, METH_VARARGS,
 			 "close(dev = '\\dev\\video0')\n\n"
 			 "Close video device. Subsequent calls to other methods will fail."},
+	{"test", (PyCFunction)Test, METH_VARARGS,
+			 "test(dev = '\\dev\\video0')\n\n"
+			 "testfunc."},
 	{NULL}
 };
 
