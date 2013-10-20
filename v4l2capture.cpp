@@ -61,6 +61,9 @@ public:
 };
 typedef Device_manager_cl Device_manager;
 
+static PyObject *Device_manager_stop(Device_manager *self, PyObject *args);
+static PyObject *Device_manager_close(Device_manager *self, PyObject *args);
+
 struct capability {
 	int id;
 	const char *name;
@@ -205,7 +208,7 @@ static PyObject *Video_device_get_info(Video_device *self)
 
 		if(!s)
 			{
-							Py_DECREF(set);
+				Py_DECREF(set);
 				Py_RETURN_NONE;
 			}
 
@@ -849,6 +852,26 @@ void *Device_manager_Worker_thread(void *arg)
 
 static void Device_manager_dealloc(Device_manager *self)
 {
+	//Stop high level threads
+	for(std::map<std::string, class Device_manager_Worker_thread_args *>::iterator it = self->threadArgStore->begin(); 
+		it != self->threadArgStore->end(); it++)
+	{
+		PyObject *args = PyTuple_New(1);
+		PyTuple_SetItem(args, 0, PyString_FromString(it->first.c_str()));
+		Device_manager_stop(self, args);
+		Py_DECREF(args);
+	}
+
+	//Close devices
+	for(std::map<std::string, int>::iterator it = self->fd->begin(); 
+		it != self->fd->end(); it++)
+	{
+		PyObject *args = PyTuple_New(1);
+		PyTuple_SetItem(args, 0, PyString_FromString(it->first.c_str()));
+		Device_manager_close(self, args);
+		Py_DECREF(args);
+	}
+
 	delete self->fd;
 	delete self->buffers;
 	delete self->buffer_counts;
