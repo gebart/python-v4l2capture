@@ -50,12 +50,14 @@ typedef struct {
 	int buffer_count;
 } Video_device;
 
-typedef struct {
+class Device_manager_cl{
+public:
 	PyObject_HEAD
-	std::map<std::string, int> fd;
-	std::map<std::string, struct buffer *> buffers;
-	std::map<std::string, int> buffer_count;
-} Device_manager;
+	std::map<std::string, int> *fd;
+	std::map<std::string, struct buffer *> *buffers;
+	std::map<std::string, int> *buffer_counts;
+};
+typedef Device_manager_cl Device_manager;
 
 struct capability {
 	int id;
@@ -767,21 +769,28 @@ static PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 
 static void Device_manager_dealloc(Device_manager *self)
 {
+	delete self->fd;
+	delete self->buffers;
+	delete self->buffer_counts;
 	self->ob_type->tp_free((PyObject *)self);
 }
 
 static int Device_manager_init(Device_manager *self, PyObject *args,
 		PyObject *kwargs)
 {
+	self->fd = new std::map<std::string, int>;
+	self->buffers = new std::map<std::string, struct buffer *>;
+	self->buffer_counts = new std::map<std::string, int>;
 	return 0;
 }
 
 static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 //	self, dev = None, reqSize=(640, 480), reqFps = 30, fmt = "MJPEG", buffer_count = 10):
 {
+
 	//Process arguments
 	const char *devarg = NULL;
-	if(PyTuple_Size(args) < 1)
+	if(PyTuple_Size(args) >= 1)
 	{
 		PyObject *pydevarg = PyTuple_GetItem(args, 0);
 		devarg = PyString_AsString(pydevarg);
@@ -799,8 +808,8 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 	}
 
 	//Check this device has not already been start
-	std::map<std::string, int>::iterator it = self->fd.find(devarg);
-	if(it!=self->fd.end())
+	std::map<std::string, int>::iterator it = self->fd->find(devarg);
+	if(it!=self->fd->end())
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device already started.");
  		Py_RETURN_NONE;
@@ -815,8 +824,8 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 		Py_RETURN_NONE;
 	}
 
-	self->fd[devarg] = fd;
-	self->buffers[devarg] = NULL;
+	(*self->fd)[devarg] = fd;
+	(*self->buffers)[devarg] = NULL;
 
 	//Set other parameters for capture
 	//TODO
@@ -854,9 +863,9 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 	}
 
 	struct buffer *buffs = (struct buffer *)malloc(reqbuf.count * sizeof(struct buffer));
-	self->buffers[devarg] = buffs;
+	(*self->buffers)[devarg] = buffs;
 
-	if(!self->buffers[devarg])
+	if(!buffs)
 	{
 		PyErr_NoMemory();
 		Py_RETURN_NONE;
@@ -885,8 +894,8 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 		}
 	}
 
-	self->buffer_count[devarg] = reqbuf.count;
-	buffer_count = self->buffer_count[devarg];
+	(*self->buffer_counts)[devarg] = reqbuf.count;
+	buffer_count = reqbuf.count;
 
 	// Send the buffer to the device. Some devices require this to be done
 	// before calling 'start'.
@@ -916,7 +925,7 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
-static PyObject *Device_manager_stop(Video_device *self, PyObject *args)
+static PyObject *Device_manager_stop(Device_manager *self, PyObject *args)
 {
 	//Process arguments
 	const char *devarg = NULL;
@@ -930,7 +939,7 @@ static PyObject *Device_manager_stop(Video_device *self, PyObject *args)
 		devarg = "/dev/video0";
 	}
 
-	if(self->fd[devarg] < 0)
+	if((*self->fd)[devarg] < 0)
 	{
 		PyErr_SetString(PyExc_ValueError, "I/O operation on closed file");
 		Py_RETURN_NONE;
@@ -939,7 +948,7 @@ static PyObject *Device_manager_stop(Video_device *self, PyObject *args)
 	enum v4l2_buf_type type;
 	type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-	if(my_ioctl(self->fd[devarg], VIDIOC_STREAMOFF, &type))
+	if(my_ioctl((*self->fd)[devarg], VIDIOC_STREAMOFF, &type))
 	{
 		Py_RETURN_NONE;
 	}
@@ -1030,7 +1039,7 @@ static PyTypeObject Device_manager_type = {
 	PyObject_HEAD_INIT(NULL)
 			0, "v4l2capture.Device_manager", sizeof(Device_manager), 0,
 			(destructor)Device_manager_dealloc, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, Py_TPFLAGS_DEFAULT, "Video_device(path)\n\nOpens the video device at "
+			0, Py_TPFLAGS_DEFAULT, "Device_manager(path)\n\nOpens the video device at "
 			"the given path and returns an object that can capture images. The "
 			"constructor and all methods except close may raise IOError.", 0, 0, 0,
 			0, 0, 0, Device_manager_methods, 0, 0, 0, 0, 0, 0, 0,
