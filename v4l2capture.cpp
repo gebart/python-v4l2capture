@@ -1039,7 +1039,6 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 	threadArgs->devName = devarg;
 	pthread_create(&thread, NULL, Device_manager_Worker_thread, threadArgs);
 	
-	printf("Create done\n");
 	Py_RETURN_NONE;
 }
 
