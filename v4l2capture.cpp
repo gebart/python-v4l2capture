@@ -182,16 +182,16 @@ static PyObject *Video_device_get_info(Video_device *self)
 	struct v4l2_capability caps;
 
 	if(my_ioctl(self->fd, VIDIOC_QUERYCAP, &caps))
-		{
-			Py_RETURN_NONE;
-		}
+	{
+		Py_RETURN_NONE;
+	}
 
 	PyObject *set = PySet_New(NULL);
 
 	if(!set)
-		{
-			Py_RETURN_NONE;
-		}
+	{
+		Py_RETURN_NONE;
+	}
 
 	struct capability *capability = capabilities;
 
@@ -870,17 +870,15 @@ public:
 		if(this->buffers == NULL)
 		{
 			throw std::runtime_error("Buffers have not been created");
-			return 0;
 		}
 
 		struct v4l2_buffer buffer;
 		buffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		buffer.memory = V4L2_MEMORY_MMAP;
-		printf("a %d\n", this->fd);
+		printf("a %d %ld\n", this->fd, (long) &buffer);
 		if(my_ioctl(fd, VIDIOC_DQBUF, &buffer))
 		{
 			throw std::runtime_error("VIDIOC_DQBUF failed");
-			return 0;
 		}
 		printf("b\n");
 		#ifdef USE_LIBV4L
@@ -896,7 +894,6 @@ public:
 		if(!result)
 		{
 			throw std::runtime_error("String convert failed");
-			return 0;
 		}
 
 		char *rgb = PyString_AS_STRING(result);
@@ -941,7 +938,6 @@ public:
 		if(my_ioctl(fd, VIDIOC_QBUF, &buffer))
 		{
 			throw std::runtime_error("VIDIOC_QBUF failed");
-			return 0;
 		}
 
 		return 1;
@@ -955,8 +951,7 @@ public:
 
 		if(fd < 0)
 		{
-			PyErr_SetFromErrnoWithFilename(PyExc_IOError, this->devName.c_str());
-			return 0;
+			throw std::runtime_error("Error opening device");
 		}
 
 		this->deviceStarted = 0;
@@ -969,8 +964,7 @@ public:
 		//Check this device has not already been start
 		if(this->fd==-1)
 		{
-			PyErr_Format(PyExc_RuntimeError, "Device not open.");
-	 		return 0;
+			throw std::runtime_error("Device not open");
 		}
 
 		//Set other parameters for capture
@@ -1000,22 +994,19 @@ public:
 
 		if(my_ioctl(this->fd, VIDIOC_REQBUFS, &reqbuf))
 		{
-			PyErr_SetString(PyExc_IOError, "VIDIOC_REQBUFS failed");
-			return 0;
+			throw std::runtime_error("VIDIOC_REQBUFS failed");
 		}
 
 		if(!reqbuf.count)
 		{
-			PyErr_SetString(PyExc_IOError, "Not enough buffer memory");
-			return 0;
+			throw std::runtime_error("Not enough buffer memory");
 		}
 
 		this->buffers = new struct buffer [reqbuf.count];
 
 		if(this->buffers == NULL)
 		{
-			PyErr_NoMemory();
-			return 0;
+			throw std::runtime_error("Failed to allocate buffer memory");
 		}
 
 		for(unsigned int i = 0; i < reqbuf.count; i++)
@@ -1027,7 +1018,7 @@ public:
 
 			if(my_ioctl(fd, VIDIOC_QUERYBUF, &buffer))
 			{
-				return 0;
+				throw std::runtime_error("VIDIOC_QUERYBUF failed");
 			}
 
 			this->buffers[i].length = buffer.length;
@@ -1036,8 +1027,7 @@ public:
 
 			if(this->buffers[i].start == MAP_FAILED)
 			{
-				PyErr_SetFromErrno(PyExc_IOError);
-				return 0;
+				throw std::runtime_error("v4l2_mmap failed");
 			}
 		}
 
@@ -1055,7 +1045,7 @@ public:
 
 			if(my_ioctl(fd, VIDIOC_QBUF, &buffer))
 			{
-				return 0;
+				throw std::runtime_error("VIDIOC_QBUF failed");
 			}
 		}
 
@@ -1065,7 +1055,7 @@ public:
 
 		if(my_ioctl(fd, VIDIOC_STREAMON, &type))
 		{
-			return 0;
+			throw std::runtime_error("VIDIOC_STREAMON failed");
 		}
 
 		this->deviceStarted = 1;
@@ -1076,8 +1066,7 @@ public:
 	{
 		if(this->fd==-1)
 		{
-			PyErr_Format(PyExc_RuntimeError, "Device not started.");
-	 		return;
+			throw std::runtime_error("Device not started");
 		}
 
 		//Signal V4l2 api
@@ -1086,17 +1075,21 @@ public:
 
 		if(my_ioctl(this->fd, VIDIOC_STREAMOFF, &type))
 		{
-	 		return;
+			throw std::runtime_error("VIDIOC_STREAMOFF failed");
 		}
+
+		this->deviceStarted = 0;
 	}
 
 	int CloseDeviceInternal()
 	{
 		if(this->fd == -1)
 		{
-			PyErr_Format(PyExc_RuntimeError, "Device not started.");
-	 		return 0;
+			throw std::runtime_error("Device not open");
 		}
+
+		if(this->deviceStarted)
+			StopDeviceInternal();
 
 		for(int i = 0; i < this->buffer_counts; i++)
 		{
@@ -1113,23 +1106,19 @@ public:
 
 	void Run()
 	{
-		printf("Thread started\n");
+		printf("Thread started: %s\n", this->devName.c_str());
 		int running = 1;
 		pthread_mutex_lock(&this->lock);
 		this->stopped = 0;
 		pthread_mutex_unlock(&this->lock);
 
+		try
+		{
 		while(running)
 		{
 			usleep(1000);
-			try
-			{	
-				if(deviceStarted) this->ReadFrame();
-			}
-			catch(std::exception)
-			{
 
-			}
+			if(deviceStarted) this->ReadFrame();
 
 			pthread_mutex_lock(&this->lock);
 			if(this->startDeviceFlag.size() > 0)
@@ -1169,6 +1158,12 @@ public:
 			running = !this->stop;
 			pthread_mutex_unlock(&this->lock);
 		}
+		}
+		catch(std::exception)
+		{
+
+		}
+
 		printf("Thread stopping\n");
 		pthread_mutex_lock(&this->lock);
 		this->stopped = 1;
