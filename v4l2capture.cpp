@@ -928,8 +928,9 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 static PyObject *Device_manager_stop(Device_manager *self, PyObject *args)
 {
 	//Process arguments
+
 	const char *devarg = NULL;
-	if(PyTuple_Size(args) < 1)
+	if(PyTuple_Size(args) >= 1)
 	{
 		PyObject *pydevarg = PyTuple_GetItem(args, 0);
 		devarg = PyString_AsString(pydevarg);
@@ -1029,7 +1030,7 @@ static PyMethodDef Device_manager_methods[] = {
 	{"start", (PyCFunction)Device_manager_Start, METH_VARARGS,
 			 "start(dev = '\\dev\\video0', reqSize=(640, 480), reqFps = 30, fmt = 'MJPEG\', buffer_count = 10)\n\n"
 			 "Start video capture."},
-	{"stop", (PyCFunction)Device_manager_stop, METH_NOARGS,
+	{"stop", (PyCFunction)Device_manager_stop, METH_VARARGS,
 			 "stop()\n\n"
 			 "Stop video capture."},
 	{NULL}
