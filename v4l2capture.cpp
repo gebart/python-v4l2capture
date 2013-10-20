@@ -814,36 +814,118 @@ public:
 			usleep(10000);
 		}
 	};
+
+	void ReadFrame()
+	{
+		/*if(!self->buffers)
+		{
+			ASSERT_OPEN;
+			PyErr_SetString(PyExc_ValueError, "Buffers have not been created");
+			Py_RETURN_NONE;
+		}
+
+		struct v4l2_buffer buffer;
+		buffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		buffer.memory = V4L2_MEMORY_MMAP;
+
+		if(my_ioctl(self->fd, VIDIOC_DQBUF, &buffer))
+		{
+			Py_RETURN_NONE;
+		}
+
+		#ifdef USE_LIBV4L
+		PyObject *result = PyString_FromStringAndSize(
+				(const char*)self->buffers[buffer.index].start, buffer.bytesused);
+
+		if(!result)
+		{
+			Py_RETURN_NONE;
+		}
+		#else
+		// Convert buffer from YUYV to RGB.
+		// For the byte order, see: http://v4l2spec.bytesex.org/spec/r4339.htm
+		// For the color conversion, see: http://v4l2spec.bytesex.org/spec/x2123.htm
+		int length = buffer.bytesused * 6 / 4;
+		PyObject *result = PyString_FromStringAndSize(NULL, length);
+
+		if(!result)
+		{
+			Py_RETURN_NONE;
+		}
+
+		char *rgb = PyString_AS_STRING(result);
+		char *rgb_max = rgb + length;
+		unsigned char *yuyv = self->buffers[buffer.index].start;
+
+		#define CLAMP(c) ((c) <= 0 ? 0 : (c) >= 65025 ? 255 : (c) >> 8)
+		while(rgb < rgb_max)
+			{
+				int u = yuyv[1] - 128;
+				int v = yuyv[3] - 128;
+				int uv = 100 * u + 208 * v;
+				u *= 516;
+				v *= 409;
+
+				int y = 298 * (yuyv[0] - 16);
+				rgb[0] = CLAMP(y + v);
+				rgb[1] = CLAMP(y - uv);
+				rgb[2] = CLAMP(y + u);
+
+				y = 298 * (yuyv[2] - 16);
+				rgb[3] = CLAMP(y + v);
+				rgb[4] = CLAMP(y - uv);
+				rgb[5] = CLAMP(y + u);
+
+				rgb += 6;
+				yuyv += 4;
+			}
+		#undef CLAMP
+		#endif
+		PyObject *out = result;
+
+		if(return_timestamp)
+		{
+			out = PyTuple_New(4);
+			PyTuple_SetItem(out, 0, result);
+			PyTuple_SetItem(out, 1, PyInt_FromLong(buffer.timestamp.tv_sec));
+			PyTuple_SetItem(out, 2, PyInt_FromLong(buffer.timestamp.tv_usec));
+			PyTuple_SetItem(out, 3, PyInt_FromLong(buffer.sequence));
+		}
+
+		if(queue && my_ioctl(self->fd, VIDIOC_QBUF, &buffer))
+		{
+			Py_RETURN_NONE;
+		}*/
+	}
+
+	void Run()
+	{
+		printf("Thread started\n");
+		int running = 1;
+		pthread_mutex_lock(&this->lock);
+		this->stopped = 0;
+		pthread_mutex_unlock(&this->lock);
+
+		while(running)
+		{
+			usleep(1000);
+			this->ReadFrame();
+
+			pthread_mutex_lock(&this->lock);
+			running = !this->stop;
+			pthread_mutex_unlock(&this->lock);
+		}
+		printf("Thread stopping\n");
+		pthread_mutex_lock(&this->lock);
+		this->stopped = 1;
+		pthread_mutex_unlock(&this->lock);
+	};
 };
 
 void *Device_manager_Worker_thread(void *arg)
 {
 	class Device_manager_Worker_thread_args *argobj = (class Device_manager_Worker_thread_args*) arg;
-	printf("Thread started\n");
-	int running = 1;
-	pthread_mutex_lock(&argobj->lock);
-	argobj->stopped = 0;
-	pthread_mutex_unlock(&argobj->lock);
-
-	while(running)
-	{
-		usleep(1000);
-/*	int return_timestamp=0;
-
-	if(!PyArg_ParseTuple(args, "|i", &return_timestamp))
-		{
-			Py_RETURN_NONE;
-		}
-
-	return Video_device_read_internal(self, 1, return_timestamp);*/
-		pthread_mutex_lock(&argobj->lock);
-		running = !argobj->stop;
-		pthread_mutex_unlock(&argobj->lock);
-	}
-	printf("Thread stopping\n");
-	pthread_mutex_lock(&argobj->lock);
-	argobj->stopped = 1;
-	pthread_mutex_unlock(&argobj->lock);
+	argobj->Run();
 
 	return NULL;
 }
