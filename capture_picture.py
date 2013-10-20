@@ -1,17 +1,11 @@
 #!/usr/bin/python
-#
 # python-v4l2capture
+# Python extension to capture video with video4linux2
 #
-# This file is an example on how to capture a picture with
-# python-v4l2capture.
-#
-# 2009, 2010 Fredrik Portstrom
-#
-# I, the copyright holder of this file, hereby release it into the
-# public domain. This applies worldwide. In case this is not legally
-# possible: I grant anyone the right to use this work for any
-# purpose, without any conditions, unless such conditions are
-# required by law.
+# 2009, 2010, 2011 Fredrik Portstrom, released into the public domain
+# 2011, Joakim Gebart
+# 2013, Tim Sheerman-Chase
+# See README for license
 
 import Image
 import select
