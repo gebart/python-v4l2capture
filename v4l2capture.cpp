@@ -995,6 +995,7 @@ public:
 
 	int SetFormat(int size_x, int size_y, const char *fmt)
 	{
+		pthread_mutex_lock(&this->lock);
 		struct v4l2_format format;
 		format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		format.fmt.pix.width = size_x;
@@ -1015,9 +1016,11 @@ public:
 
 		if(my_ioctl(this->fd, VIDIOC_S_FMT, &format))
 		{
+			pthread_mutex_unlock(&this->lock);
 			return 0;
 		}
 
+		pthread_mutex_unlock(&this->lock);
 		return 1;
 	}
 
@@ -1305,17 +1308,11 @@ static PyObject *Device_manager_set_format(Device_manager *self, PyObject *args)
 	int size_x;
 	int size_y;
 	const char *fmt = NULL;
+	const char *devarg = NULL;
 
-	if(!PyArg_ParseTuple(args, "ii|s", &size_x, &size_y, &fmt))
+	if(!PyArg_ParseTuple(args, "sii|s", &devarg, &size_x, &size_y, &fmt))
 	{
 		Py_RETURN_NONE;
-	}
-
-	const char *devarg = "/dev/video0";
-	if(PyTuple_Size(args) >= 1)
-	{
-		PyObject *pydevarg = PyTuple_GetItem(args, 0);
-		devarg = PyString_AsString(pydevarg);
 	}
 
 	class Device_manager_Worker_thread_args *threadArgs = (*self->threadArgStore)[devarg];
