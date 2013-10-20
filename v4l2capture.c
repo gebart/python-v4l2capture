@@ -41,6 +41,8 @@ struct buffer {
   size_t length;
 };
 
+static PyTypeObject Device_manager_type;
+
 typedef struct {
   PyObject_HEAD
   int fd;
@@ -774,6 +776,52 @@ static int Device_manager_init(Device_manager *self, PyObject *args,
 	return 0;
 }
 
+static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
+//	self, dev = None, reqSize=(640, 480), reqFps = 30, fmt = "MJPEG"):
+{
+	//Process arguments
+	const char *devarg = NULL;
+	if(PyTuple_Size(args) < 1)
+	{
+		PyObject *pydevarg = PyTuple_GetItem(args, 0);
+		devarg = PyString_AsString(pydevarg);
+	}
+	else
+	{
+		devarg = "/dev/video0";
+	}
+
+	//Open the video device.
+	PyObject *arglist = Py_BuildValue("(s)", devarg);
+	PyObject *obj = PyObject_CallObject((PyObject *) &Device_manager_type, arglist);
+	Py_DECREF(arglist);
+	Py_DECREF(obj);
+	/*
+	//Suggest an image size to the device. The device may choose and
+	//return another size if it doesn't support the suggested one.
+	self.video.set_format(reqSize[0], reqSize[1], fmt)
+
+	//Query current pixel format
+	self.size_x, self.size_y, self.pixelFmt = self.video.get_format()
+
+	//Set target frames per second
+	self.fps = self.video.set_fps(reqFps)
+
+	// Create a buffer to store image data in. This must be done before
+	// calling 'start' if v4l2capture is compiled with libv4l2. Otherwise
+	// raises IOError.
+	self.video.create_buffers(10)
+
+	// Send the buffer to the device. Some devices require this to be done
+	// before calling 'start'.
+	self.video.queue_all_buffers()
+
+	// Start the device. This lights the LED if it's a camera that has one.
+	self.video.start()*/
+	
+	Py_RETURN_NONE;
+}
+
 // *********************************************************************
 
 static PyMethodDef Video_device_methods[] = {
@@ -843,6 +891,9 @@ static PyTypeObject Video_device_type = {
 // *********************************************************************
 
 static PyMethodDef Device_manager_methods[] = {
+  {"start", (PyCFunction)Device_manager_Start, METH_VARARGS,
+       "start()\n\n"
+       "Start video capture."},
   {NULL}
 };
 
