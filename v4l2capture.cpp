@@ -990,6 +990,7 @@ public:
 		}
 
 		this->deviceStarted = 0;
+		printf("Done opening\n");
 		return 1;
 	}
 
@@ -1190,15 +1191,6 @@ public:
 			if(deviceStarted) this->ReadFrame();
 
 			pthread_mutex_lock(&this->lock);
-			if(this->startDeviceFlag.size() > 0)
-			{
-				int buffer_count = this->startDeviceFlag[this->startDeviceFlag.size()-1];
-				this->startDeviceFlag.pop_back();
-				this->StartDeviceInternal(buffer_count);
-			}
-			pthread_mutex_unlock(&this->lock);
-
-			pthread_mutex_lock(&this->lock);
 			if(this->openDeviceFlag.size() > 0)
 			{
 				std::string devName = this->openDeviceFlag[this->openDeviceFlag.size()-1];
@@ -1208,7 +1200,18 @@ public:
 			pthread_mutex_unlock(&this->lock);
 
 			pthread_mutex_lock(&this->lock);
-			if(this->stopDeviceFlag)
+			if(this->startDeviceFlag.size() > 0 && this->openDeviceFlag.size() == 0)
+			{
+				int buffer_count = this->startDeviceFlag[this->startDeviceFlag.size()-1];
+				this->startDeviceFlag.pop_back();
+				this->StartDeviceInternal(buffer_count);
+			}
+			pthread_mutex_unlock(&this->lock);
+
+			pthread_mutex_lock(&this->lock);
+			if(this->stopDeviceFlag 
+				&& this->openDeviceFlag.size() == 0 
+				&& this->startDeviceFlag.size() == 0)
 			{
 				this->StopDeviceInternal();
 				this->stopDeviceFlag = 0;
@@ -1216,7 +1219,9 @@ public:
 			pthread_mutex_unlock(&this->lock);
 
 			pthread_mutex_lock(&this->lock);
-			if(this->closeDeviceFlag)
+			if(this->closeDeviceFlag && !this->stopDeviceFlag 
+				&& this->openDeviceFlag.size() == 0 
+				&& this->startDeviceFlag.size() == 0)
 			{
 				this->CloseDeviceInternal();
 				this->closeDeviceFlag = 0;
