@@ -52,9 +52,6 @@ typedef struct {
 class Device_manager_cl{
 public:
 	PyObject_HEAD
-	std::map<std::string, int> *fd;
-	std::map<std::string, struct buffer *> *buffers;
-	std::map<std::string, int> *buffer_counts;
 	std::map<std::string, class Device_manager_Worker_thread_args *> *threadArgStore;
 };
 typedef Device_manager_cl Device_manager;
@@ -782,7 +779,12 @@ public:
 	pthread_mutex_t lock;
 	std::vector<std::string> openDeviceFlag;
 	std::vector<std::string> startDeviceFlag;
+	int stopDeviceFlag;
+	int closeDeviceFlag;
 	int deviceStarted;
+	int fd;
+	struct buffer *buffers;
+	int buffer_counts;
 
 	Device_manager_Worker_thread_args(const char *devNameIn)
 	{
@@ -791,10 +793,27 @@ public:
 		deviceStarted = 0;
 		this->devName = devNameIn;
 		pthread_mutex_init(&lock, NULL);
+		buffer_counts = 10;
+		buffers = NULL;
+		stopDeviceFlag = 0;
+		closeDeviceFlag = 0;
 	};
 
 	virtual ~Device_manager_Worker_thread_args()
 	{
+		if(deviceStarted)
+		{
+			this->StopDeviceInternal();
+		}
+
+		if(fd!=-1)
+		{
+			this->CloseDeviceInternal();
+		}
+
+		if(buffers) delete [] buffers;
+		this->buffers = NULL;
+
 		pthread_mutex_destroy(&lock);
 	};
 
@@ -832,10 +851,23 @@ public:
 		pthread_mutex_unlock(&this->lock);
 	};
 
+	void StopDevice()
+	{
+		pthread_mutex_lock(&this->lock);
+		this->stopDeviceFlag = 1;
+		pthread_mutex_unlock(&this->lock);
+	};
+
+	void CloseDevice()
+	{
+		pthread_mutex_lock(&this->lock);
+		this->closeDeviceFlag = 1;
+		pthread_mutex_unlock(&this->lock);
+	};
+
 	int ReadFrame()
 	{
-		std::map<std::string, struct buffer *>::iterator it = self->buffers->find(this->devName);
-		if(it == self->buffers->end())
+		if(this->buffers == NULL)
 		{
 			throw std::runtime_error("Buffers have not been created");
 			return 0;
@@ -844,8 +876,7 @@ public:
 		struct v4l2_buffer buffer;
 		buffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		buffer.memory = V4L2_MEMORY_MMAP;
-		int fd = (*self->fd)[this->devName];
-		printf("a %d\n", fd);
+		printf("a %d\n", this->fd);
 		if(my_ioctl(fd, VIDIOC_DQBUF, &buffer))
 		{
 			throw std::runtime_error("VIDIOC_DQBUF failed");
@@ -916,34 +947,31 @@ public:
 		return 1;
 	}
 
-	int OpenDeviceInternal(const char *devarg)
+	int OpenDeviceInternal()
 	{
+		printf("OpenDeviceInternal\n");
 		//Open the video device.
-		int fd = v4l2_open(devarg, O_RDWR | O_NONBLOCK);
+		this->fd = v4l2_open(this->devName.c_str(), O_RDWR | O_NONBLOCK);
 
 		if(fd < 0)
 		{
-			PyErr_SetFromErrnoWithFilename(PyExc_IOError, devarg);
+			PyErr_SetFromErrnoWithFilename(PyExc_IOError, this->devName.c_str());
 			return 0;
 		}
 
-		(*self->fd)[devarg] = fd;
-		(*self->buffers)[devarg] = NULL;
 		this->deviceStarted = 0;
 		return 1;
 	}
 
-	int StartDeviceInternal(const char *devarg)
+	int StartDeviceInternal()
 	{
+		printf("StartDeviceInternal\n");
 		//Check this device has not already been start
-		std::map<std::string, int>::iterator it = self->fd->find(devarg);
-		if(it==self->fd->end())
+		if(this->fd==-1)
 		{
 			PyErr_Format(PyExc_RuntimeError, "Device not open.");
 	 		return 0;
 		}
-
-		int fd = (*self->fd)[devarg];
 
 		//Set other parameters for capture
 		//TODO
@@ -970,7 +998,7 @@ public:
 		reqbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		reqbuf.memory = V4L2_MEMORY_MMAP;
 
-		if(my_ioctl(fd, VIDIOC_REQBUFS, &reqbuf))
+		if(my_ioctl(this->fd, VIDIOC_REQBUFS, &reqbuf))
 		{
 			PyErr_SetString(PyExc_IOError, "VIDIOC_REQBUFS failed");
 			return 0;
@@ -982,10 +1010,9 @@ public:
 			return 0;
 		}
 
-		struct buffer *buffs = new struct buffer [reqbuf.count];
-		(*self->buffers)[devarg] = buffs;
+		this->buffers = new struct buffer [reqbuf.count];
 
-		if(!buffs)
+		if(this->buffers == NULL)
 		{
 			PyErr_NoMemory();
 			return 0;
@@ -1003,19 +1030,18 @@ public:
 				return 0;
 			}
 
-			buffs[i].length = buffer.length;
-			buffs[i].start = v4l2_mmap(NULL, buffer.length,
+			this->buffers[i].length = buffer.length;
+			this->buffers[i].start = v4l2_mmap(NULL, buffer.length,
 			PROT_READ | PROT_WRITE, MAP_SHARED, fd, buffer.m.offset);
 
-			if(buffs[i].start == MAP_FAILED)
+			if(this->buffers[i].start == MAP_FAILED)
 			{
 				PyErr_SetFromErrno(PyExc_IOError);
 				return 0;
 			}
 		}
 
-		(*self->buffer_counts)[devarg] = reqbuf.count;
-		buffer_count = reqbuf.count;
+		this->buffer_counts = reqbuf.count;
 
 		// Send the buffer to the device. Some devices require this to be done
 		// before calling 'start'.
@@ -1046,6 +1072,45 @@ public:
 		return 1;
 	}
 
+	void StopDeviceInternal()
+	{
+		if(this->fd==-1)
+		{
+			PyErr_Format(PyExc_RuntimeError, "Device not started.");
+	 		return;
+		}
+
+		//Signal V4l2 api
+		enum v4l2_buf_type type;
+		type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+		if(my_ioctl(this->fd, VIDIOC_STREAMOFF, &type))
+		{
+	 		return;
+		}
+	}
+
+	int CloseDeviceInternal()
+	{
+		if(this->fd == -1)
+		{
+			PyErr_Format(PyExc_RuntimeError, "Device not started.");
+	 		return 0;
+		}
+
+		for(int i = 0; i < this->buffer_counts; i++)
+		{
+			v4l2_munmap(buffers[i].start, buffers[i].length);	
+		}
+		delete [] this->buffers;
+		this->buffers = NULL;
+
+		//Release memory
+		v4l2_close(fd);
+		fd = -1;
+		return 1;
+	}
+
 	void Run()
 	{
 		printf("Thread started\n");
@@ -1071,7 +1136,7 @@ public:
 			{
 				std::string devName = this->startDeviceFlag[this->startDeviceFlag.size()-1];
 				this->startDeviceFlag.pop_back();
-				this->StartDeviceInternal(devName.c_str());
+				this->StartDeviceInternal();
 			}
 			pthread_mutex_unlock(&this->lock);
 
@@ -1080,7 +1145,23 @@ public:
 			{
 				std::string devName = this->openDeviceFlag[this->openDeviceFlag.size()-1];
 				this->openDeviceFlag.pop_back();
-				this->OpenDeviceInternal(devName.c_str());
+				this->OpenDeviceInternal();
+			}
+			pthread_mutex_unlock(&this->lock);
+
+			pthread_mutex_lock(&this->lock);
+			if(this->stopDeviceFlag)
+			{
+				this->StopDeviceInternal();
+				this->stopDeviceFlag = 0;
+			}
+			pthread_mutex_unlock(&this->lock);
+
+			pthread_mutex_lock(&this->lock);
+			if(this->closeDeviceFlag)
+			{
+				this->CloseDeviceInternal();
+				this->closeDeviceFlag = 0;
 			}
 			pthread_mutex_unlock(&this->lock);
 
@@ -1117,19 +1198,6 @@ static void Device_manager_dealloc(Device_manager *self)
 		Py_DECREF(args);
 	}
 
-	//Close devices
-	for(std::map<std::string, int>::iterator it = self->fd->begin(); 
-		it != self->fd->end(); it++)
-	{
-		PyObject *args = PyTuple_New(1);
-		PyTuple_SetItem(args, 0, PyString_FromString(it->first.c_str()));
-		Device_manager_close(self, args);
-		Py_DECREF(args);
-	}
-
-	delete self->fd;
-	delete self->buffers;
-	delete self->buffer_counts;
 	delete self->threadArgStore;
 	self->ob_type->tp_free((PyObject *)self);
 }
@@ -1137,9 +1205,6 @@ static void Device_manager_dealloc(Device_manager *self)
 static int Device_manager_init(Device_manager *self, PyObject *args,
 		PyObject *kwargs)
 {
-	self->fd = new std::map<std::string, int>;
-	self->buffers = new std::map<std::string, struct buffer *>;
-	self->buffer_counts = new std::map<std::string, int>;
 	self->threadArgStore = new std::map<std::string, class Device_manager_Worker_thread_args*>;
 	return 0;
 }
@@ -1147,20 +1212,16 @@ static int Device_manager_init(Device_manager *self, PyObject *args,
 static PyObject *Device_manager_open(Device_manager *self, PyObject *args)
 {
 	//Process arguments
-	const char *devarg = NULL;
+	const char *devarg = "/dev/video0";
 	if(PyTuple_Size(args) >= 1)
 	{
 		PyObject *pydevarg = PyTuple_GetItem(args, 0);
 		devarg = PyString_AsString(pydevarg);
 	}
-	else
-	{
-		devarg = "/dev/video0";
-	}
 
 	//Check this device has not already been opened
-	std::map<std::string, int>::iterator it = self->fd->find(devarg);
-	if(it!=self->fd->end())
+	std::map<std::string, class Device_manager_Worker_thread_args *>::iterator it = self->threadArgStore->find(devarg);
+	if(it!=self->threadArgStore->end())
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device already opened.");
  		Py_RETURN_NONE;
@@ -1182,15 +1243,11 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 {
 
 	//Process arguments
-	const char *devarg = NULL;
+	const char *devarg = "/dev/video0";
 	if(PyTuple_Size(args) >= 1)
 	{
 		PyObject *pydevarg = PyTuple_GetItem(args, 0);
 		devarg = PyString_AsString(pydevarg);
-	}
-	else
-	{
-		devarg = "/dev/video0";
 	}
 
 	long buffer_count = 10;
@@ -1209,39 +1266,15 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 static PyObject *Device_manager_stop(Device_manager *self, PyObject *args)
 {
 	//Process arguments
-
-	const char *devarg = NULL;
+	const char *devarg = "/dev/video0";
 	if(PyTuple_Size(args) >= 1)
 	{
 		PyObject *pydevarg = PyTuple_GetItem(args, 0);
 		devarg = PyString_AsString(pydevarg);
 	}
-	else
-	{
-		devarg = "/dev/video0";
-	}
 
-	std::map<std::string, int>::iterator it = self->fd->find(devarg);
-	if(it==self->fd->end())
-	{
-		PyErr_Format(PyExc_RuntimeError, "Device not started.");
- 		Py_RETURN_NONE;
-	}
-
-	if((*self->fd)[devarg] < 0)
-	{
-		PyErr_SetString(PyExc_ValueError, "I/O operation on closed file");
-		Py_RETURN_NONE;
-	}
-
-	//Signal V4l2 api
-	enum v4l2_buf_type type;
-	type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-
-	if(my_ioctl((*self->fd)[devarg], VIDIOC_STREAMOFF, &type))
-	{
-		Py_RETURN_NONE;
-	}
+	class Device_manager_Worker_thread_args *threadArgs = (*self->threadArgStore)[devarg];
+	threadArgs->StopDevice();
 
 	Py_RETURN_NONE;
 }
@@ -1249,60 +1282,23 @@ static PyObject *Device_manager_stop(Device_manager *self, PyObject *args)
 static PyObject *Device_manager_close(Device_manager *self, PyObject *args)
 {
 	//Process arguments
-	const char *devarg = NULL;
+	const char *devarg = "/dev/video0";
 	if(PyTuple_Size(args) >= 1)
 	{
 		PyObject *pydevarg = PyTuple_GetItem(args, 0);
 		devarg = PyString_AsString(pydevarg);
 	}
-	else
-	{
-		devarg = "/dev/video0";
-	}
 
-	//Check if thread is still running
-	std::map<std::string, class Device_manager_Worker_thread_args *>::iterator it3 = self->threadArgStore->find(devarg);
-	if(it3 != self->threadArgStore->end())
-	{
-		//Stop worker thread
-		(*self->threadArgStore)[devarg]->Stop();
+	class Device_manager_Worker_thread_args *threadArgs = (*self->threadArgStore)[devarg];
+	threadArgs->CloseDevice();
 
-		//Release memeory
-		(*self->threadArgStore)[devarg]->WaitForStop();
-		delete (*self->threadArgStore)[devarg];
-		self->threadArgStore->erase(devarg);
-	}
+	//Stop worker thread
+	threadArgs->Stop();
 
-	std::map<std::string, int>::iterator it = self->fd->find(devarg);
-	if(it==self->fd->end())
-	{
-		PyErr_Format(PyExc_RuntimeError, "Device not started.");
- 		Py_RETURN_NONE;
-	}
-
-	int fd = (*self->fd)[devarg];
-
-	std::map<std::string, struct buffer *>::iterator it2 = self->buffers->find(devarg);
-	if(it2 != self->buffers->end())
-	{
-		struct buffer *buffers = (*self->buffers)[devarg];
-		int buffer_count = (*self->buffer_counts)[devarg];
-
-		for(int i = 0; i < buffer_count; i++)
-		{
-			v4l2_munmap(buffers[i].start, buffers[i].length);	
-		}
-		delete [] buffers;
-
-		//Release memory
-		self->buffers->erase(devarg);
-		self->buffer_counts->erase(devarg);
-	}
-
-	//Release memory
-	v4l2_close(fd);
-	fd = -1;
-	self->fd->erase(devarg);
+	//Release memeory
+	threadArgs->WaitForStop();
+	delete threadArgs;
+	self->threadArgStore->erase(devarg);
 
 	Py_RETURN_NONE;
 }
