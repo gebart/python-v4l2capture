@@ -15,6 +15,7 @@
 #include <string.h>
 #include <string>
 #include <map>
+#include <stdexcept>
 #include <pthread.h>
 
 #ifdef USE_LIBV4L
@@ -811,32 +812,29 @@ public:
 		}
 	};
 
-	void ReadFrame()
+	int ReadFrame()
 	{
-		/*if(!self->buffers)
+		std::map<std::string, struct buffer *>::iterator it = self->buffers->find(this->devName);
+		if(it == self->buffers->end())
 		{
-			ASSERT_OPEN;
-			PyErr_SetString(PyExc_ValueError, "Buffers have not been created");
-			Py_RETURN_NONE;
+			throw std::runtime_error("Buffers have not been created");
+			return 0;
 		}
 
 		struct v4l2_buffer buffer;
 		buffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		buffer.memory = V4L2_MEMORY_MMAP;
-
-		if(my_ioctl(self->fd, VIDIOC_DQBUF, &buffer))
+		int fd = (*self->fd)[this->devName];
+		printf("a %d\n", fd);
+		if(my_ioctl(fd, VIDIOC_DQBUF, &buffer))
 		{
-			Py_RETURN_NONE;
+			throw std::runtime_error("VIDIOC_DQBUF failed");
+			return 0;
 		}
-
+		printf("b\n");
 		#ifdef USE_LIBV4L
-		PyObject *result = PyString_FromStringAndSize(
-				(const char*)self->buffers[buffer.index].start, buffer.bytesused);
+		printf("Rx %d\n", buffer.bytesused); //self->buffers[buffer.index].start, buffer.bytesused
 
-		if(!result)
-		{
-			Py_RETURN_NONE;
-		}
 		#else
 		// Convert buffer from YUYV to RGB.
 		// For the byte order, see: http://v4l2spec.bytesex.org/spec/r4339.htm
@@ -846,7 +844,8 @@ public:
 
 		if(!result)
 		{
-			Py_RETURN_NONE;
+			throw std::runtime_error("String convert failed");
+			return 0;
 		}
 
 		char *rgb = PyString_AS_STRING(result);
@@ -877,21 +876,24 @@ public:
 			}
 		#undef CLAMP
 		#endif
-		PyObject *out = result;
 
-		if(return_timestamp)
+		/*if(1)
 		{
 			out = PyTuple_New(4);
 			PyTuple_SetItem(out, 0, result);
 			PyTuple_SetItem(out, 1, PyInt_FromLong(buffer.timestamp.tv_sec));
 			PyTuple_SetItem(out, 2, PyInt_FromLong(buffer.timestamp.tv_usec));
 			PyTuple_SetItem(out, 3, PyInt_FromLong(buffer.sequence));
+		}*/
+
+		//Queue next frame read
+		if(my_ioctl(fd, VIDIOC_QBUF, &buffer))
+		{
+			throw std::runtime_error("VIDIOC_QBUF failed");
+			return 0;
 		}
 
-		if(queue && my_ioctl(self->fd, VIDIOC_QBUF, &buffer))
-		{
-			Py_RETURN_NONE;
-		}*/
+		return 1;
 	}
 
 	void Run()
@@ -905,7 +907,14 @@ public:
 		while(running)
 		{
 			usleep(1000);
-			this->ReadFrame();
+			try
+			{
+				this->ReadFrame();
+			}
+			catch(std::exception)
+			{
+
+			}
 
 			pthread_mutex_lock(&this->lock);
 			running = !this->stop;
@@ -1073,7 +1082,7 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 		Py_RETURN_NONE;
 	}
 
-	struct buffer *buffs = (struct buffer *)malloc(reqbuf.count * sizeof(struct buffer));
+	struct buffer *buffs = new struct buffer [reqbuf.count];
 	(*self->buffers)[devarg] = buffs;
 
 	if(!buffs)
@@ -1232,7 +1241,7 @@ static PyObject *Device_manager_close(Device_manager *self, PyObject *args)
 		{
 			v4l2_munmap(buffers[i].start, buffers[i].length);	
 		}
-		free (buffers);
+		delete [] buffers;
 
 		//Release memory
 		self->buffers->erase(devarg);
