@@ -780,12 +780,16 @@ public:
 	int stop;
 	int stopped;
 	pthread_mutex_t lock;
+	std::vector<std::string> openDeviceFlag;
 	std::vector<std::string> startDeviceFlag;
+	int deviceStarted;
 
-	Device_manager_Worker_thread_args()
+	Device_manager_Worker_thread_args(const char *devNameIn)
 	{
 		stop = 0;
 		stopped = 1;
+		deviceStarted = 0;
+		this->devName = devNameIn;
 		pthread_mutex_init(&lock, NULL);
 	};
 
@@ -814,10 +818,17 @@ public:
 		}
 	};
 
-	void StartDevice(const char *devName)
+	void OpenDevice()
 	{
 		pthread_mutex_lock(&this->lock);
-		this->startDeviceFlag.push_back(devName);
+		this->openDeviceFlag.push_back(this->devName.c_str());
+		pthread_mutex_unlock(&this->lock);
+	};
+
+	void StartDevice()
+	{
+		pthread_mutex_lock(&this->lock);
+		this->startDeviceFlag.push_back(this->devName.c_str());
 		pthread_mutex_unlock(&this->lock);
 	};
 
@@ -902,6 +913,23 @@ public:
 			return 0;
 		}
 
+		return 1;
+	}
+
+	int OpenDeviceInternal(const char *devarg)
+	{
+		//Open the video device.
+		int fd = v4l2_open(devarg, O_RDWR | O_NONBLOCK);
+
+		if(fd < 0)
+		{
+			PyErr_SetFromErrnoWithFilename(PyExc_IOError, devarg);
+			return 0;
+		}
+
+		(*self->fd)[devarg] = fd;
+		(*self->buffers)[devarg] = NULL;
+		this->deviceStarted = 0;
 		return 1;
 	}
 
@@ -1014,6 +1042,7 @@ public:
 			return 0;
 		}
 
+		this->deviceStarted = 1;
 		return 1;
 	}
 
@@ -1029,8 +1058,8 @@ public:
 		{
 			usleep(1000);
 			try
-			{
-				this->ReadFrame();
+			{	
+				if(deviceStarted) this->ReadFrame();
 			}
 			catch(std::exception)
 			{
@@ -1044,7 +1073,15 @@ public:
 				this->startDeviceFlag.pop_back();
 				this->StartDeviceInternal(devName.c_str());
 			}
+			pthread_mutex_unlock(&this->lock);
 
+			pthread_mutex_lock(&this->lock);
+			if(this->openDeviceFlag.size() > 0)
+			{
+				std::string devName = this->openDeviceFlag[this->openDeviceFlag.size()-1];
+				this->openDeviceFlag.pop_back();
+				this->OpenDeviceInternal(devName.c_str());
+			}
 			pthread_mutex_unlock(&this->lock);
 
 			pthread_mutex_lock(&this->lock);
@@ -1129,17 +1166,13 @@ static PyObject *Device_manager_open(Device_manager *self, PyObject *args)
  		Py_RETURN_NONE;
 	}
 
-	//Open the video device.
-	int fd = v4l2_open(devarg, O_RDWR | O_NONBLOCK);
+	pthread_t thread;
+	Device_manager_Worker_thread_args *threadArgs = new Device_manager_Worker_thread_args(devarg);
+	(*self->threadArgStore)[devarg] = threadArgs;
+	threadArgs->self = self;
+	pthread_create(&thread, NULL, Device_manager_Worker_thread, threadArgs);
 
-	if(fd < 0)
-	{
-		PyErr_SetFromErrnoWithFilename(PyExc_IOError, devarg);
-		Py_RETURN_NONE;
-	}
-
-	(*self->fd)[devarg] = fd;
-	(*self->buffers)[devarg] = NULL;
+	threadArgs->OpenDevice();
 
 	Py_RETURN_NONE;
 }
@@ -1167,14 +1200,8 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 		buffer_count = PyInt_AsLong(pybufferarg);
 	}
 
-	pthread_t thread;
-	Device_manager_Worker_thread_args *threadArgs = new Device_manager_Worker_thread_args;
-	(*self->threadArgStore)[devarg] = threadArgs;
-	threadArgs->self = self;
-	threadArgs->devName = devarg;
-	pthread_create(&thread, NULL, Device_manager_Worker_thread, threadArgs);
-
-	threadArgs->StartDevice(devarg);
+	class Device_manager_Worker_thread_args *threadArgs = (*self->threadArgStore)[devarg];
+	threadArgs->StartDevice();
 	
 	Py_RETURN_NONE;
 }
@@ -1207,9 +1234,6 @@ static PyObject *Device_manager_stop(Device_manager *self, PyObject *args)
 		Py_RETURN_NONE;
 	}
 
-	//Stop worker thread
-	(*self->threadArgStore)[devarg]->Stop();
-
 	//Signal V4l2 api
 	enum v4l2_buf_type type;
 	type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -1218,11 +1242,6 @@ static PyObject *Device_manager_stop(Device_manager *self, PyObject *args)
 	{
 		Py_RETURN_NONE;
 	}
-
-	//Release memeory
-	(*self->threadArgStore)[devarg]->WaitForStop();
-	delete (*self->threadArgStore)[devarg];
-	self->threadArgStore->erase(devarg);
 
 	Py_RETURN_NONE;
 }
@@ -1245,8 +1264,13 @@ static PyObject *Device_manager_close(Device_manager *self, PyObject *args)
 	std::map<std::string, class Device_manager_Worker_thread_args *>::iterator it3 = self->threadArgStore->find(devarg);
 	if(it3 != self->threadArgStore->end())
 	{
-		//Stop thread that is still running
-		Device_manager_stop(self, args);
+		//Stop worker thread
+		(*self->threadArgStore)[devarg]->Stop();
+
+		//Release memeory
+		(*self->threadArgStore)[devarg]->WaitForStop();
+		delete (*self->threadArgStore)[devarg];
+		self->threadArgStore->erase(devarg);
 	}
 
 	std::map<std::string, int>::iterator it = self->fd->find(devarg);
