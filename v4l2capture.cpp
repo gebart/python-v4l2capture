@@ -796,6 +796,27 @@ static PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 
 // *********************************************************************
 
+int DecodeFrame(const unsigned char *data, unsigned dataLen, 
+	const char *inPxFmt,
+	int width, int height,
+	const char *targetPxFmt,
+	unsigned char **buffOut,
+	unsigned *buffOutLen)
+{
+	printf("rx %d %s\n", dataLen, inPxFmt);
+
+	if(strcmp(inPxFmt,"MJPEG")==0)
+	{
+
+	}
+
+
+	return 1;
+}
+
+
+// **********************************************************************
+
 class SetFormatParams
 {
 public:
@@ -839,6 +860,7 @@ public:
 	int deviceStarted;
 	int fd;
 	struct buffer *buffers;
+	int frameWidth, frameHeight;
 	int buffer_counts;
 	std::string pxFmt;
 
@@ -853,6 +875,8 @@ public:
 		buffers = NULL;
 		stopDeviceFlag = 0;
 		closeDeviceFlag = 0;
+		frameWidth = 0;
+		frameHeight = 0;
 	};
 
 	virtual ~Device_manager_Worker_thread_args()
@@ -951,7 +975,13 @@ protected:
 			return 0;
 		}
 
-		this->DecodeFrame((const unsigned char*)this->buffers[buffer.index].start, buffer.bytesused);
+		unsigned char *rgbBuff = NULL;
+		unsigned rgbBuffLen = 0;
+		DecodeFrame((const unsigned char*)this->buffers[buffer.index].start, buffer.bytesused, 
+			this->pxFmt.c_str(),
+			this->frameWidth,
+			this->frameHeight,
+			"RGB24", &rgbBuff, &rgbBuffLen);
 
 		//PyObject *out = result;
 
@@ -969,12 +999,6 @@ protected:
 			//Py_RETURN_NONE;
 		}
 
-		return 1;
-	}
-
-	int DecodeFrame(const unsigned char *data, unsigned dataLen)
-	{
-		printf("rx %d\n", dataLen);
 		return 1;
 	}
 
@@ -996,9 +1020,9 @@ protected:
 
 	int SetFormatInternal(class SetFormatParams &args)
 	{
+		printf("SetFormatInternal\n");
 		//int size_x, int size_y, const char *fmt;
 
-		pthread_mutex_lock(&this->lock);
 		struct v4l2_format format;
 		format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		format.fmt.pix.width = args.width;
@@ -1019,13 +1043,13 @@ protected:
 
 		if(my_ioctl(this->fd, VIDIOC_S_FMT, &format))
 		{
-			pthread_mutex_unlock(&this->lock);
 			return 0;
 		}
 
 		//Store pixel format for decoding usage later
 		this->pxFmt = args.fmt;
-		pthread_mutex_unlock(&this->lock);
+		this->frameWidth = args.width;
+		this->frameHeight = args.height;
 		return 1;
 	}
 
@@ -1052,6 +1076,13 @@ protected:
 		// Create a buffer to store image data in. This must be done before
 		// calling 'start' if v4l2capture is compiled with libv4l2. Otherwise
 		// raises IOError.
+
+		if(this->pxFmt.length()==0)
+		{
+			//Get current pixel format
+			//TODO
+			throw std::runtime_error("Set format before starting");
+		}
 
 		struct v4l2_requestbuffers reqbuf;
 		reqbuf.count = buffer_count;
