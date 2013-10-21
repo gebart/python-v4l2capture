@@ -992,7 +992,7 @@ public:
 
 	std::vector<unsigned char *> decodedFrameBuff;
 	std::vector<unsigned> decodedFrameLenBuff;
-	int decodedFrameBuffMaxSize;
+	unsigned decodedFrameBuffMaxSize;
 
 	Device_manager_Worker_thread_args(const char *devNameIn)
 	{
@@ -1008,7 +1008,7 @@ public:
 		frameWidth = 0;
 		frameHeight = 0;
 		decodedFrameBuffMaxSize = 10;
-		verbose = 0;
+		verbose = 1;
 	}
 
 	virtual ~Device_manager_Worker_thread_args()
@@ -1374,11 +1374,14 @@ protected:
 		if(this->deviceStarted)
 			StopDeviceInternal();
 
-		for(int i = 0; i < this->buffer_counts; i++)
+		if(this->buffers!= NULL)
 		{
-			v4l2_munmap(buffers[i].start, buffers[i].length);	
+			for(int i = 0; i < this->buffer_counts; i++)
+			{
+				v4l2_munmap(this->buffers[i].start, this->buffers[i].length);	
+			}
+			delete [] this->buffers;
 		}
-		delete [] this->buffers;
 		this->buffers = NULL;
 
 		//Release memory
@@ -1406,15 +1409,16 @@ public:
 			if(deviceStarted) this->ReadFrame();
 
 			pthread_mutex_lock(&this->lock);
+			try
+			{
+
 			if(this->openDeviceFlag.size() > 0)
 			{
 				std::string devName = this->openDeviceFlag[this->openDeviceFlag.size()-1];
 				this->openDeviceFlag.pop_back();
 				this->OpenDeviceInternal();
 			}
-			pthread_mutex_unlock(&this->lock);
-	
-			pthread_mutex_lock(&this->lock);
+
 			if(this->setFormatFlags.size() > 0
 				&& this->openDeviceFlag.size() == 0)
 			{
@@ -1422,9 +1426,7 @@ public:
 				this->setFormatFlags.pop_back();
 				this->SetFormatInternal(params);
 			}
-			pthread_mutex_unlock(&this->lock);
 
-			pthread_mutex_lock(&this->lock);
 			if(this->startDeviceFlag.size() > 0 
 				&& this->openDeviceFlag.size() == 0
 				&& this->setFormatFlags.size() == 0)
@@ -1433,9 +1435,7 @@ public:
 				this->startDeviceFlag.pop_back();
 				this->StartDeviceInternal(buffer_count);
 			}
-			pthread_mutex_unlock(&this->lock);
 
-			pthread_mutex_lock(&this->lock);
 			if(this->stopDeviceFlag 
 				&& this->openDeviceFlag.size() == 0
 				&& this->setFormatFlags.size() == 0 
@@ -1444,9 +1444,7 @@ public:
 				this->StopDeviceInternal();
 				this->stopDeviceFlag = 0;
 			}
-			pthread_mutex_unlock(&this->lock);
 
-			pthread_mutex_lock(&this->lock);
 			if(this->closeDeviceFlag 
 				&& this->openDeviceFlag.size() == 0 
 				&& this->setFormatFlags.size() == 0
@@ -1456,10 +1454,14 @@ public:
 				this->CloseDeviceInternal();
 				this->closeDeviceFlag = 0;
 			}
-			pthread_mutex_unlock(&this->lock);
-
-			pthread_mutex_lock(&this->lock);
+		
 			running = !this->stop;
+			}
+			catch(std::exception &err)
+			{
+				if(verbose) printf("An exception has occured: %s\n", err.what());
+				running = 0;
+			}
 			pthread_mutex_unlock(&this->lock);
 		}
 		}
