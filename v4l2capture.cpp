@@ -804,6 +804,12 @@ static PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 
 // *********************************************************************
 
+struct my_error_mgr {
+  struct jpeg_error_mgr pub;	/* "public" fields */
+
+  jmp_buf setjmp_buffer;	/* for return to caller */
+};
+
 int ReadJpegFile(unsigned char * inbuffer,
 			      unsigned long insize)
 {
@@ -811,28 +817,27 @@ int ReadJpegFile(unsigned char * inbuffer,
 	 * working space (which is allocated as needed by the JPEG library).
 	 */
 	struct jpeg_decompress_struct cinfo;
+	struct my_error_mgr jerr;
 
 	/* More stuff */
 	JSAMPARRAY buffer;		/* Output row buffer */
 	int row_stride;		/* physical row width in output buffer */
 
 	/* Step 1: initialize the JPEG decompression object. */
+	cinfo.err = jpeg_std_error(&jerr.pub);
 	jpeg_create_decompress(&cinfo);
 
 	/* Step 2: specify data source */
 	jpeg_mem_src(&cinfo, inbuffer, insize);
 
-	printf("1 %ld %d\n", (long)inbuffer, insize);
 	/* Step 3: read file parameters with jpeg_read_header() */
 	jpeg_read_header(&cinfo, TRUE);
 
 	/* Step 4: set parameters for decompression */
 	//Optional
-	printf("1b\n");
 
 	/* Step 5: Start decompressor */
 	jpeg_start_decompress(&cinfo);
-	printf("2\n");
 	/* JSAMPLEs per row in output buffer */
 	row_stride = cinfo.output_width * cinfo.output_components;
 	/* Make a one-row-high sample array that will go away when done with image */
@@ -853,7 +858,7 @@ int ReadJpegFile(unsigned char * inbuffer,
 		jpeg_read_scanlines(&cinfo, buffer, 1);
 		/* Assume put_scanline_someplace wants a pointer and sample count. */
 		//put_scanline_someplace(buffer[0], row_stride);
-		printf("%d\n",row_stride);
+		//printf("%d\n", cinfo.output_scanline);
 	}
 
 	/* Step 7: Finish decompression */
@@ -886,9 +891,7 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 	{
 		std::string jpegBin;
 		InsertHuffmanTableCTypes(data, dataLen, jpegBin);
-		printf("a\n");
 		ReadJpegFile((unsigned char*)jpegBin.c_str(), jpegBin.length());
-		printf("b\n");
 	}
 
 	return 1;
