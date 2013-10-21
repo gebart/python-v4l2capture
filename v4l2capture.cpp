@@ -804,20 +804,29 @@ static PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 
 // *********************************************************************
 
-struct my_error_mgr {
-  struct jpeg_error_mgr pub;	/* "public" fields */
+struct my_error_mgr
+{
+	struct jpeg_error_mgr pub;	/* "public" fields */
 
-  jmp_buf setjmp_buffer;	/* for return to caller */
+	jmp_buf setjmp_buffer;	/* for return to caller */
 };
 
 int ReadJpegFile(unsigned char * inbuffer,
-			      unsigned long insize)
+	unsigned long insize,
+	unsigned char **outBuffer,
+	unsigned *outBufferSize,
+	int *widthOut, int *heightOut, int *channelsOut)
 {
 	/* This struct contains the JPEG decompression parameters and pointers to
 	 * working space (which is allocated as needed by the JPEG library).
 	 */
 	struct jpeg_decompress_struct cinfo;
 	struct my_error_mgr jerr;
+	*outBuffer = NULL;
+	*outBufferSize = 0;
+	*widthOut = 0;
+	*heightOut = 0;
+	*channelsOut = 0;
 
 	/* More stuff */
 	JSAMPARRAY buffer;		/* Output row buffer */
@@ -832,6 +841,12 @@ int ReadJpegFile(unsigned char * inbuffer,
 
 	/* Step 3: read file parameters with jpeg_read_header() */
 	jpeg_read_header(&cinfo, TRUE);
+
+	*outBufferSize = cinfo.image_width * cinfo.image_height * cinfo.num_components;
+	*outBuffer = new unsigned char[*outBufferSize];
+	*widthOut = cinfo.image_width;
+	*heightOut = cinfo.image_height;
+	*channelsOut = cinfo.num_components;
 
 	/* Step 4: set parameters for decompression */
 	//Optional
@@ -858,7 +873,12 @@ int ReadJpegFile(unsigned char * inbuffer,
 		jpeg_read_scanlines(&cinfo, buffer, 1);
 		/* Assume put_scanline_someplace wants a pointer and sample count. */
 		//put_scanline_someplace(buffer[0], row_stride);
-		//printf("%d\n", cinfo.output_scanline);
+		assert(row_stride = cinfo.image_width * cinfo.num_components);
+		//printf("%ld\n", (long)buffer);
+		//printf("%ld\n", (long)buffer[0]);
+		//printf("%d %d\n", (cinfo.output_scanline-1) * row_stride, *outBufferSize);
+		//printf("%ld %ld\n", (long)outBuffer, (long)&outBuffer[(cinfo.output_scanline-1) * row_stride]);
+		memcpy(&(*outBuffer)[(cinfo.output_scanline-1) * row_stride], buffer[0], row_stride);
 	}
 
 	/* Step 7: Finish decompression */
@@ -886,12 +906,34 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 	unsigned *buffOutLen)
 {
 	printf("rx %d %s\n", dataLen, inPxFmt);
+	*buffOut = NULL;
+	*buffOutLen = 0;
 
 	if(strcmp(inPxFmt,"MJPEG")==0)
 	{
 		std::string jpegBin;
 		InsertHuffmanTableCTypes(data, dataLen, jpegBin);
-		ReadJpegFile((unsigned char*)jpegBin.c_str(), jpegBin.length());
+
+		unsigned char *decodedBuff = NULL;
+		unsigned decodedBuffSize = 0;
+		int widthActual = 0, heightActual = 0, channelsActual = 0;
+
+		ReadJpegFile((unsigned char*)jpegBin.c_str(), jpegBin.length(), 
+			&decodedBuff, 
+			&decodedBuffSize, 
+			&widthActual, &heightActual, &channelsActual);
+
+		if(widthActual == width && heightActual == height)
+		{
+			assert(channelsActual == 3);
+			*buffOut = decodedBuff;
+			*buffOutLen = decodedBuffSize;
+		}
+		else
+		{
+			delete [] decodedBuff;
+			throw std::runtime_error("Decoded jpeg has unexpected size");
+		}
 	}
 
 	return 1;
@@ -947,6 +989,10 @@ public:
 	int buffer_counts;
 	std::string pxFmt;
 
+	std::vector<unsigned char *> decodedFrameBuff;
+	std::vector<unsigned> decodedFrameLenBuff;
+	int decodedFrameBuffMaxSize;
+
 	Device_manager_Worker_thread_args(const char *devNameIn)
 	{
 		stop = 0;
@@ -960,7 +1006,8 @@ public:
 		closeDeviceFlag = 0;
 		frameWidth = 0;
 		frameHeight = 0;
-	};
+		decodedFrameBuffMaxSize = 10;
+	}
 
 	virtual ~Device_manager_Worker_thread_args()
 	{
@@ -977,15 +1024,21 @@ public:
 		if(buffers) delete [] buffers;
 		this->buffers = NULL;
 
+		for(unsigned int i=0; i<decodedFrameBuff.size(); i++)
+		{
+			delete [] this->decodedFrameBuff[i];
+		}
+		this->decodedFrameBuff.clear();
+
 		pthread_mutex_destroy(&lock);
-	};
+	}
 
 	void Stop()
 	{
 		pthread_mutex_lock(&this->lock);
 		this->stop = 1;
 		pthread_mutex_unlock(&this->lock);
-	};
+	}
 
 	void WaitForStop()
 	{
@@ -998,14 +1051,14 @@ public:
 			if(s) return;
 			usleep(10000);
 		}
-	};
+	}
 
 	void OpenDevice()
 	{
 		pthread_mutex_lock(&this->lock);
 		this->openDeviceFlag.push_back(this->devName.c_str());
 		pthread_mutex_unlock(&this->lock);
-	};
+	}
 
 	void SetFormat(const char *fmt, int width, int height)
 	{
@@ -1024,21 +1077,42 @@ public:
 		pthread_mutex_lock(&this->lock);
 		this->startDeviceFlag.push_back(buffer_count);
 		pthread_mutex_unlock(&this->lock);
-	};
+	}
 
 	void StopDevice()
 	{
 		pthread_mutex_lock(&this->lock);
 		this->stopDeviceFlag = 1;
 		pthread_mutex_unlock(&this->lock);
-	};
+	}
 
 	void CloseDevice()
 	{
 		pthread_mutex_lock(&this->lock);
 		this->closeDeviceFlag = 1;
 		pthread_mutex_unlock(&this->lock);
-	};
+	}
+
+	int GetFrame(unsigned char **buffOut, unsigned *buffLenOut)
+	{
+		pthread_mutex_lock(&this->lock);
+		if(this->decodedFrameBuff.size()==0)
+		{
+			//No frame found
+			*buffOut = NULL;
+			*buffLenOut = 0;
+			pthread_mutex_unlock(&this->lock);
+			return 0;
+		}
+
+		//Return frame
+		*buffOut = this->decodedFrameBuff[0];
+		*buffLenOut = this->decodedFrameLenBuff[0];
+		this->decodedFrameBuff.erase(this->decodedFrameBuff.begin());
+		this->decodedFrameLenBuff.erase(this->decodedFrameLenBuff.begin());
+		pthread_mutex_unlock(&this->lock);
+		return 1;
+	}
 
 protected:
 	int ReadFrame()
@@ -1060,11 +1134,35 @@ protected:
 
 		unsigned char *rgbBuff = NULL;
 		unsigned rgbBuffLen = 0;
-		DecodeFrame((const unsigned char*)this->buffers[buffer.index].start, buffer.bytesused, 
+		int ok = DecodeFrame((const unsigned char*)this->buffers[buffer.index].start, buffer.bytesused, 
 			this->pxFmt.c_str(),
 			this->frameWidth,
 			this->frameHeight,
 			"RGB24", &rgbBuff, &rgbBuffLen);
+
+		if(ok)
+		{
+			if(rgbBuff != NULL)
+			{
+				pthread_mutex_lock(&this->lock);
+				this->decodedFrameBuff.push_back(rgbBuff);
+				this->decodedFrameLenBuff.push_back(rgbBuffLen);
+				while(this->decodedFrameBuff.size() > this->decodedFrameBuffMaxSize)
+				{
+					this->decodedFrameBuff.erase(this->decodedFrameBuff.begin());
+					this->decodedFrameLenBuff.erase(this->decodedFrameLenBuff.begin());
+				}
+				pthread_mutex_unlock(&this->lock);
+			}
+		}
+		else
+		{
+			if(rgbBuff != NULL)
+			{
+				delete [] rgbBuff;
+				rgbBuff = NULL;
+			}
+		}
 
 		//PyObject *out = result;
 
@@ -1480,6 +1578,32 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+static PyObject *Device_manager_Get_frame(Device_manager *self, PyObject *args)
+{
+
+	//Process arguments
+	const char *devarg = "/dev/video0";
+	if(PyTuple_Size(args) >= 1)
+	{
+		PyObject *pydevarg = PyTuple_GetItem(args, 0);
+		devarg = PyString_AsString(pydevarg);
+	}
+
+	class Device_manager_Worker_thread_args *threadArgs = (*self->threadArgStore)[devarg];
+	unsigned char *buffOut = NULL; 
+	unsigned buffLenOut = 0;
+
+	int ok = threadArgs->GetFrame(&buffOut, &buffLenOut);
+	if(ok && buffOut != NULL)
+	{
+		PyObject *out = PyByteArray_FromStringAndSize((char *)buffOut, buffLenOut);
+		delete [] buffOut;
+		return out;
+	}
+	
+	Py_RETURN_NONE;
+}
+
 static PyObject *Device_manager_stop(Device_manager *self, PyObject *args)
 {
 	//Process arguments
@@ -1600,6 +1724,9 @@ static PyMethodDef Device_manager_methods[] = {
 	{"start", (PyCFunction)Device_manager_Start, METH_VARARGS,
 			 "start(dev = '\\dev\\video0', reqSize=(640, 480), reqFps = 30, fmt = 'MJPEG\', buffer_count = 10)\n\n"
 			 "Start video capture."},
+	{"get_frame", (PyCFunction)Device_manager_Get_frame, METH_VARARGS,
+			 "start(dev = '\\dev\\video0'\n\n"
+			 "Get video frame."},
 	{"stop", (PyCFunction)Device_manager_stop, METH_VARARGS,
 			 "stop(dev = '\\dev\\video0')\n\n"
 			 "Stop video capture."},
