@@ -19,6 +19,7 @@
 #include <stdexcept>
 #include <pthread.h>
 #include <jpeglib.h>
+#include <dirent.h>
 
 #ifdef USE_LIBV4L
 #include <libv4l2.h>
@@ -1787,6 +1788,29 @@ static PyObject *Device_manager_close(Device_manager *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+static PyObject *Device_manager_list_devices(Device_manager *self)
+{
+	PyObject *out = PyList_New(0);
+	const char dir[] = "/dev";
+    DIR *dp;
+    struct dirent *dirp;
+    if((dp  = opendir(dir)) == NULL) {
+        printf("Error(%d) opening %s\n", errno, dir);
+        Py_RETURN_NONE;
+    }
+
+    while ((dirp = readdir(dp)) != NULL) {
+		if (strncmp(dirp->d_name, "video", 5) != 0) continue;
+		std::string tmp = "/dev/";
+		tmp.append(dirp->d_name);
+		PyList_Append(out, PyString_FromString(tmp.c_str()));
+    }
+    closedir(dp);
+
+	PyList_Sort(out);
+	return out;
+}
+
 // *********************************************************************
 
 static PyMethodDef Video_device_methods[] = {
@@ -1876,7 +1900,9 @@ static PyMethodDef Device_manager_methods[] = {
 	{"close", (PyCFunction)Device_manager_close, METH_VARARGS,
 			 "close(dev = '\\dev\\video0')\n\n"
 			 "Close video device. Subsequent calls to other methods will fail."},
-
+	{"list_devices", (PyCFunction)Device_manager_list_devices, METH_NOARGS,
+			 "list_devices()\n\n"
+			 "List available capture devices."},
 	{NULL}
 };
 
