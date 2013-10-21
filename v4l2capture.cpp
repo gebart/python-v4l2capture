@@ -905,7 +905,7 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 	unsigned char **buffOut,
 	unsigned *buffOutLen)
 {
-	printf("rx %d %s\n", dataLen, inPxFmt);
+	//printf("rx %d %s\n", dataLen, inPxFmt);
 	*buffOut = NULL;
 	*buffOutLen = 0;
 
@@ -988,6 +988,7 @@ public:
 	int frameWidth, frameHeight;
 	int buffer_counts;
 	std::string pxFmt;
+	int verbose;
 
 	std::vector<unsigned char *> decodedFrameBuff;
 	std::vector<unsigned> decodedFrameLenBuff;
@@ -1007,6 +1008,7 @@ public:
 		frameWidth = 0;
 		frameHeight = 0;
 		decodedFrameBuffMaxSize = 10;
+		verbose = 0;
 	}
 
 	virtual ~Device_manager_Worker_thread_args()
@@ -1185,7 +1187,7 @@ protected:
 
 	int OpenDeviceInternal()
 	{
-		printf("OpenDeviceInternal\n");
+		if(verbose) printf("OpenDeviceInternal\n");
 		//Open the video device.
 		this->fd = v4l2_open(this->devName.c_str(), O_RDWR | O_NONBLOCK);
 
@@ -1195,13 +1197,13 @@ protected:
 		}
 
 		this->deviceStarted = 0;
-		printf("Done opening\n");
+		if(verbose) printf("Done opening\n");
 		return 1;
 	}
 
 	int SetFormatInternal(class SetFormatParams &args)
 	{
-		printf("SetFormatInternal\n");
+		if(verbose) printf("SetFormatInternal\n");
 		//int size_x, int size_y, const char *fmt;
 
 		struct v4l2_format format;
@@ -1236,7 +1238,7 @@ protected:
 
 	int StartDeviceInternal(int buffer_count = 10)
 	{
-		printf("StartDeviceInternal\n");
+		if(verbose) printf("StartDeviceInternal\n");
 		//Check this device has not already been start
 		if(this->fd==-1)
 		{
@@ -1337,13 +1339,13 @@ protected:
 		}
 
 		this->deviceStarted = 1;
-		printf("Started ok\n");
+		if(verbose) printf("Started ok\n");
 		return 1;
 	}
 
 	void StopDeviceInternal()
 	{
-		printf("StopDeviceInternal\n");
+		if(verbose) printf("StopDeviceInternal\n");
 		if(this->fd==-1)
 		{
 			throw std::runtime_error("Device not started");
@@ -1363,7 +1365,7 @@ protected:
 
 	int CloseDeviceInternal()
 	{
-		printf("CloseDeviceInternal\n");
+		if(verbose) printf("CloseDeviceInternal\n");
 		if(this->fd == -1)
 		{
 			throw std::runtime_error("Device not open");
@@ -1388,7 +1390,7 @@ protected:
 public:
 	void Run()
 	{
-		printf("Thread started: %s\n", this->devName.c_str());
+		if(verbose) printf("Thread started: %s\n", this->devName.c_str());
 		int running = 1;
 		pthread_mutex_lock(&this->lock);
 		this->stopped = 0;
@@ -1463,10 +1465,10 @@ public:
 		}
 		catch(std::exception &err)
 		{
-			printf("An exception has occured: %s\n", err.what());
+			if(verbose) printf("An exception has occured: %s\n", err.what());
 		}
 
-		printf("Thread stopping\n");
+		if(verbose) printf("Thread stopping\n");
 		pthread_mutex_lock(&this->lock);
 		this->stopped = 1;
 		pthread_mutex_unlock(&this->lock);
