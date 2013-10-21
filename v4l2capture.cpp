@@ -990,6 +990,7 @@ public:
 	int buffer_counts;
 	std::string pxFmt;
 	int verbose;
+	std::string targetFmt;
 
 	std::vector<unsigned char *> decodedFrameBuff;
 	std::vector<unsigned> decodedFrameLenBuff;
@@ -1010,6 +1011,7 @@ public:
 		frameHeight = 0;
 		decodedFrameBuffMaxSize = 10;
 		verbose = 1;
+		targetFmt = "RGB24";
 	}
 
 	virtual ~Device_manager_Worker_thread_args()
@@ -1137,12 +1139,11 @@ protected:
 
 		unsigned char *rgbBuff = NULL;
 		unsigned rgbBuffLen = 0;
-		char targetFmt[] = "RGB24";
 		int ok = DecodeFrame((const unsigned char*)this->buffers[buffer.index].start, buffer.bytesused, 
 			this->pxFmt.c_str(),
 			this->frameWidth,
 			this->frameHeight,
-			targetFmt, &rgbBuff, &rgbBuffLen);
+			this->targetFmt.c_str(), &rgbBuff, &rgbBuffLen);
 
 		if(ok)
 		{
@@ -1161,7 +1162,7 @@ protected:
 		}
 		else
 		{
-			if(verbose) printf("Failed to convert from %s to %s\n", this->pxFmt.c_str(), targetFmt);
+			if(verbose) printf("Failed to convert from %s to %s\n", this->pxFmt.c_str(), this->targetFmt.c_str());
 			if(rgbBuff != NULL)
 			{
 				delete [] rgbBuff;
