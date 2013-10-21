@@ -1048,6 +1048,9 @@ public:
 		height = in.height;
 		fmt = in.fmt;
 		buffLen = in.buffLen;
+		sequence = in.sequence;
+		tv_sec = in.tv_sec;
+		tv_usec = in.tv_usec;
 		return *this;
 	}
 
