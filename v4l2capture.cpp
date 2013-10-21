@@ -812,6 +812,7 @@ public:
 	int fd;
 	struct buffer *buffers;
 	int buffer_counts;
+	std::string pxFmt;
 
 	Device_manager_Worker_thread_args(const char *devNameIn)
 	{
@@ -909,55 +910,7 @@ public:
 			return 0;
 		}
 
-		#ifdef USE_LIBV4L
-			printf("rx %d\n", buffer.bytesused);
-			//PyObject *result = PyString_FromStringAndSize(
-			//		(const char*)self->buffers[buffer.index].start, buffer.bytesused);
-
-			//if(!result)
-			//	{
-			//		Py_RETURN_NONE;
-			//	}
-		#else
-			// Convert buffer from YUYV to RGB.
-			// For the byte order, see: http://v4l2spec.bytesex.org/spec/r4339.htm
-			// For the color conversion, see: http://v4l2spec.bytesex.org/spec/x2123.htm
-			int length = buffer.bytesused * 6 / 4;
-			PyObject *result = PyString_FromStringAndSize(NULL, length);
-
-			if(!result)
-				{
-					Py_RETURN_NONE;
-				}
-
-			char *rgb = PyString_AS_STRING(result);
-			char *rgb_max = rgb + length;
-			unsigned char *yuyv = self->buffers[buffer.index].start;
-
-		#define CLAMP(c) ((c) <= 0 ? 0 : (c) >= 65025 ? 255 : (c) >> 8)
-			while(rgb < rgb_max)
-				{
-					int u = yuyv[1] - 128;
-					int v = yuyv[3] - 128;
-					int uv = 100 * u + 208 * v;
-					u *= 516;
-					v *= 409;
-
-					int y = 298 * (yuyv[0] - 16);
-					rgb[0] = CLAMP(y + v);
-					rgb[1] = CLAMP(y - uv);
-					rgb[2] = CLAMP(y + u);
-
-					y = 298 * (yuyv[2] - 16);
-					rgb[3] = CLAMP(y + v);
-					rgb[4] = CLAMP(y - uv);
-					rgb[5] = CLAMP(y + u);
-
-					rgb += 6;
-					yuyv += 4;
-				}
-		#undef CLAMP
-		#endif
+		this->DecodeFrame((const unsigned char*)this->buffers[buffer.index].start, buffer.bytesused);
 
 		//PyObject *out = result;
 
@@ -976,6 +929,11 @@ public:
 		}
 
 		return 1;
+	}
+
+	int DecodeFrame(const unsigned char *data, unsigned dataLen)
+	{
+		printf("rx %d\n", dataLen);
 	}
 
 	int OpenDeviceInternal()
@@ -1021,6 +979,8 @@ public:
 			return 0;
 		}
 
+		//Store pixel format for decoding usage later
+		this->pxFmt = fmt;
 		pthread_mutex_unlock(&this->lock);
 		return 1;
 	}
@@ -1038,10 +998,6 @@ public:
 		//TODO
 
 		/*
-		//Suggest an image size to the device. The device may choose and
-		//return another size if it doesn't support the suggested one.
-		self.video.set_format(reqSize[0], reqSize[1], fmt)
-
 		//Query current pixel format
 		self.size_x, self.size_y, self.pixelFmt = self.video.get_format()
 
