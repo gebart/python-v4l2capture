@@ -808,19 +808,18 @@ public:
 		height = 0;
 	}
 
-	SetFormatParams(const class SetFormatParams &in)
+	SetFormatParams(const SetFormatParams &in)
 	{
 		SetFormatParams::operator=(in);
 	}	
 
-	class SetFormatParams &SetFormatParams=(const class SetFormatParams &in)
+	const SetFormatParams &operator=(const SetFormatParams &in)
 	{
 		width = in.width;
 		height = in.height;
-		fmt = in.fmt
+		fmt = in.fmt;
 		return *this;
-	}	
-
+	}
 };
 
 
@@ -834,6 +833,7 @@ public:
 	pthread_mutex_t lock;
 	std::vector<std::string> openDeviceFlag;
 	std::vector<int> startDeviceFlag;
+	std::vector<class SetFormatParams> setFormatFlags;
 	int stopDeviceFlag;
 	int closeDeviceFlag;
 	int deviceStarted;
@@ -900,13 +900,15 @@ public:
 		pthread_mutex_unlock(&this->lock);
 	};
 
-	void SetFormat()
+	void SetFormat(const char *fmt, int width, int height)
 	{
 		class SetFormatParams params;
-		
+		params.fmt = fmt;
+		params.width = width;
+		params.height = height;
 
 		pthread_mutex_lock(&this->lock);
-		//this->openDeviceFlag.push_back(this->devName.c_str());
+		this->setFormatFlags.push_back(params);
 		pthread_mutex_unlock(&this->lock);
 	}
 
@@ -931,6 +933,7 @@ public:
 		pthread_mutex_unlock(&this->lock);
 	};
 
+protected:
 	int ReadFrame()
 	{
 		if(this->fd<0)
@@ -972,6 +975,7 @@ public:
 	int DecodeFrame(const unsigned char *data, unsigned dataLen)
 	{
 		printf("rx %d\n", dataLen);
+		return 1;
 	}
 
 	int OpenDeviceInternal()
@@ -990,24 +994,26 @@ public:
 		return 1;
 	}
 
-	int SetFormat(int size_x, int size_y, const char *fmt)
+	int SetFormatInternal(class SetFormatParams &args)
 	{
+		//int size_x, int size_y, const char *fmt;
+
 		pthread_mutex_lock(&this->lock);
 		struct v4l2_format format;
 		format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-		format.fmt.pix.width = size_x;
-		format.fmt.pix.height = size_y;
-	#ifdef USE_LIBV4L
+		format.fmt.pix.width = args.width;
+		format.fmt.pix.height = args.height;
 		format.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24;
-		if(fmt != NULL && strcmp(fmt, "MJPEG")==0)
+
+		if(strcmp(args.fmt.c_str(), "MJPEG")==0)
 			format.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
-		if(fmt != NULL && strcmp(fmt, "RGB24")==0)
+		if(strcmp(args.fmt.c_str(), "RGB24")==0)
 			format.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24;
-		if(fmt != NULL && strcmp(fmt, "YUV420")==0)
+		if(strcmp(args.fmt.c_str(), "YUV420")==0)
 			format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUV420;
-	#else
-		format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
-	#endif
+		//if(strcmp(args.fmt.c_str(), "YUVV")==0)
+		//	format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUVV;
+
 		format.fmt.pix.field = V4L2_FIELD_NONE;
 		format.fmt.pix.bytesperline = 0;
 
@@ -1018,7 +1024,7 @@ public:
 		}
 
 		//Store pixel format for decoding usage later
-		this->pxFmt = fmt;
+		this->pxFmt = args.fmt;
 		pthread_mutex_unlock(&this->lock);
 		return 1;
 	}
@@ -1167,6 +1173,7 @@ public:
 		return 1;
 	}
 
+public:
 	void Run()
 	{
 		printf("Thread started: %s\n", this->devName.c_str());
@@ -1192,9 +1199,21 @@ public:
 				this->OpenDeviceInternal();
 			}
 			pthread_mutex_unlock(&this->lock);
+	
+			pthread_mutex_lock(&this->lock);
+			if(this->setFormatFlags.size() > 0
+				&& this->openDeviceFlag.size() == 0)
+			{
+				class SetFormatParams params = this->setFormatFlags[this->setFormatFlags.size()-1];
+				this->setFormatFlags.pop_back();
+				this->SetFormatInternal(params);
+			}
+			pthread_mutex_unlock(&this->lock);
 
 			pthread_mutex_lock(&this->lock);
-			if(this->startDeviceFlag.size() > 0 && this->openDeviceFlag.size() == 0)
+			if(this->startDeviceFlag.size() > 0 
+				&& this->openDeviceFlag.size() == 0
+				&& this->setFormatFlags.size() == 0)
 			{
 				int buffer_count = this->startDeviceFlag[this->startDeviceFlag.size()-1];
 				this->startDeviceFlag.pop_back();
@@ -1204,7 +1223,8 @@ public:
 
 			pthread_mutex_lock(&this->lock);
 			if(this->stopDeviceFlag 
-				&& this->openDeviceFlag.size() == 0 
+				&& this->openDeviceFlag.size() == 0
+				&& this->setFormatFlags.size() == 0 
 				&& this->startDeviceFlag.size() == 0)
 			{
 				this->StopDeviceInternal();
@@ -1213,9 +1233,11 @@ public:
 			pthread_mutex_unlock(&this->lock);
 
 			pthread_mutex_lock(&this->lock);
-			if(this->closeDeviceFlag && !this->stopDeviceFlag 
+			if(this->closeDeviceFlag 
 				&& this->openDeviceFlag.size() == 0 
-				&& this->startDeviceFlag.size() == 0)
+				&& this->setFormatFlags.size() == 0
+				&& this->startDeviceFlag.size() == 0
+				&& !this->stopDeviceFlag)
 			{
 				this->CloseDeviceInternal();
 				this->closeDeviceFlag = 0;
@@ -1315,9 +1337,9 @@ static PyObject *Device_manager_set_format(Device_manager *self, PyObject *args)
 	}
 
 	class Device_manager_Worker_thread_args *threadArgs = (*self->threadArgStore)[devarg];
-	int ret = threadArgs->SetFormat(size_x, size_y, fmt);
+	threadArgs->SetFormat(fmt, size_x, size_y);
 
-	return Py_BuildValue("i", ret);
+	Py_RETURN_NONE;
 }
 
 static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
