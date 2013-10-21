@@ -1016,6 +1016,43 @@ public:
 	}
 };
 
+class FrameMetaData
+{
+public:
+	std::string fmt;
+	int width;
+	int height;
+	unsigned buffLen;
+	unsigned long sequence;
+	unsigned long tv_sec;
+	unsigned long tv_usec;
+
+	FrameMetaData()
+	{
+		width = 0;
+		height = 0;
+		buffLen = 0;
+		sequence = 0;
+		tv_sec = 0;
+		tv_usec = 0;
+	}
+
+	FrameMetaData(const FrameMetaData &in)
+	{
+		FrameMetaData::operator=(in);
+	}	
+
+	const FrameMetaData &operator=(const FrameMetaData &in)
+	{
+		width = in.width;
+		height = in.height;
+		fmt = in.fmt;
+		buffLen = in.buffLen;
+		return *this;
+	}
+
+};
+
 
 class Device_manager_Worker_thread_args
 {
@@ -1040,7 +1077,7 @@ public:
 	std::string targetFmt;
 
 	std::vector<unsigned char *> decodedFrameBuff;
-	std::vector<unsigned> decodedFrameLenBuff;
+	std::vector<class FrameMetaData> decodedFrameMetaBuff;
 	unsigned decodedFrameBuffMaxSize;
 
 	Device_manager_Worker_thread_args(const char *devNameIn)
@@ -1145,23 +1182,23 @@ public:
 		pthread_mutex_unlock(&this->lock);
 	}
 
-	int GetFrame(unsigned char **buffOut, unsigned *buffLenOut)
+	int GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 	{
 		pthread_mutex_lock(&this->lock);
 		if(this->decodedFrameBuff.size()==0)
 		{
 			//No frame found
 			*buffOut = NULL;
-			*buffLenOut = 0;
+			metaOut = NULL;
 			pthread_mutex_unlock(&this->lock);
 			return 0;
 		}
 
 		//Return frame
 		*buffOut = this->decodedFrameBuff[0];
-		*buffLenOut = this->decodedFrameLenBuff[0];
+		*metaOut = this->decodedFrameMetaBuff[0];
 		this->decodedFrameBuff.erase(this->decodedFrameBuff.begin());
-		this->decodedFrameLenBuff.erase(this->decodedFrameLenBuff.begin());
+		this->decodedFrameMetaBuff.erase(this->decodedFrameMetaBuff.begin());
 		pthread_mutex_unlock(&this->lock);
 		return 1;
 	}
@@ -1198,11 +1235,21 @@ protected:
 			{
 				pthread_mutex_lock(&this->lock);
 				this->decodedFrameBuff.push_back(rgbBuff);
-				this->decodedFrameLenBuff.push_back(rgbBuffLen);
+
+				class FrameMetaData meta;
+				meta.buffLen = rgbBuffLen;
+				meta.width = this->frameWidth;
+				meta.height = this->frameHeight;
+				meta.fmt = this->pxFmt;
+				meta.sequence = buffer.sequence;
+				meta.tv_sec = buffer.timestamp.tv_sec;
+				meta.tv_usec = buffer.timestamp.tv_usec;
+
+				this->decodedFrameMetaBuff.push_back(meta);
 				while(this->decodedFrameBuff.size() > this->decodedFrameBuffMaxSize)
 				{
 					this->decodedFrameBuff.erase(this->decodedFrameBuff.begin());
-					this->decodedFrameLenBuff.erase(this->decodedFrameLenBuff.begin());
+					this->decodedFrameMetaBuff.erase(this->decodedFrameMetaBuff.begin());
 				}
 				pthread_mutex_unlock(&this->lock);
 			}
@@ -1217,20 +1264,9 @@ protected:
 			}
 		}
 
-		//PyObject *out = result;
-
-		if(1)
-		{
-			/*out = PyTuple_New(4);
-			PyTuple_SetItem(out, 0, result);
-			PyTuple_SetItem(out, 1, PyInt_FromLong(buffer.timestamp.tv_sec));
-			PyTuple_SetItem(out, 2, PyInt_FromLong(buffer.timestamp.tv_usec));
-			PyTuple_SetItem(out, 3, PyInt_FromLong(buffer.sequence));*/
-		}
-
 		if(my_ioctl(this->fd, VIDIOC_QBUF, &buffer))
 		{
-			//Py_RETURN_NONE;
+			throw std::runtime_error("VIDIOC_QBUF failed");
 		}
 
 		return 1;
@@ -1319,6 +1355,8 @@ protected:
 			this->pxFmt = "Unknown";
 			break;
 		}
+
+		if(verbose) printf("Current format %s %i %i\n", this->pxFmt.c_str(), this->frameWidth, this->frameHeight);
 		return 1;
 	}
 
@@ -1682,12 +1720,24 @@ static PyObject *Device_manager_Get_frame(Device_manager *self, PyObject *args)
 
 	class Device_manager_Worker_thread_args *threadArgs = (*self->threadArgStore)[devarg];
 	unsigned char *buffOut = NULL; 
-	unsigned buffLenOut = 0;
+	class FrameMetaData metaOut;
 
-	int ok = threadArgs->GetFrame(&buffOut, &buffLenOut);
+	int ok = threadArgs->GetFrame(&buffOut, &metaOut);
 	if(ok && buffOut != NULL)
 	{
-		PyObject *out = PyByteArray_FromStringAndSize((char *)buffOut, buffLenOut);
+		//Format output to python
+		PyObject *pymeta = PyDict_New();
+		PyDict_SetItemString(pymeta, "width", PyInt_FromLong(metaOut.width));
+		PyDict_SetItemString(pymeta, "height", PyInt_FromLong(metaOut.height));
+		PyDict_SetItemString(pymeta, "format", PyString_FromString(metaOut.fmt.c_str()));
+		PyDict_SetItemString(pymeta, "sequence", PyInt_FromLong(metaOut.sequence));
+		PyDict_SetItemString(pymeta, "tv_sec", PyInt_FromLong(metaOut.tv_sec));
+		PyDict_SetItemString(pymeta, "tv_usec", PyInt_FromLong(metaOut.tv_usec));
+
+		PyObject *out = PyTuple_New(2);
+		PyTuple_SetItem(out, 0, PyByteArray_FromStringAndSize((char *)buffOut, metaOut.buffLen));
+		PyTuple_SetItem(out, 1, pymeta);
+
 		delete [] buffOut;
 		return out;
 	}
