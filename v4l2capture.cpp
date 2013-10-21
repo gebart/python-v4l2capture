@@ -796,6 +796,34 @@ static PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 
 // *********************************************************************
 
+class SetFormatParams
+{
+public:
+	std::string fmt;
+	int width, height;
+
+	SetFormatParams()
+	{
+		width = 0;
+		height = 0;
+	}
+
+	SetFormatParams(const class SetFormatParams &in)
+	{
+		SetFormatParams::operator=(in);
+	}	
+
+	class SetFormatParams &SetFormatParams=(const class SetFormatParams &in)
+	{
+		width = in.width;
+		height = in.height;
+		fmt = in.fmt
+		return *this;
+	}	
+
+};
+
+
 class Device_manager_Worker_thread_args
 {
 public:
@@ -871,6 +899,16 @@ public:
 		this->openDeviceFlag.push_back(this->devName.c_str());
 		pthread_mutex_unlock(&this->lock);
 	};
+
+	void SetFormat()
+	{
+		class SetFormatParams params;
+		
+
+		pthread_mutex_lock(&this->lock);
+		//this->openDeviceFlag.push_back(this->devName.c_str());
+		pthread_mutex_unlock(&this->lock);
+	}
 
 	void StartDevice(int buffer_count)
 	{
