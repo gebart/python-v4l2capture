@@ -909,7 +909,7 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 	*buffOut = NULL;
 	*buffOutLen = 0;
 
-	if(strcmp(inPxFmt,"MJPEG")==0)
+	if(strcmp(inPxFmt,"MJPEG")==0 && strcmp(targetPxFmt, "RGB24")==0)
 	{
 		std::string jpegBin;
 		InsertHuffmanTableCTypes(data, dataLen, jpegBin);
@@ -934,9 +934,10 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 			delete [] decodedBuff;
 			throw std::runtime_error("Decoded jpeg has unexpected size");
 		}
+		return 1;
 	}
 
-	return 1;
+	return 0;
 }
 
 
@@ -1136,11 +1137,12 @@ protected:
 
 		unsigned char *rgbBuff = NULL;
 		unsigned rgbBuffLen = 0;
+		char targetFmt[] = "RGB24";
 		int ok = DecodeFrame((const unsigned char*)this->buffers[buffer.index].start, buffer.bytesused, 
 			this->pxFmt.c_str(),
 			this->frameWidth,
 			this->frameHeight,
-			"RGB24", &rgbBuff, &rgbBuffLen);
+			targetFmt, &rgbBuff, &rgbBuffLen);
 
 		if(ok)
 		{
@@ -1159,6 +1161,7 @@ protected:
 		}
 		else
 		{
+			if(verbose) printf("Failed to convert from %s to %s\n", this->pxFmt.c_str(), targetFmt);
 			if(rgbBuff != NULL)
 			{
 				delete [] rgbBuff;
@@ -1230,9 +1233,44 @@ protected:
 		}
 
 		//Store pixel format for decoding usage later
-		this->pxFmt = args.fmt;
-		this->frameWidth = args.width;
-		this->frameHeight = args.height;
+		//this->pxFmt = args.fmt;
+		//this->frameWidth = args.width;
+		//this->frameHeight = args.height;
+		this->GetFormatInternal();
+
+		return 1;
+	}
+
+	int GetFormatInternal()
+	{
+		struct v4l2_format format;
+		format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		if(my_ioctl(this->fd, VIDIOC_G_FMT, &format))
+		{
+			return 0;
+		}
+
+		this->frameWidth = format.fmt.pix.width;
+		this->frameHeight = format.fmt.pix.height;
+
+		switch(format.fmt.pix.pixelformat)
+		{
+		case V4L2_PIX_FMT_MJPEG:
+			this->pxFmt = "MJPEG";
+			break;
+		case V4L2_PIX_FMT_RGB24:
+			this->pxFmt = "RGB24";
+			break;
+		case V4L2_PIX_FMT_YUV420:
+			this->pxFmt = "YUV420";
+			break;
+		case V4L2_PIX_FMT_YUYV:
+			this->pxFmt = "YUYV";
+			break;
+		default:
+			this->pxFmt = "Unknown";
+			break;
+		}
 		return 1;
 	}
 
@@ -1264,7 +1302,8 @@ protected:
 		{
 			//Get current pixel format
 			//TODO
-			throw std::runtime_error("Set format before starting");
+			int ret = GetFormatInternal();
+			if(!ret) throw std::runtime_error("Could not determine image format");
 		}
 
 		struct v4l2_requestbuffers reqbuf;
