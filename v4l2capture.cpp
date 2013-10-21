@@ -1232,41 +1232,40 @@ protected:
 			this->frameHeight,
 			this->targetFmt.c_str(), &rgbBuff, &rgbBuffLen);
 
-		if(ok)
+		//Return a frame, decoded or not
+		pthread_mutex_lock(&this->lock);
+				
+		class FrameMetaData meta;
+		meta.width = this->frameWidth;
+		meta.height = this->frameHeight;
+		if(ok && rgbBuff != NULL)
 		{
-			if(rgbBuff != NULL)
-			{
-				pthread_mutex_lock(&this->lock);
-				this->decodedFrameBuff.push_back(rgbBuff);
-
-				class FrameMetaData meta;
-				meta.buffLen = rgbBuffLen;
-				meta.width = this->frameWidth;
-				meta.height = this->frameHeight;
-				meta.fmt = this->pxFmt;
-				meta.sequence = buffer.sequence;
-				meta.tv_sec = buffer.timestamp.tv_sec;
-				meta.tv_usec = buffer.timestamp.tv_usec;
-
-				this->decodedFrameMetaBuff.push_back(meta);
-				while(this->decodedFrameBuff.size() > this->decodedFrameBuffMaxSize)
-				{
-					this->decodedFrameBuff.erase(this->decodedFrameBuff.begin());
-					this->decodedFrameMetaBuff.erase(this->decodedFrameMetaBuff.begin());
-				}
-				pthread_mutex_unlock(&this->lock);
-			}
+			meta.fmt = this->targetFmt;
+			meta.buffLen = rgbBuffLen;
+			this->decodedFrameBuff.push_back(rgbBuff);
 		}
 		else
 		{
-			if(verbose) printf("Failed to convert from %s to %s\n", this->pxFmt.c_str(), this->targetFmt.c_str());
-			if(rgbBuff != NULL)
-			{
-				delete [] rgbBuff;
-				rgbBuff = NULL;
-			}
+			//Make a copy of un-decodable buffer to return
+			unsigned char* buffOut = new unsigned char[buffer.bytesused];
+			memcpy(buffOut, this->buffers[buffer.index].start, buffer.bytesused);
+			meta.fmt = this->pxFmt;
+			meta.buffLen = buffer.bytesused;
+			this->decodedFrameBuff.push_back(buffOut);
 		}
+		meta.sequence = buffer.sequence;
+		meta.tv_sec = buffer.timestamp.tv_sec;
+		meta.tv_usec = buffer.timestamp.tv_usec;
 
+		this->decodedFrameMetaBuff.push_back(meta);
+		while(this->decodedFrameBuff.size() > this->decodedFrameBuffMaxSize)
+		{
+			this->decodedFrameBuff.erase(this->decodedFrameBuff.begin());
+			this->decodedFrameMetaBuff.erase(this->decodedFrameMetaBuff.begin());
+		}
+		pthread_mutex_unlock(&this->lock);
+
+		//Queue buffer for next frame
 		if(my_ioctl(this->fd, VIDIOC_QBUF, &buffer))
 		{
 			throw std::runtime_error("VIDIOC_QBUF failed");
