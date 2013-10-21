@@ -712,6 +712,57 @@ int ReadJpegFrame(const unsigned char *data, unsigned offset, const unsigned cha
 	return 1;
 }
 
+int InsertHuffmanTableCTypes(const unsigned char* inBufferPtr, unsigned inBufferLen, std::string &outBuffer)
+{
+	int parsing = 1;
+	unsigned frameStartPos = 0;
+	int huffFound = 0;
+
+	outBuffer.clear();
+
+	while(parsing)
+	{
+		//Check if we should stop
+		if (frameStartPos >= inBufferLen)
+		{
+			parsing = 0;
+			continue;
+		}
+
+		//Read the next segment
+		const unsigned char *twoBytes = NULL;
+		unsigned frameEndPos=0;
+	
+		int ok = ReadJpegFrame(inBufferPtr, frameStartPos, &twoBytes, &frameStartPos, &frameEndPos);
+
+		//if(verbose)
+		//	print map(hex, twoBytes), frameStartPos, frameEndPos;
+
+		//Stop if there is a serious error
+		if(!ok)
+		{
+			return 0;
+		}
+	
+		//Check if this segment is the compressed data
+		if(twoBytes[0] == 0xff && twoBytes[1] == 0xda && !huffFound)
+		{
+			outBuffer.append(huffmanSegment, HUFFMAN_SEGMENT_LEN);
+		}
+
+		//Check the type of frame
+		if(twoBytes[0] == 0xff && twoBytes[1] == 0xc4)
+			huffFound = 1;
+
+		//Write current structure to output
+		outBuffer.append((char *)&inBufferPtr[frameStartPos], frameEndPos - frameStartPos);
+
+		//Move cursor
+		frameStartPos = frameEndPos;
+	}
+	return 1;
+}
+
 static PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 {
 	/* This converts an MJPEG frame into a standard JPEG binary
@@ -739,59 +790,15 @@ static PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
  		Py_RETURN_NONE;
 	}
 
-	int parsing = 1;
-	unsigned frameStartPos = 0;
-	int huffFound = 0;
 	unsigned char* inBufferPtr = (unsigned char*)PyString_AsString(inBuffer);
 	Py_ssize_t inBufferLen = PyString_Size(inBuffer);
+	std::string outBuffer;
 
-	PyObject *outBuffer = PyString_FromString("");
+	InsertHuffmanTableCTypes((unsigned char*)inBufferPtr, inBufferLen, outBuffer);
 
-	while(parsing)
-	{
-		//Check if we should stop
-		if (frameStartPos >= inBufferLen)
-		{
-			parsing = 0;
-			continue;
-		}
+	PyObject *outBufferPy = PyString_FromStringAndSize(outBuffer.c_str(), outBuffer.length());
 
-		//Read the next segment
-		const unsigned char *twoBytes = NULL;
-		unsigned frameEndPos=0;
-	
-		int ok = ReadJpegFrame(inBufferPtr, frameStartPos, &twoBytes, &frameStartPos, &frameEndPos);
-
-		//if(verbose)
-		//	print map(hex, twoBytes), frameStartPos, frameEndPos;
-
-		//Stop if there is a serious error
-		if(!ok)
-		{
-			parsing = 0;
-			continue;
-		}
-	
-		//Check if this segment is the compressed data
-		if(twoBytes[0] == 0xff && twoBytes[1] == 0xda && !huffFound)
-		{
-			PyObject *substr = PyString_FromStringAndSize(huffmanSegment, HUFFMAN_SEGMENT_LEN);
-			PyString_ConcatAndDel(&outBuffer, substr);
-		}
-
-		//Check the type of frame
-		if(twoBytes[0] == 0xff && twoBytes[1] == 0xc4)
-			huffFound = 1;
-
-		//Write current structure to output
-		PyObject *substr = PyString_FromStringAndSize((char *)&inBufferPtr[frameStartPos], frameEndPos - frameStartPos);
-		PyString_ConcatAndDel(&outBuffer, substr);
-
-		//Move cursor
-		frameStartPos = frameEndPos;
-	}
-
-	return outBuffer;
+	return outBufferPy;
 }
 
 // *********************************************************************
@@ -807,7 +814,10 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 
 	if(strcmp(inPxFmt,"MJPEG")==0)
 	{
+		std::string jpegBin;
+		InsertHuffmanTableCTypes(data, dataLen, jpegBin);
 
+		
 	}
 
 
