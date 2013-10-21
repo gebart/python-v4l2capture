@@ -909,6 +909,15 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 	*buffOut = NULL;
 	*buffOutLen = 0;
 
+	if(strcmp(inPxFmt, targetPxFmt) == 0)
+	{
+		//Conversion not required, return a shallow copy
+		*buffOutLen = dataLen;
+		*buffOut = new unsigned char[dataLen];
+		memcpy(*buffOut, data, dataLen);
+		return 1;
+	}
+
 	if(strcmp(inPxFmt,"MJPEG")==0 && strcmp(targetPxFmt, "RGB24")==0)
 	{
 		std::string jpegBin;
