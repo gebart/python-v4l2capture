@@ -1471,6 +1471,24 @@ static PyTypeObject Device_manager_type = {
 			(initproc)Device_manager_init
 };
 
+static PyMethodDef Video_out_manager_methods[] = {
+	{"test", (PyCFunction)Video_out_manager_open, METH_VARARGS,
+			 "test(dev = '\\dev\\video0')\n\n"
+			 "Open video output."},
+	{NULL}
+};
+
+static PyTypeObject Video_out_manager_type = {
+	PyObject_HEAD_INIT(NULL)
+			0, "v4l2capture.Video_out_manager", sizeof(Video_out_manager), 0,
+			(destructor)Video_out_manager_dealloc, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, Py_TPFLAGS_DEFAULT, "Video_out_manager(path)\n\nOpens the video device at "
+			"the given path and returns an object that can capture images. The "
+			"constructor and all methods except close may raise IOError.", 0, 0, 0,
+			0, 0, 0, Video_out_manager_methods, 0, 0, 0, 0, 0, 0, 0,
+			(initproc)Video_out_manager_init
+};
+
 // *********************************************************************
 
 static PyMethodDef module_methods[] = {
