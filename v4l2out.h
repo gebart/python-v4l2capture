@@ -9,7 +9,7 @@
 class Video_out_manager_cl{
 public:
 	PyObject_HEAD
-	//std::map<std::string, class Device_manager_Worker_thread_args *> *threadArgStore;
+	std::map<std::string, class Video_out *> *threads;
 };
 typedef Video_out_manager_cl Video_out_manager;
 

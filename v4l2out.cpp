@@ -15,7 +15,7 @@ public:
 	{
 		stop = 0;
 		stopped = 1;
-		verbose = 0;
+		verbose = 1;
 		this->devName = devNameIn;
 		pthread_mutex_init(&lock, NULL);
 
@@ -26,6 +26,10 @@ public:
 
 		pthread_mutex_destroy(&lock);
 	}
+
+protected:
+
+
 
 public:
 	void Run()
@@ -40,14 +44,14 @@ public:
 		{
 		while(running)
 		{
-			//printf("Sleep\n");
-			usleep(1000);
+			printf("Sleep\n");
+			usleep(1000000);
 
 			pthread_mutex_lock(&this->lock);
 			try
 			{
 
-			running = !this->stop;
+				running = !this->stop;
 			}
 			catch(std::exception &err)
 			{
@@ -66,7 +70,28 @@ public:
 		pthread_mutex_lock(&this->lock);
 		this->stopped = 1;
 		pthread_mutex_unlock(&this->lock);
-	};
+	}
+
+	void Stop()
+	{
+		pthread_mutex_lock(&this->lock);
+		this->stop = 1;
+		pthread_mutex_unlock(&this->lock);
+	}
+
+	int WaitForStop()
+	{
+		this->Stop();
+		while(1)
+		{
+			pthread_mutex_lock(&this->lock);
+			int s = this->stopped;
+			pthread_mutex_unlock(&this->lock);
+
+			if(s) return 1;
+			usleep(10000);
+		}
+	}
 };
 
 void *Video_out_manager_Worker_thread(void *arg)
@@ -82,33 +107,66 @@ void *Video_out_manager_Worker_thread(void *arg)
 int Video_out_manager_init(Video_out_manager *self, PyObject *args,
 		PyObject *kwargs)
 {
-	//self->threadArgStore = new std::map<std::string, class Video_out*>;
+	self->threads = new std::map<std::string, class Video_out *>;
 	return 0;
 }
 
 void Video_out_manager_dealloc(Video_out_manager *self)
 {
 	//Stop high level threads
-	/*for(std::map<std::string, class Device_manager_Worker_thread_args *>::iterator it = self->threadArgStore->begin(); 
-		it != self->threadArgStore->end(); it++)
+	for(std::map<std::string, class Video_out *>::iterator it = self->threads->begin(); 
+		it != self->threads->end(); it++)
 	{
-		PyObject *args = PyTuple_New(1);
-		PyTuple_SetItem(args, 0, PyString_FromString(it->first.c_str()));
-		Device_manager_stop(self, args);
-		Py_DECREF(args);
+
+
+
+		it->second->Stop();
+		it->second->WaitForStop();
 	}
 
-	delete self->threadArgStore;*/
+	delete self->threads;
+	self->threads = NULL;
 	self->ob_type->tp_free((PyObject *)self);
 }
 
 PyObject *Video_out_manager_open(Video_out_manager *self, PyObject *args)
 {
+	//Process arguments
+	const char *devarg = "/dev/video0";
+	if(PyTuple_Size(args) >= 1)
+	{
+		PyObject *pydevarg = PyTuple_GetItem(args, 0);
+		devarg = PyString_AsString(pydevarg);
+	}
+
+	//Create worker thread
+	pthread_t thread;
+	Video_out *threadArgs = new Video_out(devarg);
+	(*self->threads)[devarg] = threadArgs;
+	threadArgs->self = self;
+	pthread_create(&thread, NULL, Video_out_manager_Worker_thread, threadArgs);
+
 	Py_RETURN_NONE;
 }
 
 PyObject *Video_out_manager_close(Video_out_manager *self, PyObject *args)
 {
+	//Process arguments
+	const char *devarg = "/dev/video0";
+	if(PyTuple_Size(args) >= 1)
+	{
+		PyObject *pydevarg = PyTuple_GetItem(args, 0);
+		devarg = PyString_AsString(pydevarg);
+	}
+
+	//Stop worker thread
+	std::map<std::string, class Video_out *>::iterator it = self->threads->find(devarg);
+
+	if(it != self->threads->end())
+	{
+		it->second->Stop();
+	}
+
 	Py_RETURN_NONE;
 }
 
