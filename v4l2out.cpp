@@ -1,8 +1,6 @@
 
 #include "v4l2out.h"
 
-
-
 class Video_out
 {
 public:
@@ -26,10 +24,8 @@ public:
 	virtual ~Video_out()
 	{
 
-
 		pthread_mutex_destroy(&lock);
 	}
-
 
 public:
 	void Run()
@@ -108,8 +104,11 @@ void Video_out_manager_dealloc(Video_out_manager *self)
 
 PyObject *Video_out_manager_open(Video_out_manager *self, PyObject *args)
 {
+	Py_RETURN_NONE;
+}
 
-
+PyObject *Video_out_manager_close(Video_out_manager *self, PyObject *args)
+{
 	Py_RETURN_NONE;
 }
 

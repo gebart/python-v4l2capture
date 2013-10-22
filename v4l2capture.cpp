@@ -1472,9 +1472,12 @@ static PyTypeObject Device_manager_type = {
 };
 
 static PyMethodDef Video_out_manager_methods[] = {
-	{"test", (PyCFunction)Video_out_manager_open, METH_VARARGS,
-			 "test(dev = '\\dev\\video0')\n\n"
+	{"open", (PyCFunction)Video_out_manager_open, METH_VARARGS,
+			 "open(dev = '\\dev\\video0')\n\n"
 			 "Open video output."},
+	{"close", (PyCFunction)Video_out_manager_close, METH_VARARGS,
+			 "close(dev = '\\dev\\video0')\n\n"
+			 "Close video device. Subsequent calls to other methods will fail."},
 	{NULL}
 };
 

@@ -20,6 +20,7 @@ void Video_out_manager_dealloc(Video_out_manager *self);
 
 PyObject *Video_out_manager_open(Video_out_manager *self, PyObject *args);
 
+PyObject *Video_out_manager_close(Video_out_manager *self, PyObject *args);
 
 // ******************************************************************
 
