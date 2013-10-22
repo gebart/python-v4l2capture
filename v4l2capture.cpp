@@ -21,6 +21,7 @@
 #include <pthread.h>
 #include <jpeglib.h>
 #include <dirent.h>
+#include "v4l2out.h"
 
 #ifdef USE_LIBV4L
 #include <libv4l2.h>
@@ -1480,8 +1481,13 @@ static PyMethodDef module_methods[] = {
 PyMODINIT_FUNC initv4l2capture(void)
 {
 	Device_manager_type.tp_new = PyType_GenericNew;
+	Video_out_manager_type.tp_new = PyType_GenericNew;
 
 	if(PyType_Ready(&Device_manager_type) < 0)
+		{
+			return;
+		}
+	if(PyType_Ready(&Video_out_manager_type) < 0)
 		{
 			return;
 		}
@@ -1496,5 +1502,6 @@ PyMODINIT_FUNC initv4l2capture(void)
 
 	Py_INCREF(&Device_manager_type);
 	PyModule_AddObject(module, "Device_manager", (PyObject *)&Device_manager_type);
+	PyModule_AddObject(module, "Video_out_manager", (PyObject *)&Video_out_manager_type);
 
 }
