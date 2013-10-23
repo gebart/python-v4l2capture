@@ -320,26 +320,22 @@ void ConvertRGBToYUYV(const unsigned char *im, unsigned sizeimage,
 		}
 	
 		//Set color information for Cb
-		/*cursor = y * bytesperline + padding
+		cursor = y * bytesperline + padding;
 		for(unsigned x=0;x< width;x++)
 		{
-			try:
-				buff[cursor+1] = 0.5 * (Pb[y, x] + Pb[y, x+1]) + 128
-			except IndexError:
-				pass
-			cursor += 4
+			//buff[cursor+1] = 0.5 * (Pb[y, x] + Pb[y, x+1]) + 128
+			outBuff[cursor+1] = 128;
+			cursor += 4;
 		}
 
 		//Set color information for Cr
-		cursor = y * bytesperline + padding
+		cursor = y * bytesperline + padding;
 		for(unsigned x=0;x< width;x++)
 		{
-			try:
-				buff[cursor+3] = 0.5 * (Pr[y, x] + Pr[y, x+1]) + 128
-			except IndexError:
-				pass
-			cursor += 4
-		}*/
+			//buff[cursor+3] = 0.5 * (Pr[y, x] + Pr[y, x+1]) + 128
+			outBuff[cursor+3] = 128;
+			cursor += 4;
+		}
 	}
 }
 // *********************************************************************
