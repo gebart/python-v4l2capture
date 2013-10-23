@@ -162,6 +162,11 @@ public:
 		pthread_mutex_unlock(&this->lock);
 	}
 
+	void SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height)
+	{
+		printf("x %i %s %i %i\n", imgLen, pxFmt, width, height);
+	}
+
 	void Stop()
 	{
 		pthread_mutex_lock(&this->lock);
@@ -242,15 +247,29 @@ PyObject *Video_out_manager_open(Video_out_manager *self, PyObject *args)
 PyObject *Video_out_manager_Send_frame(Video_out_manager *self, PyObject *args)
 {
 	printf("Video_out_manager_Send_frame\n");
+	//dev = '\\dev\\video0', img, pixel_format, width, height
 
 	//Process arguments
-	const char *devarg = "/dev/video0";
-	if(PyTuple_Size(args) >= 1)
-	{
-		PyObject *pydevarg = PyTuple_GetItem(args, 0);
-		devarg = PyString_AsString(pydevarg);
-	}
+	const char *devarg = NULL;
+	const char *imgIn = NULL;
+	const char *pxFmtIn = NULL;
+	int widthIn = 0;
+	int heightIn = 0;
 
+	if(!PyArg_ParseTuple(args, "sssii", &devarg, &imgIn, &pxFmtIn, &widthIn, &heightIn))
+	{
+		PyErr_Format(PyExc_RuntimeError, "Incorrect arguments to function.");
+		Py_RETURN_NONE;
+	}
+	PyObject *pyimg = PyTuple_GetItem(args, 1);
+	Py_ssize_t imgLen = PyObject_Length(pyimg);
+
+	std::map<std::string, class Video_out *>::iterator it = self->threads->find(devarg);
+
+	if(it != self->threads->end())
+	{
+		it->second->SendFrame(imgIn, imgLen, pxFmtIn, widthIn, heightIn);
+	}
 
 	Py_RETURN_NONE;
 }

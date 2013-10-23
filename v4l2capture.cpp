@@ -1049,7 +1049,7 @@ static PyMethodDef Video_out_manager_methods[] = {
 			 "open(dev = '\\dev\\video0')\n\n"
 			 "Open video output."},
 	{"send_frame", (PyCFunction)Video_out_manager_Send_frame, METH_VARARGS,
-			 "send_frame(dev = '\\dev\\video0', img, pixel_format)\n\n"
+			 "send_frame(dev = '\\dev\\video0', img, pixel_format, width, height)\n\n"
 			 "Send frame to video stream output."},
 	{"close", (PyCFunction)Video_out_manager_close, METH_VARARGS,
 			 "close(dev = '\\dev\\video0')\n\n"
