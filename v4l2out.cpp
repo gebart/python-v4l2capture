@@ -5,9 +5,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
 #include <string.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <vector>
 #include "v4l2out.h"
 
 #define ROUND_UP_2(num)  (((num)+1)&~1)
@@ -27,6 +29,36 @@ void print_format(struct v4l2_format*vid_format) {
 
 //*******************************************************************
 
+class SendFrameArgs
+{
+public:
+	unsigned imgLen;
+	std::string pxFmt;
+	unsigned width;
+	unsigned height;
+
+	SendFrameArgs()
+	{
+		imgLen = 0;
+		width = 0;
+		height = 0;
+	}
+
+	SendFrameArgs(const SendFrameArgs &in)
+	{
+		SendFrameArgs::operator=(in);
+	}	
+
+	const SendFrameArgs &operator=(const SendFrameArgs &in)
+	{
+		width = in.width;
+		height = in.height;
+		imgLen = in.imgLen;
+		pxFmt = in.pxFmt;
+		return *this;
+	}
+};
+
 class Video_out
 {
 public:
@@ -36,6 +68,8 @@ public:
 	int stopped;
 	pthread_mutex_t lock;
 	int verbose;
+	std::vector<class SendFrameArgs> sendFrameArgs;
+	std::vector<const char *> sendFrameBuffer;
 
 	Video_out(const char *devNameIn)
 	{
@@ -49,13 +83,21 @@ public:
 
 	virtual ~Video_out()
 	{
+		for(unsigned i=0; i<this->sendFrameBuffer.size(); i++)
+		{
+			delete [] this->sendFrameBuffer[i];
+		}
+		this->sendFrameBuffer.clear();
 
 		pthread_mutex_destroy(&lock);
 	}
 
 protected:
 
+	void SendFrameInternal(class SendFrameArgs *args)
+	{
 
+	}
 
 public:
 	void Run()
@@ -134,6 +176,16 @@ public:
 		{
 			usleep(1000000);
 
+			pthread_mutex_lock(&this->lock);		
+			printf("%i\n", this->sendFrameBuffer.size());
+			const char* buff = this->sendFrameBuffer[this->sendFrameBuffer.size()-1];
+			class SendFrameArgs args = this->sendFrameArgs[this->sendFrameArgs.size()-1];
+
+			//If necessary, remove old frames (but leave one in the buffer)
+			//TODO
+
+			pthread_mutex_unlock(&this->lock);
+
 			printf("Write frame\n");
 			write(fdwr, buffer, framesize);
 
@@ -164,7 +216,22 @@ public:
 
 	void SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height)
 	{
-		printf("x %i %s %i %i\n", imgLen, pxFmt, width, height);
+		pthread_mutex_lock(&this->lock);
+		//printf("x %i %s %i %i\n", imgLen, pxFmt, width, height);
+
+		//Take a shallow copy of the buffer and keep for worker thread
+		char *buffCpy = new char[imgLen];
+		memcpy(buffCpy, imgIn, imgLen);
+		this->sendFrameBuffer.push_back(buffCpy);
+
+		class SendFrameArgs sendFrameArgsTmp;
+		sendFrameArgsTmp.imgLen = imgLen;
+		sendFrameArgsTmp.pxFmt = pxFmt;
+		sendFrameArgsTmp.width = width;
+		sendFrameArgsTmp.height = height;
+		this->sendFrameArgs.push_back(sendFrameArgsTmp);
+
+		pthread_mutex_unlock(&this->lock);
 	}
 
 	void Stop()
@@ -212,9 +279,6 @@ void Video_out_manager_dealloc(Video_out_manager *self)
 	for(std::map<std::string, class Video_out *>::iterator it = self->threads->begin(); 
 		it != self->threads->end(); it++)
 	{
-
-
-
 		it->second->Stop();
 		it->second->WaitForStop();
 	}
