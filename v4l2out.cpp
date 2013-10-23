@@ -1,5 +1,31 @@
 
+#include <linux/videodev2.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <assert.h>
 #include "v4l2out.h"
+
+#define ROUND_UP_2(num)  (((num)+1)&~1)
+#define ROUND_UP_4(num)  (((num)+3)&~3)
+#define ROUND_UP_8(num)  (((num)+7)&~7)
+
+void print_format(struct v4l2_format*vid_format) {
+  printf("	vid_format->type                =%d\n",	vid_format->type );
+  printf("	vid_format->fmt.pix.width       =%d\n",	vid_format->fmt.pix.width );
+  printf("	vid_format->fmt.pix.height      =%d\n",	vid_format->fmt.pix.height );
+  printf("	vid_format->fmt.pix.pixelformat =%d\n",	vid_format->fmt.pix.pixelformat);
+  printf("	vid_format->fmt.pix.sizeimage   =%d\n",	vid_format->fmt.pix.sizeimage );
+  printf("	vid_format->fmt.pix.field       =%d\n",	vid_format->fmt.pix.field );
+  printf("	vid_format->fmt.pix.bytesperline=%d\n",	vid_format->fmt.pix.bytesperline );
+  printf("	vid_format->fmt.pix.colorspace  =%d\n",	vid_format->fmt.pix.colorspace );
+}
+
+//*******************************************************************
 
 class Video_out
 {
@@ -40,12 +66,76 @@ public:
 		this->stopped = 0;
 		pthread_mutex_unlock(&this->lock);
 
+		int fdwr = open(this->devName.c_str(), O_RDWR);
+		assert(fdwr >= 0);
+
+		struct v4l2_capability vid_caps;
+		int ret_code = ioctl(fdwr, VIDIOC_QUERYCAP, &vid_caps);
+		assert(ret_code != -1);
+	
+		struct v4l2_format vid_format;
+		memset(&vid_format, 0, sizeof(vid_format));
+
+		printf("a %d\n", vid_format.fmt.pix.sizeimage);
+
+		ret_code = ioctl(fdwr, VIDIOC_G_FMT, &vid_format);
+		if(verbose)print_format(&vid_format);
+
+		#define FRAME_WIDTH 640
+		#define FRAME_HEIGHT 480
+		#define FRAME_FORMAT V4L2_PIX_FMT_YVU420
+		int lw = FRAME_WIDTH; /* ??? */
+		int fw = ROUND_UP_4 (FRAME_WIDTH) * ROUND_UP_2 (FRAME_HEIGHT);
+		fw += 2 * ((ROUND_UP_8 (FRAME_WIDTH) / 2) * (ROUND_UP_2 (FRAME_HEIGHT) / 2));
+
+		vid_format.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
+		vid_format.fmt.pix.width = FRAME_WIDTH;
+		vid_format.fmt.pix.height = FRAME_HEIGHT;
+		vid_format.fmt.pix.pixelformat = FRAME_FORMAT;
+		vid_format.fmt.pix.sizeimage = lw;
+		//printf("test %d\n", vid_format.fmt.pix.sizeimage);
+		vid_format.fmt.pix.field = V4L2_FIELD_NONE;
+		vid_format.fmt.pix.bytesperline = fw;
+		//printf("test2 %d\n", vid_format.fmt.pix.bytesperline);
+		vid_format.fmt.pix.colorspace = V4L2_COLORSPACE_SRGB;
+
+		printf("b %d\n", vid_format.fmt.pix.sizeimage);
+
+		if(verbose)print_format(&vid_format);
+
+		printf("b2 %d\n", vid_format.fmt.pix.sizeimage);
+
+		ret_code = ioctl(fdwr, VIDIOC_S_FMT, &vid_format);
+
+		printf("c %d\n", vid_format.fmt.pix.sizeimage);
+
+		assert(ret_code != -1);
+
+		int framesize = vid_format.fmt.pix.sizeimage;
+		int linewidth = vid_format.fmt.pix.bytesperline;
+		if(verbose)printf("frame: format=%d\tsize=%d\n", FRAME_FORMAT, framesize);
+		printf("d %d\n", vid_format.fmt.pix.sizeimage);
+		print_format(&vid_format);
+
+		printf("test %d\n", framesize);
+		printf("e %d\n", vid_format.fmt.pix.sizeimage);
+
+		printf("testa %d\n", framesize);
+		printf("f %d\n", vid_format.fmt.pix.sizeimage);
+
+		__u8* buffer=(__u8*)malloc(sizeof(__u8)*framesize);
+		memset(buffer, 0, framesize);
+
+		printf("testb %d\n", framesize);
+
 		try
 		{
 		while(running)
 		{
-			printf("Sleep\n");
 			usleep(1000000);
+
+			printf("Write frame\n");
+			write(fdwr, buffer, framesize);
 
 			pthread_mutex_lock(&this->lock);
 			try
