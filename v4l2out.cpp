@@ -9,6 +9,8 @@
 #include <string.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <signal.h>
+#include <time.h>
 #include <vector>
 #include "v4l2out.h"
 
@@ -70,15 +72,26 @@ public:
 	int verbose;
 	std::vector<class SendFrameArgs> sendFrameArgs;
 	std::vector<const char *> sendFrameBuffer;
+	struct timespec lastFrameTime;
+	int fdwr;
+	int framesize;
 
 	Video_out(const char *devNameIn)
 	{
+		this->fdwr = 0;
+		framesize = 0;
 		stop = 0;
 		stopped = 1;
 		verbose = 1;
 		this->devName = devNameIn;
 		pthread_mutex_init(&lock, NULL);
 
+		clock_gettime(CLOCK_MONOTONIC, &lastFrameTime);
+
+		struct sigevent sevp;
+		memset(&sevp, 0, sizeof(struct sigevent));
+		sevp.sigev_notify = SIGEV_NONE;
+	
 	}
 
 	virtual ~Video_out()
@@ -94,9 +107,50 @@ public:
 
 protected:
 
-	void SendFrameInternal(class SendFrameArgs *args)
+	void SendFrameInternal()
 	{
+		const char* buff = NULL;
+		class SendFrameArgs args;
+			
+		pthread_mutex_lock(&this->lock);
+		if(this->sendFrameBuffer.size()>=1)
+		{
+			//Get oldest frame
+			printf("%d\n", (int)this->sendFrameBuffer.size());
+			buff = this->sendFrameBuffer[0];
+			args = this->sendFrameArgs[0];
 
+			//Remove frame from buffer
+			this->sendFrameBuffer.erase(this->sendFrameBuffer.begin());
+			this->sendFrameArgs.erase(this->sendFrameArgs.begin());
+		}
+		pthread_mutex_unlock(&this->lock);
+
+		struct timespec tp;
+		clock_gettime(CLOCK_MONOTONIC, &tp);
+		long int secSinceLastFrame = tp.tv_sec - this->lastFrameTime.tv_sec;
+		long int nsecSinceLastFrame = tp.tv_nsec - this->lastFrameTime.tv_nsec;
+		if(nsecSinceLastFrame < 0)
+		{
+			secSinceLastFrame -= 1;
+			nsecSinceLastFrame *= -1;
+		}
+
+		if(secSinceLastFrame>=1)
+		{
+			__u8* buffer=(__u8*)malloc(sizeof(__u8)*framesize);
+			memset(buffer, 0, framesize);
+
+			printf("Write frame\n");
+			write(this->fdwr, buffer, framesize);
+
+			free(buffer);
+			this->lastFrameTime = tp;
+		}
+
+		//Free image buffer
+		if(buff!=NULL)
+			delete [] buff;
 	}
 
 public:
@@ -108,11 +162,11 @@ public:
 		this->stopped = 0;
 		pthread_mutex_unlock(&this->lock);
 
-		int fdwr = open(this->devName.c_str(), O_RDWR);
+		this->fdwr = open(this->devName.c_str(), O_RDWR);
 		assert(fdwr >= 0);
 
 		struct v4l2_capability vid_caps;
-		int ret_code = ioctl(fdwr, VIDIOC_QUERYCAP, &vid_caps);
+		int ret_code = ioctl(this->fdwr, VIDIOC_QUERYCAP, &vid_caps);
 		assert(ret_code != -1);
 	
 		struct v4l2_format vid_format;
@@ -120,7 +174,7 @@ public:
 
 		printf("a %d\n", vid_format.fmt.pix.sizeimage);
 
-		ret_code = ioctl(fdwr, VIDIOC_G_FMT, &vid_format);
+		ret_code = ioctl(this->fdwr, VIDIOC_G_FMT, &vid_format);
 		if(verbose)print_format(&vid_format);
 
 		#define FRAME_WIDTH 640
@@ -147,13 +201,13 @@ public:
 
 		printf("b2 %d\n", vid_format.fmt.pix.sizeimage);
 
-		ret_code = ioctl(fdwr, VIDIOC_S_FMT, &vid_format);
+		ret_code = ioctl(this->fdwr, VIDIOC_S_FMT, &vid_format);
 
 		printf("c %d\n", vid_format.fmt.pix.sizeimage);
 
 		assert(ret_code != -1);
 
-		int framesize = vid_format.fmt.pix.sizeimage;
+		this->framesize = vid_format.fmt.pix.sizeimage;
 		int linewidth = vid_format.fmt.pix.bytesperline;
 		if(verbose)printf("frame: format=%d\tsize=%d\n", FRAME_FORMAT, framesize);
 		printf("d %d\n", vid_format.fmt.pix.sizeimage);
@@ -165,29 +219,15 @@ public:
 		printf("testa %d\n", framesize);
 		printf("f %d\n", vid_format.fmt.pix.sizeimage);
 
-		__u8* buffer=(__u8*)malloc(sizeof(__u8)*framesize);
-		memset(buffer, 0, framesize);
-
 		printf("testb %d\n", framesize);
 
 		try
 		{
 		while(running)
 		{
-			usleep(1000000);
+			usleep(1000);
 
-			pthread_mutex_lock(&this->lock);		
-			printf("%i\n", this->sendFrameBuffer.size());
-			const char* buff = this->sendFrameBuffer[this->sendFrameBuffer.size()-1];
-			class SendFrameArgs args = this->sendFrameArgs[this->sendFrameArgs.size()-1];
-
-			//If necessary, remove old frames (but leave one in the buffer)
-			//TODO
-
-			pthread_mutex_unlock(&this->lock);
-
-			printf("Write frame\n");
-			write(fdwr, buffer, framesize);
+			this->SendFrameInternal();
 
 			pthread_mutex_lock(&this->lock);
 			try
