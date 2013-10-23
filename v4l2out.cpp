@@ -77,6 +77,7 @@ public:
 	int fdwr;
 	int framesize;
 	unsigned char *currentFrame;
+	unsigned char *paddingBuff;
 
 	#define FRAME_WIDTH 640
 	#define FRAME_HEIGHT 480
@@ -94,6 +95,7 @@ public:
 		this->devName = devNameIn;
 		pthread_mutex_init(&lock, NULL);
 		currentFrame = NULL;
+		paddingBuff = NULL;
 
 		clock_gettime(CLOCK_MONOTONIC, &lastFrameTime);
 
@@ -114,6 +116,10 @@ public:
 		if(this->currentFrame!=NULL)
 			delete [] this->currentFrame;
 		this->currentFrame = NULL;
+
+		if(this->paddingBuff!=NULL)
+			delete [] this->paddingBuff;
+		this->paddingBuff = NULL;
 
 		pthread_mutex_destroy(&lock);
 	}
@@ -194,6 +200,12 @@ protected:
 			memset(this->currentFrame, 0, this->framesize);
 		}
 
+		if(this->paddingBuff==NULL)
+		{
+			this->paddingBuff = new unsigned char[4096];
+			memset(this->paddingBuff, 0, 4096);
+		}
+
 		int timeElapsed = secSinceLastFrame>=1;
 
 		if(timeElapsed || buff != NULL)
@@ -201,6 +213,7 @@ protected:
 			//Send frame update due to time elapse
 			if(timeElapsed)
 				printf("Write frame due to elapse time\n");
+			write(this->fdwr, this->paddingBuff, 4096);
 			write(this->fdwr, this->currentFrame, this->framesize);
 
 			this->lastFrameTime = tp;

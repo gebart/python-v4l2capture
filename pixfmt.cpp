@@ -299,8 +299,7 @@ void ConvertRGBToYUYV(const unsigned char *im, unsigned sizeimage,
 	unsigned char **outIm, unsigned *outImSize)
 {
 	unsigned bytesperline = width * 2;
-	unsigned padding = 4096;
-	//padding = 0
+	unsigned padding = 0;
 	*outImSize = sizeimage+padding;
 	unsigned char *outBuff = new unsigned char [*outImSize];
 	*outIm = outBuff;
