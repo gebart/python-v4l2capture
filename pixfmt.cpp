@@ -292,6 +292,57 @@ int ReadJpegFile(unsigned char * inbuffer,
 	return 1;
 }
 
+// **************************************************************
+
+void ConvertRGBToYUYV(const unsigned char *im, unsigned sizeimage, 
+	unsigned width, unsigned height,
+	unsigned char **outIm, unsigned *outImSize)
+{
+	unsigned bytesperline = width * 2;
+	unsigned padding = 4096;
+	//padding = 0
+	*outImSize = sizeimage+padding;
+	unsigned char *outBuff = new unsigned char [*outImSize];
+	*outIm = outBuff;
+
+	//imgrey = im[:,:,0] * 0.299 + im[:,:,1] * 0.587 + im[:,:,2] * 0.114
+	//Pb = im[:,:,0] * -0.168736 + im[:,:,1] * -0.331264 + im[:,:,2] * 0.5
+	//Pr = im[:,:,0] * 0.5 + im[:,:,1] * -0.418688 + im[:,:,2] * -0.081312
+
+	for (unsigned y=0; y<height; y++)
+	{
+		//Set lumenance
+		unsigned cursor = y * bytesperline + padding;
+		for(unsigned x=0;x< width;x++)
+		{
+			unsigned rgbOffset = width * y * 3 + x * 3;
+			outBuff[cursor] = im[rgbOffset] * 0.299 + im[rgbOffset+1] * 0.587 + im[rgbOffset+2] * 0.114;
+			cursor += 2;
+		}
+	
+		//Set color information for Cb
+		/*cursor = y * bytesperline + padding
+		for(unsigned x=0;x< width;x++)
+		{
+			try:
+				buff[cursor+1] = 0.5 * (Pb[y, x] + Pb[y, x+1]) + 128
+			except IndexError:
+				pass
+			cursor += 4
+		}
+
+		//Set color information for Cr
+		cursor = y * bytesperline + padding
+		for(unsigned x=0;x< width;x++)
+		{
+			try:
+				buff[cursor+3] = 0.5 * (Pr[y, x] + Pr[y, x+1]) + 128
+			except IndexError:
+				pass
+			cursor += 4
+		}*/
+	}
+}
 // *********************************************************************
 
 int DecodeFrame(const unsigned char *data, unsigned dataLen, 
@@ -377,6 +428,14 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 				yuyv += 4;
 			}
 	#undef CLAMP
+		return 1;
+	}
+
+	if(strcmp(inPxFmt,"RGB24")==0 && strcmp(targetPxFmt, "YUYV")==0)
+	{
+		ConvertRGBToYUYV(data, dataLen, 
+			width, height,
+			buffOut, buffOutLen);
 		return 1;
 	}
 

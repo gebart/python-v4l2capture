@@ -239,6 +239,22 @@ PyObject *Video_out_manager_open(Video_out_manager *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+PyObject *Video_out_manager_Send_frame(Video_out_manager *self, PyObject *args)
+{
+	printf("Video_out_manager_Send_frame\n");
+
+	//Process arguments
+	const char *devarg = "/dev/video0";
+	if(PyTuple_Size(args) >= 1)
+	{
+		PyObject *pydevarg = PyTuple_GetItem(args, 0);
+		devarg = PyString_AsString(pydevarg);
+	}
+
+
+	Py_RETURN_NONE;
+}
+
 PyObject *Video_out_manager_close(Video_out_manager *self, PyObject *args)
 {
 	//Process arguments
