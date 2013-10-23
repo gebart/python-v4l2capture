@@ -25,5 +25,5 @@ setup(
         "License :: Public Domain",
         "Programming Language :: C++"],
     ext_modules = [
-        Extension("v4l2capture", ["v4l2capture.cpp", "v4l2out.cpp"], libraries = ["v4l2", "pthread", "jpeg"])])
+        Extension("v4l2capture", ["v4l2capture.cpp", "v4l2out.cpp", "pixfmt.cpp"], libraries = ["v4l2", "pthread", "jpeg"])])
 
