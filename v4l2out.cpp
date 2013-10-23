@@ -13,6 +13,7 @@
 #include <time.h>
 #include <vector>
 #include "v4l2out.h"
+#include "pixfmt.h"
 
 #define ROUND_UP_2(num)  (((num)+1)&~1)
 #define ROUND_UP_4(num)  (((num)+3)&~3)
@@ -75,6 +76,13 @@ public:
 	struct timespec lastFrameTime;
 	int fdwr;
 	int framesize;
+	unsigned char *currentFrame;
+
+	#define FRAME_WIDTH 640
+	#define FRAME_HEIGHT 480
+	//#define FRAME_FORMAT V4L2_PIX_FMT_YVU420
+	#define FRAME_FORMAT V4L2_PIX_FMT_YUYV
+	#define FRAME_FORMAT_SHORT "YUYV"
 
 	Video_out(const char *devNameIn)
 	{
@@ -85,6 +93,7 @@ public:
 		verbose = 1;
 		this->devName = devNameIn;
 		pthread_mutex_init(&lock, NULL);
+		currentFrame = NULL;
 
 		clock_gettime(CLOCK_MONOTONIC, &lastFrameTime);
 
@@ -101,6 +110,10 @@ public:
 			delete [] this->sendFrameBuffer[i];
 		}
 		this->sendFrameBuffer.clear();
+
+		if(this->currentFrame!=NULL)
+			delete [] this->currentFrame;
+		this->currentFrame = NULL;
 
 		pthread_mutex_destroy(&lock);
 	}
@@ -126,6 +139,7 @@ protected:
 		}
 		pthread_mutex_unlock(&this->lock);
 
+		//Check time since previous frame send
 		struct timespec tp;
 		clock_gettime(CLOCK_MONOTONIC, &tp);
 		long int secSinceLastFrame = tp.tv_sec - this->lastFrameTime.tv_sec;
@@ -136,15 +150,59 @@ protected:
 			nsecSinceLastFrame *= -1;
 		}
 
-		if(secSinceLastFrame>=1)
+		if(buff != NULL)
 		{
-			__u8* buffer=(__u8*)malloc(sizeof(__u8)*framesize);
-			memset(buffer, 0, framesize);
+			//Convert new frame to correct size and pixel format
+			assert(strcmp(args.pxFmt.c_str(), "RGB24")==0);
+			unsigned resizeBuffLen = FRAME_WIDTH * FRAME_HEIGHT * 3;
+			char *buffResize = new char[resizeBuffLen];
+			memset(buffResize, 0, resizeBuffLen);
+			for(unsigned x = 0; x < FRAME_WIDTH; x++)
+			{
+				if (x >= args.width) continue;
+				for(unsigned y = 0; y < FRAME_HEIGHT; y++)
+				{
+					if (y >= args.height) continue;
+					buffResize[y * FRAME_WIDTH * 3 + x * 3] = buff[y * args.width * 3 + x * 3];
+				}
+			}
 
-			printf("Write frame\n");
-			write(this->fdwr, buffer, framesize);
+			unsigned char *buffOut = NULL;
+			unsigned buffOutLen = 0;
+			DecodeFrame((unsigned char *)buffResize, resizeBuffLen, 
+				args.pxFmt.c_str(),
+				args.width, args.height,
+				FRAME_FORMAT_SHORT,
+				&buffOut,
+				&buffOutLen);
 
-			free(buffer);
+			assert(buffOutLen == this->framesize);
+
+			//Replace current frame with new encoded frame
+			if(this->currentFrame!=NULL)
+				delete [] this->currentFrame;
+			this->currentFrame = buffOut;
+
+			delete [] buffResize;
+
+		}
+
+		//If we have no data, initialise with a blank frame
+		if(this->currentFrame==NULL)
+		{
+			this->currentFrame = new unsigned char[this->framesize];
+			memset(this->currentFrame, 0, this->framesize);
+		}
+
+		int timeElapsed = secSinceLastFrame>=1;
+
+		if(timeElapsed || buff != NULL)
+		{
+			//Send frame update due to time elapse
+			if(timeElapsed)
+				printf("Write frame due to elapse time\n");
+			write(this->fdwr, this->currentFrame, this->framesize);
+
 			this->lastFrameTime = tp;
 		}
 
@@ -177,12 +235,20 @@ public:
 		ret_code = ioctl(this->fdwr, VIDIOC_G_FMT, &vid_format);
 		if(verbose)print_format(&vid_format);
 
-		#define FRAME_WIDTH 640
-		#define FRAME_HEIGHT 480
-		#define FRAME_FORMAT V4L2_PIX_FMT_YVU420
-		int lw = FRAME_WIDTH; /* ??? */
-		int fw = ROUND_UP_4 (FRAME_WIDTH) * ROUND_UP_2 (FRAME_HEIGHT);
-		fw += 2 * ((ROUND_UP_8 (FRAME_WIDTH) / 2) * (ROUND_UP_2 (FRAME_HEIGHT) / 2));
+		int lw = 0;
+		int fw = 0;
+		if(FRAME_FORMAT==V4L2_PIX_FMT_YVU420)
+		{
+			lw = FRAME_WIDTH; /* ??? */
+			fw = ROUND_UP_4 (FRAME_WIDTH) * ROUND_UP_2 (FRAME_HEIGHT);
+			fw += 2 * ((ROUND_UP_8 (FRAME_WIDTH) / 2) * (ROUND_UP_2 (FRAME_HEIGHT) / 2));
+		}
+
+		if(FRAME_FORMAT==V4L2_PIX_FMT_YUYV)
+		{
+			lw = (ROUND_UP_2 (FRAME_WIDTH) * 2);
+			fw = lw * FRAME_HEIGHT;
+		}
 
 		vid_format.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
 		vid_format.fmt.pix.width = FRAME_WIDTH;
