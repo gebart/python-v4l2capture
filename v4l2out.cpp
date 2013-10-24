@@ -170,6 +170,8 @@ protected:
 				{
 					if (y >= args.height) continue;
 					buffResize[y * FRAME_WIDTH * 3 + x * 3] = buff[y * args.width * 3 + x * 3];
+					buffResize[y * FRAME_WIDTH * 3 + x * 3 + 1] = buff[y * args.width * 3 + x * 3 + 1];
+					buffResize[y * FRAME_WIDTH * 3 + x * 3 + 2] = buff[y * args.width * 3 + x * 3 + 2];
 				}
 			}
 
@@ -177,7 +179,7 @@ protected:
 			unsigned buffOutLen = 0;
 			DecodeFrame((unsigned char *)buffResize, resizeBuffLen, 
 				args.pxFmt.c_str(),
-				args.width, args.height,
+				FRAME_WIDTH, FRAME_HEIGHT,
 				FRAME_FORMAT_SHORT,
 				&buffOut,
 				&buffOutLen);

@@ -303,10 +303,7 @@ void ConvertRGBToYUYV(const unsigned char *im, unsigned sizeimage,
 	*outImSize = sizeimage+padding;
 	unsigned char *outBuff = new unsigned char [*outImSize];
 	*outIm = outBuff;
-
-	//imgrey = im[:,:,0] * 0.299 + im[:,:,1] * 0.587 + im[:,:,2] * 0.114
-	//Pb = im[:,:,0] * -0.168736 + im[:,:,1] * -0.331264 + im[:,:,2] * 0.5
-	//Pr = im[:,:,0] * 0.5 + im[:,:,1] * -0.418688 + im[:,:,2] * -0.081312
+	unsigned char *im2 = (unsigned char *)im;
 
 	for (unsigned y=0; y<height; y++)
 	{
@@ -321,19 +318,25 @@ void ConvertRGBToYUYV(const unsigned char *im, unsigned sizeimage,
 	
 		//Set color information for Cb
 		cursor = y * bytesperline + padding;
-		for(unsigned x=0;x< width;x++)
+		for(unsigned x=0;x< width;x+=2)
 		{
-			//buff[cursor+1] = 0.5 * (Pb[y, x] + Pb[y, x+1]) + 128
-			outBuff[cursor+1] = 128;
+			unsigned rgbOffset = width * y * 3 + x * 3;
+			float Pb1 = im2[rgbOffset+0] * -0.168736 + im2[rgbOffset+1] * -0.331264 + im2[rgbOffset+2] * 0.5;
+			float Pb2 = im2[rgbOffset+3] * -0.168736 + im2[rgbOffset+4] * -0.331264 + im2[rgbOffset+5] * 0.5;
+
+			outBuff[cursor+1] = 0.5 * (Pb1 + Pb2) + 128;
 			cursor += 4;
 		}
 
 		//Set color information for Cr
 		cursor = y * bytesperline + padding;
-		for(unsigned x=0;x< width;x++)
+		for(unsigned x=0;x< width;x+=2)
 		{
-			//buff[cursor+3] = 0.5 * (Pr[y, x] + Pr[y, x+1]) + 128
-			outBuff[cursor+3] = 128;
+			unsigned rgbOffset = width * y * 3 + x * 3;
+			float Pr1 = im2[rgbOffset+0] * 0.5 + im2[rgbOffset+1] * -0.418688 + im2[rgbOffset+2] * -0.081312;
+			float Pr2 = im2[rgbOffset+3] * 0.5 + im2[rgbOffset+4] * -0.418688 + im2[rgbOffset+5] * -0.081312;
+
+			outBuff[cursor+3] = 0.5 * (Pr1 + Pr2) + 128;
 			cursor += 4;
 		}
 	}
