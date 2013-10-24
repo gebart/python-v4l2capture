@@ -1046,7 +1046,7 @@ static PyTypeObject Device_manager_type = {
 
 static PyMethodDef Video_out_manager_methods[] = {
 	{"open", (PyCFunction)Video_out_manager_open, METH_VARARGS,
-			 "open(dev = '\\dev\\video0')\n\n"
+			 "open(dev = '\\dev\\video0', pixel_format, width, height)\n\n"
 			 "Open video output."},
 	{"send_frame", (PyCFunction)Video_out_manager_Send_frame, METH_VARARGS,
 			 "send_frame(dev = '\\dev\\video0', img, pixel_format, width, height)\n\n"

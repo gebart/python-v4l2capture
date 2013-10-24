@@ -78,12 +78,9 @@ public:
 	int framesize;
 	unsigned char *currentFrame;
 	unsigned char *paddingBuff;
-
-	#define FRAME_WIDTH 640
-	#define FRAME_HEIGHT 480
-	//#define FRAME_FORMAT V4L2_PIX_FMT_YVU420
-	#define FRAME_FORMAT V4L2_PIX_FMT_YUYV
-	#define FRAME_FORMAT_SHORT "YUYV"
+	int outputWidth;
+	int outputHeight;
+	std::string outputPxFmt;
 
 	Video_out(const char *devNameIn)
 	{
@@ -96,6 +93,9 @@ public:
 		pthread_mutex_init(&lock, NULL);
 		currentFrame = NULL;
 		paddingBuff = NULL;
+		outputWidth = 640;
+		outputHeight = 480;
+		outputPxFmt = "YUYV";
 
 		clock_gettime(CLOCK_MONOTONIC, &lastFrameTime);
 
@@ -160,18 +160,18 @@ protected:
 		{
 			//Convert new frame to correct size and pixel format
 			assert(strcmp(args.pxFmt.c_str(), "RGB24")==0);
-			unsigned resizeBuffLen = FRAME_WIDTH * FRAME_HEIGHT * 3;
+			unsigned resizeBuffLen = this->outputWidth * this->outputHeight * 3;
 			char *buffResize = new char[resizeBuffLen];
 			memset(buffResize, 0, resizeBuffLen);
-			for(unsigned x = 0; x < FRAME_WIDTH; x++)
+			for(unsigned x = 0; x < this->outputWidth; x++)
 			{
 				if (x >= args.width) continue;
-				for(unsigned y = 0; y < FRAME_HEIGHT; y++)
+				for(unsigned y = 0; y < this->outputHeight; y++)
 				{
 					if (y >= args.height) continue;
-					buffResize[y * FRAME_WIDTH * 3 + x * 3] = buff[y * args.width * 3 + x * 3];
-					buffResize[y * FRAME_WIDTH * 3 + x * 3 + 1] = buff[y * args.width * 3 + x * 3 + 1];
-					buffResize[y * FRAME_WIDTH * 3 + x * 3 + 2] = buff[y * args.width * 3 + x * 3 + 2];
+					buffResize[y * this->outputWidth * 3 + x * 3] = buff[y * args.width * 3 + x * 3];
+					buffResize[y * this->outputWidth * 3 + x * 3 + 1] = buff[y * args.width * 3 + x * 3 + 1];
+					buffResize[y * this->outputWidth * 3 + x * 3 + 2] = buff[y * args.width * 3 + x * 3 + 2];
 				}
 			}
 
@@ -179,8 +179,8 @@ protected:
 			unsigned buffOutLen = 0;
 			DecodeFrame((unsigned char *)buffResize, resizeBuffLen, 
 				args.pxFmt.c_str(),
-				FRAME_WIDTH, FRAME_HEIGHT,
-				FRAME_FORMAT_SHORT,
+				this->outputWidth, this->outputHeight,
+				this->outputPxFmt.c_str(),
 				&buffOut,
 				&buffOutLen);
 
@@ -252,23 +252,30 @@ public:
 
 		int lw = 0;
 		int fw = 0;
-		if(FRAME_FORMAT==V4L2_PIX_FMT_YVU420)
+		if(strcmp(this->outputPxFmt.c_str(), "YVU420")==0)
 		{
-			lw = FRAME_WIDTH; /* ??? */
-			fw = ROUND_UP_4 (FRAME_WIDTH) * ROUND_UP_2 (FRAME_HEIGHT);
-			fw += 2 * ((ROUND_UP_8 (FRAME_WIDTH) / 2) * (ROUND_UP_2 (FRAME_HEIGHT) / 2));
+			lw = this->outputWidth; /* ??? */
+			fw = ROUND_UP_4 (this->outputWidth) * ROUND_UP_2 (this->outputHeight);
+			fw += 2 * ((ROUND_UP_8 (this->outputWidth) / 2) * (ROUND_UP_2 (this->outputHeight) / 2));
 		}
 
-		if(FRAME_FORMAT==V4L2_PIX_FMT_YUYV)
+		if(strcmp(this->outputPxFmt.c_str(), "YUYV")==0)
 		{
-			lw = (ROUND_UP_2 (FRAME_WIDTH) * 2);
-			fw = lw * FRAME_HEIGHT;
+			lw = (ROUND_UP_2 (this->outputWidth) * 2);
+			fw = lw * this->outputHeight;
 		}
 
 		vid_format.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
-		vid_format.fmt.pix.width = FRAME_WIDTH;
-		vid_format.fmt.pix.height = FRAME_HEIGHT;
-		vid_format.fmt.pix.pixelformat = FRAME_FORMAT;
+		vid_format.fmt.pix.width = this->outputWidth;
+		vid_format.fmt.pix.height = this->outputHeight;
+		vid_format.fmt.pix.pixelformat = 0;
+		if(strcmp(this->outputPxFmt.c_str(), "YUYV")==0)
+			vid_format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
+		if(strcmp(this->outputPxFmt.c_str(), "YVU420")==0)
+			vid_format.fmt.pix.pixelformat = V4L2_PIX_FMT_YVU420;
+		if(strcmp(this->outputPxFmt.c_str(), "RGB24")==0)
+			vid_format.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24;
+
 		vid_format.fmt.pix.sizeimage = lw;
 		//printf("test %d\n", vid_format.fmt.pix.sizeimage);
 		vid_format.fmt.pix.field = V4L2_FIELD_NONE;
@@ -290,7 +297,7 @@ public:
 
 		this->framesize = vid_format.fmt.pix.sizeimage;
 		int linewidth = vid_format.fmt.pix.bytesperline;
-		if(verbose)printf("frame: format=%d\tsize=%d\n", FRAME_FORMAT, framesize);
+		if(verbose)printf("frame: format=%s\tsize=%d\n", this->outputPxFmt.c_str(), framesize);
 		printf("d %d\n", vid_format.fmt.pix.sizeimage);
 		print_format(&vid_format);
 
@@ -412,11 +419,15 @@ void Video_out_manager_dealloc(Video_out_manager *self)
 PyObject *Video_out_manager_open(Video_out_manager *self, PyObject *args)
 {
 	//Process arguments
-	const char *devarg = "/dev/video0";
-	if(PyTuple_Size(args) >= 1)
+	const char *devarg = NULL;
+	const char *pxFmtIn = NULL;
+	int widthIn = 0;
+	int heightIn = 0;
+
+	if(!PyArg_ParseTuple(args, "ssii", &devarg, &pxFmtIn, &widthIn, &heightIn))
 	{
-		PyObject *pydevarg = PyTuple_GetItem(args, 0);
-		devarg = PyString_AsString(pydevarg);
+		PyErr_Format(PyExc_RuntimeError, "Incorrect arguments to function.");
+		Py_RETURN_NONE;
 	}
 
 	//Create worker thread
@@ -424,6 +435,10 @@ PyObject *Video_out_manager_open(Video_out_manager *self, PyObject *args)
 	Video_out *threadArgs = new Video_out(devarg);
 	(*self->threads)[devarg] = threadArgs;
 	threadArgs->self = self;
+	threadArgs->outputWidth = widthIn;
+	threadArgs->outputHeight = heightIn;
+	threadArgs->outputPxFmt = pxFmtIn;
+
 	pthread_create(&thread, NULL, Video_out_manager_Worker_thread, threadArgs);
 
 	Py_RETURN_NONE;
