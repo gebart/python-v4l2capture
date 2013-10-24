@@ -88,7 +88,7 @@ public:
 		framesize = 0;
 		stop = 0;
 		stopped = 1;
-		verbose = 1;
+		verbose = 0;
 		this->devName = devNameIn;
 		pthread_mutex_init(&lock, NULL);
 		currentFrame = NULL;
@@ -135,7 +135,6 @@ protected:
 		if(this->sendFrameBuffer.size()>=1)
 		{
 			//Get oldest frame
-			printf("%d\n", (int)this->sendFrameBuffer.size());
 			buff = this->sendFrameBuffer[0];
 			args = this->sendFrameArgs[0];
 
@@ -446,7 +445,7 @@ PyObject *Video_out_manager_open(Video_out_manager *self, PyObject *args)
 
 PyObject *Video_out_manager_Send_frame(Video_out_manager *self, PyObject *args)
 {
-	printf("Video_out_manager_Send_frame\n");
+	//printf("Video_out_manager_Send_frame\n");
 	//dev = '\\dev\\video0', img, pixel_format, width, height
 
 	//Process arguments

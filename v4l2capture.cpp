@@ -282,7 +282,7 @@ public:
 		frameWidth = 0;
 		frameHeight = 0;
 		decodedFrameBuffMaxSize = 10;
-		verbose = 1;
+		verbose = 0;
 		targetFmt = "RGB24";
 	}
 
