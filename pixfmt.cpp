@@ -207,6 +207,18 @@ struct my_error_mgr
 	jmp_buf setjmp_buffer;	/* for return to caller */
 };
 
+typedef struct my_error_mgr * my_error_ptr;
+METHODDEF(void) my_error_exit (j_common_ptr cinfo)
+{
+	my_error_ptr myerr = (my_error_ptr) cinfo->err;	 
+
+	/* Always display the message. */
+	(*cinfo->err->output_message) (cinfo);
+
+	/* Return control to the setjmp point */
+	longjmp(myerr->setjmp_buffer, 1);
+}
+
 int ReadJpegFile(unsigned char * inbuffer,
 	unsigned long insize,
 	unsigned char **outBuffer,
@@ -230,6 +242,16 @@ int ReadJpegFile(unsigned char * inbuffer,
 
 	/* Step 1: initialize the JPEG decompression object. */
 	cinfo.err = jpeg_std_error(&jerr.pub);
+	jerr.pub.error_exit = my_error_exit;
+	/* Establish the setjmp return context for my_error_exit to use. */
+	if (setjmp(jerr.setjmp_buffer)) {
+		/* If we get here, the JPEG code has signaled an error.
+		 * We need to clean up the JPEG object, close the input file, and return.
+		 */
+		jpeg_destroy_decompress(&cinfo);
+		return 0;
+	}
+
 	jpeg_create_decompress(&cinfo);
 
 	/* Step 2: specify data source */
@@ -372,10 +394,13 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 		unsigned decodedBuffSize = 0;
 		int widthActual = 0, heightActual = 0, channelsActual = 0;
 
-		ReadJpegFile((unsigned char*)jpegBin.c_str(), jpegBin.length(), 
+		int jpegOk = ReadJpegFile((unsigned char*)jpegBin.c_str(), jpegBin.length(), 
 			&decodedBuff, 
 			&decodedBuffSize, 
 			&widthActual, &heightActual, &channelsActual);
+
+		if (!jpegOk)
+			throw std::runtime_error("Error decoding jpeg");
 
 		if(widthActual == width && heightActual == height)
 		{

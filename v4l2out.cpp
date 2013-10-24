@@ -12,6 +12,7 @@
 #include <signal.h>
 #include <time.h>
 #include <vector>
+#include <stdexcept>
 #include "v4l2out.h"
 #include "pixfmt.h"
 
@@ -87,7 +88,7 @@ public:
 		framesize = 0;
 		stop = 0;
 		stopped = 1;
-		verbose = 0;
+		verbose = 1;
 		this->devName = devNameIn;
 		pthread_mutex_init(&lock, NULL);
 		currentFrame = NULL;
@@ -261,10 +262,8 @@ public:
 			vid_format.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24;
 
 		vid_format.fmt.pix.sizeimage = lw;
-		//printf("test %d\n", vid_format.fmt.pix.sizeimage);
 		vid_format.fmt.pix.field = V4L2_FIELD_NONE;
 		vid_format.fmt.pix.bytesperline = fw;
-		//printf("test2 %d\n", vid_format.fmt.pix.bytesperline);
 		vid_format.fmt.pix.colorspace = V4L2_COLORSPACE_SRGB;
 
 		if(verbose)print_format(&vid_format);
@@ -313,7 +312,7 @@ public:
 	void SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height)
 	{
 		pthread_mutex_lock(&this->lock);
-		//printf("x %i %s %i %i\n", imgLen, pxFmt, width, height);
+		if(verbose) printf("SendFrame %i %s %i %i\n", imgLen, pxFmt, width, height);
 
 		//Take a shallow copy of the buffer and keep for worker thread
 		char *buffCpy = new char[imgLen];
@@ -424,19 +423,38 @@ PyObject *Video_out_manager_Send_frame(Video_out_manager *self, PyObject *args)
 	int widthIn = 0;
 	int heightIn = 0;
 
-	if(!PyArg_ParseTuple(args, "sssii", &devarg, &imgIn, &pxFmtIn, &widthIn, &heightIn))
+	if(PyObject_Length(args) < 5)
 	{
-		PyErr_Format(PyExc_RuntimeError, "Incorrect arguments to function.");
+		PyErr_Format(PyExc_RuntimeError, "Too few arguments.");
 		Py_RETURN_NONE;
 	}
+
+	PyObject *pydev = PyTuple_GetItem(args, 0);
+	devarg = PyString_AsString(pydev);
+
 	PyObject *pyimg = PyTuple_GetItem(args, 1);
+	imgIn = PyString_AsString(pyimg);
 	Py_ssize_t imgLen = PyObject_Length(pyimg);
+
+	PyObject *pyPxFmt = PyTuple_GetItem(args, 2);
+	pxFmtIn = PyString_AsString(pyPxFmt);
+
+	PyObject *pyWidth = PyTuple_GetItem(args, 3);
+	widthIn = PyInt_AsLong(pyWidth);
+
+	PyObject *pyHeight = PyTuple_GetItem(args, 4);
+	heightIn = PyInt_AsLong(pyHeight);
 
 	std::map<std::string, class Video_out *>::iterator it = self->threads->find(devarg);
 
 	if(it != self->threads->end())
 	{
 		it->second->SendFrame(imgIn, imgLen, pxFmtIn, widthIn, heightIn);
+	}
+	else
+	{
+		PyErr_Format(PyExc_RuntimeError, "Device not found.");
+		Py_RETURN_NONE;
 	}
 
 	Py_RETURN_NONE;
