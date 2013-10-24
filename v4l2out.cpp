@@ -77,7 +77,6 @@ public:
 	int fdwr;
 	int framesize;
 	unsigned char *currentFrame;
-	unsigned char *paddingBuff;
 	int outputWidth;
 	int outputHeight;
 	std::string outputPxFmt;
@@ -92,7 +91,6 @@ public:
 		this->devName = devNameIn;
 		pthread_mutex_init(&lock, NULL);
 		currentFrame = NULL;
-		paddingBuff = NULL;
 		outputWidth = 640;
 		outputHeight = 480;
 		outputPxFmt = "YUYV";
@@ -116,10 +114,6 @@ public:
 		if(this->currentFrame!=NULL)
 			delete [] this->currentFrame;
 		this->currentFrame = NULL;
-
-		if(this->paddingBuff!=NULL)
-			delete [] this->paddingBuff;
-		this->paddingBuff = NULL;
 
 		pthread_mutex_destroy(&lock);
 	}
@@ -201,12 +195,6 @@ protected:
 			memset(this->currentFrame, 0, this->framesize);
 		}
 
-		if(this->paddingBuff==NULL)
-		{
-			this->paddingBuff = new unsigned char[4096];
-			memset(this->paddingBuff, 0, 4096);
-		}
-
 		int timeElapsed = secSinceLastFrame>=1;
 
 		if(timeElapsed || buff != NULL)
@@ -214,7 +202,6 @@ protected:
 			//Send frame update due to time elapse
 			if(timeElapsed)
 				printf("Write frame due to elapse time\n");
-			write(this->fdwr, this->paddingBuff, 4096);
 			write(this->fdwr, this->currentFrame, this->framesize);
 
 			this->lastFrameTime = tp;
@@ -243,8 +230,6 @@ public:
 	
 		struct v4l2_format vid_format;
 		memset(&vid_format, 0, sizeof(vid_format));
-
-		printf("a %d\n", vid_format.fmt.pix.sizeimage);
 
 		ret_code = ioctl(this->fdwr, VIDIOC_G_FMT, &vid_format);
 		if(verbose)print_format(&vid_format);
@@ -282,31 +267,15 @@ public:
 		//printf("test2 %d\n", vid_format.fmt.pix.bytesperline);
 		vid_format.fmt.pix.colorspace = V4L2_COLORSPACE_SRGB;
 
-		printf("b %d\n", vid_format.fmt.pix.sizeimage);
-
 		if(verbose)print_format(&vid_format);
 
-		printf("b2 %d\n", vid_format.fmt.pix.sizeimage);
-
 		ret_code = ioctl(this->fdwr, VIDIOC_S_FMT, &vid_format);
-
-		printf("c %d\n", vid_format.fmt.pix.sizeimage);
 
 		assert(ret_code != -1);
 
 		this->framesize = vid_format.fmt.pix.sizeimage;
 		int linewidth = vid_format.fmt.pix.bytesperline;
 		if(verbose)printf("frame: format=%s\tsize=%d\n", this->outputPxFmt.c_str(), framesize);
-		printf("d %d\n", vid_format.fmt.pix.sizeimage);
-		print_format(&vid_format);
-
-		printf("test %d\n", framesize);
-		printf("e %d\n", vid_format.fmt.pix.sizeimage);
-
-		printf("testa %d\n", framesize);
-		printf("f %d\n", vid_format.fmt.pix.sizeimage);
-
-		printf("testb %d\n", framesize);
 
 		try
 		{
