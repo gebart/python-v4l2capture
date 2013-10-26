@@ -244,7 +244,8 @@ public:
 			fw += 2 * ((ROUND_UP_8 (this->outputWidth) / 2) * (ROUND_UP_2 (this->outputHeight) / 2));
 		}
 
-		if(strcmp(this->outputPxFmt.c_str(), "YUYV")==0)
+		if(strcmp(this->outputPxFmt.c_str(), "YUYV")==0 
+			|| strcmp(this->outputPxFmt.c_str(), "UYVY")==0 )
 		{
 			lw = (ROUND_UP_2 (this->outputWidth) * 2);
 			fw = lw * this->outputHeight;
@@ -256,6 +257,8 @@ public:
 		vid_format.fmt.pix.pixelformat = 0;
 		if(strcmp(this->outputPxFmt.c_str(), "YUYV")==0)
 			vid_format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
+		if(strcmp(this->outputPxFmt.c_str(), "UYVY")==0)
+			vid_format.fmt.pix.pixelformat = V4L2_PIX_FMT_UYVY;
 		if(strcmp(this->outputPxFmt.c_str(), "YVU420")==0)
 			vid_format.fmt.pix.pixelformat = V4L2_PIX_FMT_YVU420;
 		if(strcmp(this->outputPxFmt.c_str(), "RGB24")==0)

@@ -316,8 +316,8 @@ int ReadJpegFile(unsigned char * inbuffer,
 
 // **************************************************************
 
-void ConvertRGBToYUYV(const unsigned char *im, unsigned sizeimage, 
-	unsigned width, unsigned height,
+void ConvertRGBtoYUYVorSimilar(const unsigned char *im, unsigned sizeimage, 
+	unsigned width, unsigned height, const char *targetPxFmt,
 	unsigned char **outIm, unsigned *outImSize)
 {
 	unsigned bytesperline = width * 2;
@@ -327,15 +327,45 @@ void ConvertRGBToYUYV(const unsigned char *im, unsigned sizeimage,
 	*outIm = outBuff;
 	unsigned char *im2 = (unsigned char *)im;
 
+	int uOffset = 0;
+	int vOffset = 0;
+	int yOffset1 = 0;
+	int yOffset2 = 0;
+	int formatKnown = 0;
+
+	if(strcmp(targetPxFmt, "YUYV")==0)
+	{
+		uOffset = 1;
+		vOffset = 3;
+		yOffset1 = 0;
+		yOffset2 = 2;
+		formatKnown = 1;
+	}
+
+	if(strcmp(targetPxFmt, "UYVY")==0)
+	{
+		uOffset = 0;
+		vOffset = 2;
+		yOffset1 = 1;
+		yOffset2 = 3;
+		formatKnown = 1;
+	}
+
+	if(!formatKnown)
+	{
+		throw std::runtime_error("Unknown target pixel format");
+	}
+
 	for (unsigned y=0; y<height; y++)
 	{
 		//Set lumenance
 		unsigned cursor = y * bytesperline + padding;
-		for(unsigned x=0;x< width;x++)
+		for(unsigned x=0;x< width;x+=2)
 		{
 			unsigned rgbOffset = width * y * 3 + x * 3;
-			outBuff[cursor] = im[rgbOffset] * 0.299 + im[rgbOffset+1] * 0.587 + im[rgbOffset+2] * 0.114;
-			cursor += 2;
+			outBuff[cursor+yOffset1] = im[rgbOffset] * 0.299 + im[rgbOffset+1] * 0.587 + im[rgbOffset+2] * 0.114;
+			outBuff[cursor+yOffset2] = im[rgbOffset+3] * 0.299 + im[rgbOffset+4] * 0.587 + im[rgbOffset+5] * 0.114;
+			cursor += 4;
 		}
 	
 		//Set color information for Cb
@@ -346,7 +376,7 @@ void ConvertRGBToYUYV(const unsigned char *im, unsigned sizeimage,
 			float Pb1 = im2[rgbOffset+0] * -0.168736 + im2[rgbOffset+1] * -0.331264 + im2[rgbOffset+2] * 0.5;
 			float Pb2 = im2[rgbOffset+3] * -0.168736 + im2[rgbOffset+4] * -0.331264 + im2[rgbOffset+5] * 0.5;
 
-			outBuff[cursor+1] = 0.5 * (Pb1 + Pb2) + 128;
+			outBuff[cursor+uOffset] = 0.5 * (Pb1 + Pb2) + 128;
 			cursor += 4;
 		}
 
@@ -358,7 +388,7 @@ void ConvertRGBToYUYV(const unsigned char *im, unsigned sizeimage,
 			float Pr1 = im2[rgbOffset+0] * 0.5 + im2[rgbOffset+1] * -0.418688 + im2[rgbOffset+2] * -0.081312;
 			float Pr2 = im2[rgbOffset+3] * 0.5 + im2[rgbOffset+4] * -0.418688 + im2[rgbOffset+5] * -0.081312;
 
-			outBuff[cursor+3] = 0.5 * (Pr1 + Pr2) + 128;
+			outBuff[cursor+vOffset] = 0.5 * (Pr1 + Pr2) + 128;
 			cursor += 4;
 		}
 	}
@@ -454,10 +484,13 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 		return 1;
 	}
 
-	if(strcmp(inPxFmt,"RGB24")==0 && strcmp(targetPxFmt, "YUYV")==0)
+	if(strcmp(inPxFmt,"RGB24")==0 && 
+		(strcmp(targetPxFmt, "YUYV")==0
+		|| strcmp(targetPxFmt, "UYVY")==0)
+		)
 	{
-		ConvertRGBToYUYV(data, dataLen, 
-			width, height,
+		ConvertRGBtoYUYVorSimilar(data, dataLen, 
+			width, height, targetPxFmt,
 			buffOut, buffOutLen);
 		return 1;
 	}
