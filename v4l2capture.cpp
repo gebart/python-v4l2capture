@@ -873,6 +873,14 @@ static PyObject *Device_manager_set_format(Device_manager *self, PyObject *args)
 		Py_RETURN_NONE;
 	}
 
+	//Check this device is valid
+	std::map<std::string, class Device_manager_Worker_thread_args *>::iterator it = self->threadArgStore->find(devarg);
+	if(it==self->threadArgStore->end())
+	{
+		PyErr_Format(PyExc_RuntimeError, "Device already not ready.");
+ 		Py_RETURN_NONE;
+	}
+
 	class Device_manager_Worker_thread_args *threadArgs = (*self->threadArgStore)[devarg];
 	threadArgs->SetFormat(fmt, size_x, size_y);
 
@@ -897,6 +905,14 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 		buffer_count = PyInt_AsLong(pybufferarg);
 	}
 
+	//Check this device is valid
+	std::map<std::string, class Device_manager_Worker_thread_args *>::iterator it = self->threadArgStore->find(devarg);
+	if(it==self->threadArgStore->end())
+	{
+		PyErr_Format(PyExc_RuntimeError, "Device already not ready.");
+ 		Py_RETURN_NONE;
+	}
+
 	class Device_manager_Worker_thread_args *threadArgs = (*self->threadArgStore)[devarg];
 	threadArgs->StartDevice(buffer_count);
 	
@@ -912,6 +928,14 @@ static PyObject *Device_manager_Get_frame(Device_manager *self, PyObject *args)
 	{
 		PyObject *pydevarg = PyTuple_GetItem(args, 0);
 		devarg = PyString_AsString(pydevarg);
+	}
+
+	//Check this device is valid
+	std::map<std::string, class Device_manager_Worker_thread_args *>::iterator it = self->threadArgStore->find(devarg);
+	if(it==self->threadArgStore->end())
+	{
+		PyErr_Format(PyExc_RuntimeError, "Device already not ready.");
+ 		Py_RETURN_NONE;
 	}
 
 	class Device_manager_Worker_thread_args *threadArgs = (*self->threadArgStore)[devarg];
@@ -951,6 +975,14 @@ static PyObject *Device_manager_stop(Device_manager *self, PyObject *args)
 		devarg = PyString_AsString(pydevarg);
 	}
 
+	//Check this device is valid
+	std::map<std::string, class Device_manager_Worker_thread_args *>::iterator it = self->threadArgStore->find(devarg);
+	if(it==self->threadArgStore->end())
+	{
+		PyErr_Format(PyExc_RuntimeError, "Device already not ready.");
+ 		Py_RETURN_NONE;
+	}
+
 	class Device_manager_Worker_thread_args *threadArgs = (*self->threadArgStore)[devarg];
 	threadArgs->StopDevice();
 
@@ -965,6 +997,14 @@ static PyObject *Device_manager_close(Device_manager *self, PyObject *args)
 	{
 		PyObject *pydevarg = PyTuple_GetItem(args, 0);
 		devarg = PyString_AsString(pydevarg);
+	}
+
+	//Check this device is valid
+	std::map<std::string, class Device_manager_Worker_thread_args *>::iterator it = self->threadArgStore->find(devarg);
+	if(it==self->threadArgStore->end())
+	{
+		PyErr_Format(PyExc_RuntimeError, "Device already not ready.");
+ 		Py_RETURN_NONE;
 	}
 
 	class Device_manager_Worker_thread_args *threadArgs = (*self->threadArgStore)[devarg];
