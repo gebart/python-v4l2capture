@@ -1094,6 +1094,9 @@ static PyMethodDef Video_out_manager_methods[] = {
 	{"close", (PyCFunction)Video_out_manager_close, METH_VARARGS,
 			 "close(dev = '\\dev\\video0')\n\n"
 			 "Close video device. Subsequent calls to other methods will fail."},
+	{"list_devices", (PyCFunction)Video_out_manager_list_devices, METH_NOARGS,
+			 "list_devices()\n\n"
+			 "List available capture devices."},
 	{NULL}
 };
 

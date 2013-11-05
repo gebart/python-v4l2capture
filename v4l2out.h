@@ -24,6 +24,8 @@ PyObject *Video_out_manager_Send_frame(Video_out_manager *self, PyObject *args);
 
 PyObject *Video_out_manager_close(Video_out_manager *self, PyObject *args);
 
+PyObject *Video_out_manager_list_devices(Video_out_manager *self);
+
 // ******************************************************************
 
 #endif //__V4L2OUT_H__

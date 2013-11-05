@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <signal.h>
 #include <time.h>
+#include <dirent.h>
 #include <vector>
 #include <stdexcept>
 #include "v4l2out.h"
@@ -484,3 +485,25 @@ PyObject *Video_out_manager_close(Video_out_manager *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+PyObject *Video_out_manager_list_devices(Video_out_manager *self)
+{
+	PyObject *out = PyList_New(0);
+	const char dir[] = "/dev";
+	DIR *dp;
+	struct dirent *dirp;
+	if((dp  = opendir(dir)) == NULL) {
+		printf("Error(%d) opening %s\n", errno, dir);
+		Py_RETURN_NONE;
+	}
+
+	while ((dirp = readdir(dp)) != NULL) {
+		if (strncmp(dirp->d_name, "video", 5) != 0) continue;
+		std::string tmp = "/dev/";
+		tmp.append(dirp->d_name);
+		PyList_Append(out, PyString_FromString(tmp.c_str()));
+	}
+	closedir(dp);
+
+	PyList_Sort(out);
+	return out;
+}
