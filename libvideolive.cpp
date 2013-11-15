@@ -398,7 +398,7 @@ PyMODINIT_FUNC initvideolive(void)
 		}
 
 	Py_INCREF(&Device_manager_type);
-	PyModule_AddObject(module, "Device_manager", (PyObject *)&Device_manager_type);
+	PyModule_AddObject(module, "Video_in_manager", (PyObject *)&Device_manager_type);
 	PyModule_AddObject(module, "Video_out_manager", (PyObject *)&Video_out_manager_type);
 
 }
