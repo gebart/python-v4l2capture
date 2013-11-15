@@ -1,6 +1,11 @@
 
 #include "videoin.h"
+#ifdef _NT
+#include "mfvideoin.h"
+#endif
+#ifdef _POSIX
 #include "v4l2capture.h"
+#endif
 
 void Device_manager_dealloc(Device_manager *self)
 {
@@ -44,9 +49,21 @@ PyObject *Device_manager_open(Device_manager *self, PyObject *args)
 	}
 
 	pthread_t thread;
+	#ifdef _POSIX
 	Video_in_Manager *threadArgs = new Video_in_Manager(devarg);
+	#endif
+	#ifdef _NT
+	MfVideoIn *threadArgs = new MfVideoIn(devarg);
+	#endif
+
 	(*self->threadArgStore)[devarg] = threadArgs;
+
+	#ifdef _POSIX
 	pthread_create(&thread, NULL, Video_in_Worker_thread, threadArgs);
+	#endif
+	#ifdef _NT
+	pthread_create(&thread, NULL, MfVideoIn_Worker_thread, threadArgs);
+	#endif
 
 	threadArgs->OpenDevice();
 

@@ -15,11 +15,13 @@ import os
 
 if os.name == "nt":
     videolive = Extension("videolive", ["pixfmt.cpp", "libvideolive.cpp", "videoout.cpp", "videoin.cpp", "mfvideoin.cpp", "mfvideoout.cpp"],
+						define_macros=[('_'+os.name.upper(), None)],
                           library_dirs=['C:\Dev\Lib\libjpeg-turbo-gcc\lib'],
                         include_dirs=['C:\Dev\Lib\libjpeg-turbo-gcc\include'],  
 			libraries = ["pthread", "jpeg"])
 else:
     videolive = Extension("videolive", ["v4l2capture.cpp", "v4l2out.cpp", "pixfmt.cpp", "libvideolive.cpp", "videoout.cpp", "videoin.cpp"], 
+			define_macros=[('_'+os.name.upper(), None)],
 			libraries = ["v4l2", "pthread", "jpeg"])
     
 setup(

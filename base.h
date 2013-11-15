@@ -58,6 +58,8 @@ public:
 	virtual void StopDevice() {};
 	virtual void CloseDevice() {};
 	virtual int GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut) {return 0;};
+
+	void Run() {};
 };
 
 // **********************************************************************
@@ -71,6 +73,10 @@ public:
 	virtual void SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height) {};
 	virtual void Stop() {};
 	virtual int WaitForStop() {return 1;};
+	virtual void SetOutputSize(int width, int height) {};
+	virtual void SetOutputPxFmt(const char *fmt) {};
+
+	void Run() {};
 };
 
 #endif //BASE_H

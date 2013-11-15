@@ -2,12 +2,14 @@
 #ifndef MFVIDEOIN_H
 #define MFVIDEOIN_H
 
+#include <vector>
+#include <string>
 #include "base.h"
 
 class MfVideoIn : public Base_Video_In
 {
 public:
-	MfVideoIn() : Base_Video_In() {};
+	MfVideoIn(const char *devName) : Base_Video_In() {};
 	virtual ~MfVideoIn() {};
 
 	virtual void Stop() {};
@@ -19,5 +21,8 @@ public:
 	virtual void CloseDevice() {};
 	virtual int GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut) {return 0;};
 };
+
+void *MfVideoIn_Worker_thread(void *arg);
+std::vector<std::string> List_in_devices();
 
 #endif //MFVIDEOIN_H

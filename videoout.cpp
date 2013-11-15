@@ -1,6 +1,12 @@
 
+#include <vector>
 #include "videoout.h"
+#ifdef _NT
+#include "mfvideoout.h"
+#endif
+#if _POSIX
 #include "v4l2out.h"
+#endif
 
 int Video_out_manager_init(Video_out_manager *self, PyObject *args,
 		PyObject *kwargs)
@@ -40,13 +46,23 @@ PyObject *Video_out_manager_open(Video_out_manager *self, PyObject *args)
 
 	//Create worker thread
 	pthread_t thread;
+	#ifdef _POSIX
 	Video_out *threadArgs = new Video_out(devarg);
-	(*self->threads)[devarg] = threadArgs;
-	threadArgs->outputWidth = widthIn;
-	threadArgs->outputHeight = heightIn;
-	threadArgs->outputPxFmt = pxFmtIn;
+	#endif
+	#ifdef _NT
+	MfVideoOut *threadArgs = new MfVideoOut(devarg);
+	#endif
 
+	(*self->threads)[devarg] = threadArgs;
+	threadArgs->SetOutputSize(widthIn, heightIn);
+	threadArgs->SetOutputPxFmt(pxFmtIn);
+
+	#ifdef _POSIX
 	pthread_create(&thread, NULL, Video_out_manager_Worker_thread, threadArgs);
+	#endif
+	#ifdef _NT
+	pthread_create(&thread, NULL, MfVideoOut_Worker_thread, threadArgs);
+	#endif
 
 	Py_RETURN_NONE;
 }
