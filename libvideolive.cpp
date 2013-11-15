@@ -388,7 +388,7 @@ static PyMethodDef module_methods[] = {
 	{ NULL, NULL, 0, NULL }
 };
 
-PyMODINIT_FUNC initv4l2capture(void)
+PyMODINIT_FUNC initvideolive(void)
 {
 	Device_manager_type.tp_new = PyType_GenericNew;
 	Video_out_manager_type.tp_new = PyType_GenericNew;
