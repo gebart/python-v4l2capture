@@ -34,8 +34,6 @@ void print_format(struct v4l2_format*vid_format) {
   printf("	vid_format->fmt.pix.colorspace  =%d\n",	vid_format->fmt.pix.colorspace );
 }
 
-//*******************************************************************
-
 class SendFrameArgs
 {
 public:
@@ -66,7 +64,9 @@ public:
 	}
 };
 
-Video_out::Video_out(const char *devNameIn)
+//*******************************************************************
+
+Video_out::Video_out(const char *devNameIn) : Base_Video_Out()
 {
 	this->fdwr = 0;
 	framesize = 0;

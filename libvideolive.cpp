@@ -128,7 +128,6 @@ static PyObject *Device_manager_open(Device_manager *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
-
 static PyObject *Device_manager_set_format(Device_manager *self, PyObject *args)
 {
 	int size_x;

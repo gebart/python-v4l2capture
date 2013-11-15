@@ -4,8 +4,9 @@
 #include <map>
 #include <vector>
 #include <string>
+#include "base.h"
 
-class Video_out
+class Video_out : public Base_Video_Out
 {
 public:
 	std::string devName;

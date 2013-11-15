@@ -84,7 +84,7 @@ int my_ioctl(int fd, int request, void *arg, int utimeout = -1)
 
 // **************************************************************************
 
-Video_in_Manager::Video_in_Manager(const char *devNameIn)
+Video_in_Manager::Video_in_Manager(const char *devNameIn) : Base_Video_In()
 {
 	stop = 0;
 	stopped = 1;

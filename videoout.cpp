@@ -5,14 +5,14 @@
 int Video_out_manager_init(Video_out_manager *self, PyObject *args,
 		PyObject *kwargs)
 {
-	self->threads = new std::map<std::string, class Video_out *>;
+	self->threads = new std::map<std::string, class Base_Video_Out *>;
 	return 0;
 }
 
 void Video_out_manager_dealloc(Video_out_manager *self)
 {
 	//Stop high level threads
-	for(std::map<std::string, class Video_out *>::iterator it = self->threads->begin(); 
+	for(std::map<std::string, class Base_Video_Out *>::iterator it = self->threads->begin(); 
 		it != self->threads->end(); it++)
 	{
 		it->second->Stop();
@@ -85,7 +85,7 @@ PyObject *Video_out_manager_Send_frame(Video_out_manager *self, PyObject *args)
 	PyObject *pyHeight = PyTuple_GetItem(args, 4);
 	heightIn = PyInt_AsLong(pyHeight);
 
-	std::map<std::string, class Video_out *>::iterator it = self->threads->find(devarg);
+	std::map<std::string, class Base_Video_Out *>::iterator it = self->threads->find(devarg);
 
 	if(it != self->threads->end())
 	{
@@ -111,7 +111,7 @@ PyObject *Video_out_manager_close(Video_out_manager *self, PyObject *args)
 	}
 
 	//Stop worker thread
-	std::map<std::string, class Video_out *>::iterator it = self->threads->find(devarg);
+	std::map<std::string, class Base_Video_Out *>::iterator it = self->threads->find(devarg);
 
 	if(it != self->threads->end())
 	{

@@ -44,11 +44,11 @@ public:
 
 };
 
-// **********************************************************************
-
 class Base_Video_In
 {
 public:
+	Base_Video_In() {};
+	virtual ~Base_Video_In() {};
 	virtual void Stop() {};
 	virtual void WaitForStop() {};
 	virtual void OpenDevice() {};
@@ -57,6 +57,16 @@ public:
 	virtual void StopDevice() {};
 	virtual void CloseDevice() {};
 	virtual int GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut) {return 0;};
+};
+
+// **********************************************************************
+
+class Base_Video_Out
+{
+public:
+	virtual void SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height) {};
+	virtual void Stop() {};
+	virtual int WaitForStop() {return 1;};
 };
 
 #endif //BASE_H

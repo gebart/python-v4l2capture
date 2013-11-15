@@ -5,11 +5,12 @@
 #include <Python.h>
 #include <map>
 #include <string>
+#include "base.h"
 
 class Video_out_manager_cl{
 public:
 	PyObject_HEAD
-	std::map<std::string, class Video_out *> *threads;
+	std::map<std::string, class Base_Video_Out *> *threads;
 };
 typedef Video_out_manager_cl Video_out_manager;
 
