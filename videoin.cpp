@@ -1,5 +1,6 @@
 
 #include "videoin.h"
+#include <pthread.h>
 #ifdef _NT
 #include "mfvideoin.h"
 #endif

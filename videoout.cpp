@@ -1,5 +1,6 @@
 
 #include <vector>
+#include <pthread.h>
 #include "videoout.h"
 #ifdef _NT
 #include "mfvideoout.h"
