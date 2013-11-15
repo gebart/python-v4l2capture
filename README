@@ -19,15 +19,29 @@ original python-v4l2capture: http://fredrik.jemla.eu/v4l2capture
 
 libv4l: http://freshmeat.net/projects/libv4l
 
-Installation
-============
+Installation on Linux
+=====================
 
 libvideolive on linux requires libv4l by default. You can do so by erasing ', libraries = ["v4l2"]'
-in setup.py and erasing '#define USE_LIBV4L' in v4l2capture.c.
+in setup.py and erasing '#define USE_LIBV4L' in v4l2capture.cpp.
 
-libvideolive uses distutils.
-To build: ./setup.py build
-To build and install: ./setup.py install
+libvideolive uses distutils to compile. For Linux:
+
+./setup.py build
+sudo ./setup.py install
+
+Installation on Windows
+=====================
+
+Modify setup.py to specify locations of libjpeg and pthread external libraries.
+
+With Visual Studio 2010:
+
+SET VS90COMNTOOLS=%VS100COMNTOOLS%
+python setup.py build -c msvc
+python setup.py install
+
+Remember to put the libjpeg and pthread dlls somewhere appropriate.
 
 Example
 =======

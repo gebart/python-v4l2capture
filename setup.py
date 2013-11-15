@@ -10,8 +10,6 @@
 # 2013, Tim Sheerman-Chase
 # See README for license
 
-# Visual Studio 2010 trick: SET VS90COMNTOOLS=%VS100COMNTOOLS%
-
 from distutils.core import Extension, setup
 import os
 
