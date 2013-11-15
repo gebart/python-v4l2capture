@@ -12,18 +12,18 @@
 
 from distutils.core import Extension, setup
 setup(
-    name = "v4l2capture",
-    version = "1.4",
-    author = "Fredrik Portstrom, Tim Sheerman-Chase",
-    author_email = "fredrik@jemla.se",
-    url = "http://fredrik.jemla.eu/v4l2capture",
-    description = "Capture video with video4linux2",
-    long_description = "python-v4l2capture is a slim and easy to use Python "
-    "extension for capturing video with video4linux2.",
-    license = "Public Domain",
+    name = "videolive",
+    version = "1.0",
+    author = "Tim Sheerman-Chase",
+    author_email = "info@kinatomic",
+    url = "http://www.kinatomic.com",
+    description = "Capture and stream video",
+    long_description = "Capture and stream video in python",
+    license = "GPL v2 or later",
     classifiers = [
-        "License :: Public Domain",
+        "License :: GPL",
         "Programming Language :: C++"],
     ext_modules = [
-        Extension("v4l2capture", ["v4l2capture.cpp", "v4l2out.cpp", "pixfmt.cpp"], libraries = ["v4l2", "pthread", "jpeg"])])
+        Extension("videolive", ["v4l2capture.cpp", "v4l2out.cpp", "pixfmt.cpp", "libvideolive.cpp"], 
+			libraries = ["v4l2", "pthread", "jpeg"])])
 
