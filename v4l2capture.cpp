@@ -619,3 +619,26 @@ void *Video_in_Worker_thread(void *arg)
 	return NULL;
 }
 
+std::vector<std::string> List_in_devices()
+{
+	std::vector<std::string> out;
+	const char dir[] = "/dev";
+	DIR *dp;
+	struct dirent *dirp;
+	if((dp  = opendir(dir)) == NULL) {
+		printf("Error(%d) opening %s\n", errno, dir);
+		return out;
+	}
+
+	while ((dirp = readdir(dp)) != NULL) {
+		if (strncmp(dirp->d_name, "video", 5) != 0) continue;
+		std::string tmp = "/dev/";
+		tmp.append(dirp->d_name);
+		out.push_back(tmp);
+	}
+	closedir(dp);
+	return out;
+}
+
+
+

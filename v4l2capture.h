@@ -124,6 +124,8 @@ public:
 
 void *Video_in_Worker_thread(void *arg);
 
+std::vector<std::string> List_in_devices();
+
 // **********************************************************************
 
 #endif //V4L2CAPTURE_H

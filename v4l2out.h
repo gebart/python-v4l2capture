@@ -38,6 +38,8 @@ public:
 
 void *Video_out_manager_Worker_thread(void *arg);
 
+std::vector<std::string> List_out_devices();
+
 // ******************************************************************
 
 #endif //__V4L2OUT_H__

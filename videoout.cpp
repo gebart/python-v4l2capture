@@ -1,7 +1,6 @@
 
 #include "videoout.h"
 #include "v4l2out.h"
-#include <dirent.h>
 
 int Video_out_manager_init(Video_out_manager *self, PyObject *args,
 		PyObject *kwargs)
@@ -125,22 +124,11 @@ PyObject *Video_out_manager_close(Video_out_manager *self, PyObject *args)
 PyObject *Video_out_manager_list_devices(Video_out_manager *self)
 {
 	PyObject *out = PyList_New(0);
-	const char dir[] = "/dev";
-	DIR *dp;
-	struct dirent *dirp;
-	if((dp  = opendir(dir)) == NULL) {
-		printf("Error(%d) opening %s\n", errno, dir);
-		Py_RETURN_NONE;
+	std::vector<std::string> devLi = List_out_devices();
+	for(unsigned i=0; i<devLi.size(); i++)
+	{
+		PyList_Append(out, PyString_FromString(devLi[i].c_str()));
 	}
-
-	while ((dirp = readdir(dp)) != NULL) {
-		if (strncmp(dirp->d_name, "video", 5) != 0) continue;
-		std::string tmp = "/dev/";
-		tmp.append(dirp->d_name);
-		PyList_Append(out, PyString_FromString(tmp.c_str()));
-	}
-	closedir(dp);
-
 	PyList_Sort(out);
 	return out;
 }
