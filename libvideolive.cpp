@@ -30,7 +30,7 @@ typedef struct {
 class Device_manager_cl{
 public:
 	PyObject_HEAD
-	std::map<std::string, class Video_in_Manager *> *threadArgStore;
+	std::map<std::string, class Base_Video_In *> *threadArgStore;
 };
 typedef Device_manager_cl Device_manager;
 
@@ -82,7 +82,7 @@ PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 static void Device_manager_dealloc(Device_manager *self)
 {
 	//Stop high level threads
-	for(std::map<std::string, class Video_in_Manager *>::iterator it = self->threadArgStore->begin(); 
+	for(std::map<std::string, class Base_Video_In *>::iterator it = self->threadArgStore->begin(); 
 		it != self->threadArgStore->end(); it++)
 	{
 		PyObject *args = PyTuple_New(1);
@@ -98,7 +98,7 @@ static void Device_manager_dealloc(Device_manager *self)
 static int Device_manager_init(Device_manager *self, PyObject *args,
 		PyObject *kwargs)
 {
-	self->threadArgStore = new std::map<std::string, class Video_in_Manager*>;
+	self->threadArgStore = new std::map<std::string, class Base_Video_In*>;
 	return 0;
 }
 
@@ -113,7 +113,7 @@ static PyObject *Device_manager_open(Device_manager *self, PyObject *args)
 	}
 
 	//Check this device has not already been opened
-	std::map<std::string, class Video_in_Manager *>::iterator it = self->threadArgStore->find(devarg);
+	std::map<std::string, class Base_Video_In *>::iterator it = self->threadArgStore->find(devarg);
 	if(it!=self->threadArgStore->end())
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device already opened.");
@@ -144,14 +144,14 @@ static PyObject *Device_manager_set_format(Device_manager *self, PyObject *args)
 	}
 
 	//Check this device is valid
-	std::map<std::string, class Video_in_Manager *>::iterator it = self->threadArgStore->find(devarg);
+	std::map<std::string, class Base_Video_In *>::iterator it = self->threadArgStore->find(devarg);
 	if(it==self->threadArgStore->end())
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device already not ready.");
  		Py_RETURN_NONE;
 	}
 
-	class Video_in_Manager *threadArgs = (*self->threadArgStore)[devarg];
+	class Base_Video_In *threadArgs = (*self->threadArgStore)[devarg];
 	threadArgs->SetFormat(fmt, size_x, size_y);
 
 	Py_RETURN_NONE;
@@ -176,14 +176,14 @@ static PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 	}
 
 	//Check this device is valid
-	std::map<std::string, class Video_in_Manager *>::iterator it = self->threadArgStore->find(devarg);
+	std::map<std::string, class Base_Video_In *>::iterator it = self->threadArgStore->find(devarg);
 	if(it==self->threadArgStore->end())
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device already not ready.");
  		Py_RETURN_NONE;
 	}
 
-	class Video_in_Manager *threadArgs = (*self->threadArgStore)[devarg];
+	class Base_Video_In *threadArgs = (*self->threadArgStore)[devarg];
 	threadArgs->StartDevice(buffer_count);
 	
 	Py_RETURN_NONE;
@@ -201,14 +201,14 @@ static PyObject *Device_manager_Get_frame(Device_manager *self, PyObject *args)
 	}
 
 	//Check this device is valid
-	std::map<std::string, class Video_in_Manager *>::iterator it = self->threadArgStore->find(devarg);
+	std::map<std::string, class Base_Video_In *>::iterator it = self->threadArgStore->find(devarg);
 	if(it==self->threadArgStore->end())
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device already not ready.");
  		Py_RETURN_NONE;
 	}
 
-	class Video_in_Manager *threadArgs = (*self->threadArgStore)[devarg];
+	class Base_Video_In *threadArgs = (*self->threadArgStore)[devarg];
 	unsigned char *buffOut = NULL; 
 	class FrameMetaData metaOut;
 
@@ -246,14 +246,14 @@ static PyObject *Device_manager_stop(Device_manager *self, PyObject *args)
 	}
 
 	//Check this device is valid
-	std::map<std::string, class Video_in_Manager *>::iterator it = self->threadArgStore->find(devarg);
+	std::map<std::string, class Base_Video_In *>::iterator it = self->threadArgStore->find(devarg);
 	if(it==self->threadArgStore->end())
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device already not ready.");
  		Py_RETURN_NONE;
 	}
 
-	class Video_in_Manager *threadArgs = (*self->threadArgStore)[devarg];
+	class Base_Video_In *threadArgs = (*self->threadArgStore)[devarg];
 	threadArgs->StopDevice();
 
 	Py_RETURN_NONE;
@@ -270,14 +270,14 @@ static PyObject *Device_manager_close(Device_manager *self, PyObject *args)
 	}
 
 	//Check this device is valid
-	std::map<std::string, class Video_in_Manager *>::iterator it = self->threadArgStore->find(devarg);
+	std::map<std::string, class Base_Video_In *>::iterator it = self->threadArgStore->find(devarg);
 	if(it==self->threadArgStore->end())
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device already not ready.");
  		Py_RETURN_NONE;
 	}
 
-	class Video_in_Manager *threadArgs = (*self->threadArgStore)[devarg];
+	class Base_Video_In *threadArgs = (*self->threadArgStore)[devarg];
 	threadArgs->CloseDevice();
 
 	//Stop worker thread
