@@ -1,30 +1,42 @@
 #ifndef __V4L2OUT_H__
 #define __V4L2OUT_H__
 
-#include <Python.h>
 #include <map>
 #include <vector>
 #include <string>
 
-class Video_out_manager_cl{
+class Video_out
+{
 public:
-	PyObject_HEAD
-	std::map<std::string, class Video_out *> *threads;
+	std::string devName;
+	int stop;
+	int stopped;
+	pthread_mutex_t lock;
+	int verbose;
+	std::vector<class SendFrameArgs> sendFrameArgs;
+	std::vector<const char *> sendFrameBuffer;
+	struct timespec lastFrameTime;
+	int fdwr;
+	int framesize;
+	unsigned char *currentFrame;
+	int outputWidth;
+	int outputHeight;
+	std::string outputPxFmt;
+
+	Video_out(const char *devNameIn);
+	virtual ~Video_out();
+
+protected:
+	void SendFrameInternal();
+
+public:
+	void Run();
+	void SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height);
+	void Stop();
+	int WaitForStop();
 };
-typedef Video_out_manager_cl Video_out_manager;
 
-int Video_out_manager_init(Video_out_manager *self, PyObject *args,
-		PyObject *kwargs);
-
-void Video_out_manager_dealloc(Video_out_manager *self);
-
-PyObject *Video_out_manager_open(Video_out_manager *self, PyObject *args);
-
-PyObject *Video_out_manager_Send_frame(Video_out_manager *self, PyObject *args);
-
-PyObject *Video_out_manager_close(Video_out_manager *self, PyObject *args);
-
-PyObject *Video_out_manager_list_devices(Video_out_manager *self);
+void *Video_out_manager_Worker_thread(void *arg);
 
 // ******************************************************************
 

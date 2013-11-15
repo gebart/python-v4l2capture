@@ -18,7 +18,7 @@
 #include <dirent.h>
 #include "pixfmt.h"
 #include "v4l2capture.h"
-#include "v4l2out.h"
+#include "videoout.h"
 
 typedef struct {
 	PyObject_HEAD

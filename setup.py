@@ -24,6 +24,6 @@ setup(
         "License :: GPL",
         "Programming Language :: C++"],
     ext_modules = [
-        Extension("videolive", ["v4l2capture.cpp", "v4l2out.cpp", "pixfmt.cpp", "libvideolive.cpp"], 
+        Extension("videolive", ["v4l2capture.cpp", "v4l2out.cpp", "pixfmt.cpp", "libvideolive.cpp", "videoout.cpp"], 
 			libraries = ["v4l2", "pthread", "jpeg"])])
 
