@@ -113,7 +113,7 @@ public:
 
 int my_ioctl(int fd, int request, void *arg, int utimeout);
 
-class Device_manager_Worker_thread_args
+class Video_in_Manager
 {
 public:
 	//Device_manager *self;
@@ -139,8 +139,8 @@ public:
 	std::vector<class FrameMetaData> decodedFrameMetaBuff;
 	unsigned decodedFrameBuffMaxSize;
 
-	Device_manager_Worker_thread_args(const char *devNameIn);
-	virtual ~Device_manager_Worker_thread_args();
+	Video_in_Manager(const char *devNameIn);
+	virtual ~Video_in_Manager();
 	void Stop();
 	void WaitForStop();
 	void OpenDevice();
@@ -163,7 +163,7 @@ public:
 	void Run();
 };
 
-void *Device_manager_Worker_thread(void *arg);
+void *Video_in_Worker_thread(void *arg);
 
 // **********************************************************************
 

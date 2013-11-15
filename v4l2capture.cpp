@@ -84,7 +84,7 @@ int my_ioctl(int fd, int request, void *arg, int utimeout = -1)
 
 // ***************************************************************************
 
-Device_manager_Worker_thread_args::Device_manager_Worker_thread_args(const char *devNameIn)
+Video_in_Manager::Video_in_Manager(const char *devNameIn)
 {
 	stop = 0;
 	stopped = 1;
@@ -102,7 +102,7 @@ Device_manager_Worker_thread_args::Device_manager_Worker_thread_args(const char 
 	targetFmt = "RGB24";
 }
 
-Device_manager_Worker_thread_args::~Device_manager_Worker_thread_args()
+Video_in_Manager::~Video_in_Manager()
 {
 	if(deviceStarted)
 	{
@@ -126,14 +126,14 @@ Device_manager_Worker_thread_args::~Device_manager_Worker_thread_args()
 	pthread_mutex_destroy(&lock);
 }
 
-void Device_manager_Worker_thread_args::Stop()
+void Video_in_Manager::Stop()
 {
 	pthread_mutex_lock(&this->lock);
 	this->stop = 1;
 	pthread_mutex_unlock(&this->lock);
 }
 
-void Device_manager_Worker_thread_args::WaitForStop()
+void Video_in_Manager::WaitForStop()
 {
 	while(1)
 	{
@@ -146,14 +146,14 @@ void Device_manager_Worker_thread_args::WaitForStop()
 	}
 }
 
-void Device_manager_Worker_thread_args::OpenDevice()
+void Video_in_Manager::OpenDevice()
 {
 	pthread_mutex_lock(&this->lock);
 	this->openDeviceFlag.push_back(this->devName.c_str());
 	pthread_mutex_unlock(&this->lock);
 }
 
-void Device_manager_Worker_thread_args::SetFormat(const char *fmt, int width, int height)
+void Video_in_Manager::SetFormat(const char *fmt, int width, int height)
 {
 	class SetFormatParams params;
 	params.fmt = fmt;
@@ -165,28 +165,28 @@ void Device_manager_Worker_thread_args::SetFormat(const char *fmt, int width, in
 	pthread_mutex_unlock(&this->lock);
 }
 
-void Device_manager_Worker_thread_args::StartDevice(int buffer_count)
+void Video_in_Manager::StartDevice(int buffer_count)
 {
 	pthread_mutex_lock(&this->lock);
 	this->startDeviceFlag.push_back(buffer_count);
 	pthread_mutex_unlock(&this->lock);
 }
 
-void Device_manager_Worker_thread_args::StopDevice()
+void Video_in_Manager::StopDevice()
 {
 	pthread_mutex_lock(&this->lock);
 	this->stopDeviceFlag = 1;
 	pthread_mutex_unlock(&this->lock);
 }
 
-void Device_manager_Worker_thread_args::CloseDevice()
+void Video_in_Manager::CloseDevice()
 {
 	pthread_mutex_lock(&this->lock);
 	this->closeDeviceFlag = 1;
 	pthread_mutex_unlock(&this->lock);
 }
 
-int Device_manager_Worker_thread_args::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
+int Video_in_Manager::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 {
 	pthread_mutex_lock(&this->lock);
 	if(this->decodedFrameBuff.size()==0)
@@ -207,7 +207,7 @@ int Device_manager_Worker_thread_args::GetFrame(unsigned char **buffOut, class F
 	return 1;
 }
 
-int Device_manager_Worker_thread_args::ReadFrame()
+int Video_in_Manager::ReadFrame()
 {
 	if(this->fd<0)
 		throw std::runtime_error("File not open");
@@ -274,7 +274,7 @@ int Device_manager_Worker_thread_args::ReadFrame()
 	return 1;
 }
 
-int Device_manager_Worker_thread_args::OpenDeviceInternal()
+int Video_in_Manager::OpenDeviceInternal()
 {
 	if(verbose) printf("OpenDeviceInternal\n");
 	//Open the video device.
@@ -290,7 +290,7 @@ int Device_manager_Worker_thread_args::OpenDeviceInternal()
 	return 1;
 }
 
-int Device_manager_Worker_thread_args::SetFormatInternal(class SetFormatParams &args)
+int Video_in_Manager::SetFormatInternal(class SetFormatParams &args)
 {
 	if(verbose) printf("SetFormatInternal\n");
 	//int size_x, int size_y, const char *fmt;
@@ -329,7 +329,7 @@ int Device_manager_Worker_thread_args::SetFormatInternal(class SetFormatParams &
 	return 1;
 }
 
-int Device_manager_Worker_thread_args::GetFormatInternal()
+int Video_in_Manager::GetFormatInternal()
 {
 	struct v4l2_format format;
 	format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -371,7 +371,7 @@ int Device_manager_Worker_thread_args::GetFormatInternal()
 	return 1;
 }
 
-int Device_manager_Worker_thread_args::StartDeviceInternal(int buffer_count = 10)
+int Video_in_Manager::StartDeviceInternal(int buffer_count = 10)
 {
 	if(verbose) printf("StartDeviceInternal\n");
 	//Check this device has not already been start
@@ -479,7 +479,7 @@ int Device_manager_Worker_thread_args::StartDeviceInternal(int buffer_count = 10
 	return 1;
 }
 
-void Device_manager_Worker_thread_args::StopDeviceInternal()
+void Video_in_Manager::StopDeviceInternal()
 {
 	if(verbose) printf("StopDeviceInternal\n");
 	if(this->fd==-1)
@@ -499,7 +499,7 @@ void Device_manager_Worker_thread_args::StopDeviceInternal()
 	this->deviceStarted = 0;
 }
 
-int Device_manager_Worker_thread_args::CloseDeviceInternal()
+int Video_in_Manager::CloseDeviceInternal()
 {
 	if(verbose) printf("CloseDeviceInternal\n");
 	if(this->fd == -1)
@@ -526,7 +526,7 @@ int Device_manager_Worker_thread_args::CloseDeviceInternal()
 	return 1;
 }
 
-void Device_manager_Worker_thread_args::Run()
+void Video_in_Manager::Run()
 {
 	if(verbose) printf("Thread started: %s\n", this->devName.c_str());
 	int running = 1;
@@ -611,9 +611,9 @@ void Device_manager_Worker_thread_args::Run()
 	pthread_mutex_unlock(&this->lock);
 }
 
-void *Device_manager_Worker_thread(void *arg)
+void *Video_in_Worker_thread(void *arg)
 {
-	class Device_manager_Worker_thread_args *argobj = (class Device_manager_Worker_thread_args*) arg;
+	class Video_in_Manager *argobj = (class Video_in_Manager*) arg;
 	argobj->Run();
 
 	return NULL;
