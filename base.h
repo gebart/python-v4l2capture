@@ -49,6 +49,7 @@ class Base_Video_In
 public:
 	Base_Video_In() {};
 	virtual ~Base_Video_In() {};
+
 	virtual void Stop() {};
 	virtual void WaitForStop() {};
 	virtual void OpenDevice() {};
@@ -64,6 +65,9 @@ public:
 class Base_Video_Out
 {
 public:
+	Base_Video_Out() {};
+	virtual ~Base_Video_Out() {};
+
 	virtual void SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height) {};
 	virtual void Stop() {};
 	virtual int WaitForStop() {return 1;};

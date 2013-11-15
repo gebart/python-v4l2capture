@@ -1,0 +1,2 @@
+
+#include "mfvideoin.h"

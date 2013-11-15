@@ -11,6 +11,17 @@
 # See README for license
 
 from distutils.core import Extension, setup
+import os
+
+if os.name == "nt":
+    videolive = Extension("videolive", ["pixfmt.cpp", "libvideolive.cpp", "videoout.cpp", "videoin.cpp", "mfvideoin.cpp", "mfvideoout.cpp"],
+                          library_dirs=['C:\Dev\Lib\libjpeg-turbo-gcc\lib'],
+                        include_dirs=['C:\Dev\Lib\libjpeg-turbo-gcc\include'],  
+			libraries = ["pthread", "jpeg"])
+else:
+    videolive = Extension("videolive", ["v4l2capture.cpp", "v4l2out.cpp", "pixfmt.cpp", "libvideolive.cpp", "videoout.cpp", "videoin.cpp"], 
+			libraries = ["v4l2", "pthread", "jpeg"])
+    
 setup(
     name = "videolive",
     version = "1.0",
@@ -23,7 +34,6 @@ setup(
     classifiers = [
         "License :: GPL",
         "Programming Language :: C++"],
-    ext_modules = [
-        Extension("videolive", ["v4l2capture.cpp", "v4l2out.cpp", "pixfmt.cpp", "libvideolive.cpp", "videoout.cpp", "videoin.cpp"], 
-			libraries = ["v4l2", "pthread", "jpeg"])])
+    ext_modules = [videolive]
+    )
 
