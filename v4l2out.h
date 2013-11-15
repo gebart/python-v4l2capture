@@ -35,6 +35,9 @@ public:
 	void SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height);
 	void Stop();
 	int WaitForStop();
+
+	void SetOutputSize(int width, int height);
+	void SetOutputPxFmt(const char *fmt);
 };
 
 void *Video_out_manager_Worker_thread(void *arg);

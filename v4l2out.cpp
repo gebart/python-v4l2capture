@@ -333,6 +333,21 @@ int Video_out::WaitForStop()
 	}
 }
 
+void Video_out::SetOutputSize(int width, int height)
+{
+	pthread_mutex_lock(&this->lock);
+	this->outputWidth = width;
+	this->outputHeight = height;
+	pthread_mutex_unlock(&this->lock);
+}
+
+void Video_out::SetOutputPxFmt(const char *fmt)
+{
+	pthread_mutex_lock(&this->lock);
+	this->outputPxFmt = fmt;
+	pthread_mutex_unlock(&this->lock);
+}
+
 void *Video_out_manager_Worker_thread(void *arg)
 {
 	class Video_out *argobj = (class Video_out*) arg;
