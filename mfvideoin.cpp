@@ -461,24 +461,42 @@ public:
 	}
    
 };
+//**************************************************************************
+
+WmfBase::WmfBase() : Base_Video_In()
+{
+	HRESULT hr = MFStartup(MF_VERSION);
+	if(!SUCCEEDED(hr))
+		throw std::runtime_error("Media foundation startup failed");
+
+	hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+	if(!SUCCEEDED(hr))
+		throw std::runtime_error("CoInitializeEx failed");
+}
+
+WmfBase::~WmfBase()
+{
+	MFShutdown();
+
+	CoUninitialize();
+}
 
 
 //***************************************************************************
 
-MfVideoIn::MfVideoIn(const char *devNameIn) : Base_Video_In()
+MfVideoIn::MfVideoIn(const char *devNameIn) : WmfBase()
 {
-	this->initDone = 0;
 	this->asyncMode = 1;
 	this->devName = devNameIn;
 	this->reader = NULL;
 	this->source = NULL;
 	this->readerCallback = NULL;
-	this->InitWmf();
 }
 
 MfVideoIn::~MfVideoIn()
 {
-	this->DeinitWmf();
+	SafeRelease(&reader);
+	SafeRelease(&source);
 }
 
 void MfVideoIn::Stop()
@@ -523,41 +541,6 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 
 //***************************************************************
 
-void MfVideoIn::InitWmf()
-{
-	if(this->initDone)
-		throw runtime_error("Media Foundation init already done");
-
-	HRESULT hr = MFStartup(MF_VERSION);
-	if(!SUCCEEDED(hr))
-		throw std::runtime_error("Media foundation startup failed");
-
-	hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-	if(!SUCCEEDED(hr))
-		throw std::runtime_error("CoInitializeEx failed");
-
-	this->initDone = true;
-}
-
-void MfVideoIn::DeinitWmf()
-{
-	if(!this->initDone)
-		throw runtime_error("Media Foundation init not done");
-
-	SafeRelease(&reader);
-	reader = NULL;
-	SafeRelease(&source);
-	source = NULL;
-
-	MFShutdown();
-
-	CoUninitialize();
-
-	this->initDone = false;
-}
-
-//************************************************************
-
 void *MfVideoIn_Worker_thread(void *arg)
 {
 	class MfVideoIn *argobj = (class MfVideoIn*) arg;
@@ -566,8 +549,114 @@ void *MfVideoIn_Worker_thread(void *arg)
 	return NULL;
 }
 
-std::vector<std::string> List_in_devices()
+//******************************************************************
+
+class WmfListDevices : public WmfBase
 {
-	std::vector<std::string> out;
+public:
+	WmfListDevices() : WmfBase()
+	{
+
+	}
+
+	virtual ~WmfListDevices()
+	{
+
+	}
+
+	
+	int EnumDevices(IMFActivate ***ppDevicesOut)
+	{
+		//Warning: the result from this function must be manually freed!
+
+		//Allocate memory to store devices
+		IMFAttributes *pAttributes = NULL;
+		*ppDevicesOut = NULL;
+		HRESULT hr = MFCreateAttributes(&pAttributes, 1);
+		if(!SUCCEEDED(hr))
+			throw std::runtime_error("MFCreateAttributes failed");
+
+		hr = pAttributes->SetGUID(
+            MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
+            MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID
+            );
+		if(!SUCCEEDED(hr))
+		{
+			SafeRelease(&pAttributes);
+			throw std::runtime_error("SetGUID failed");
+		}
+
+		//Get list of devices from media foundation
+		UINT32 count;
+		hr = MFEnumDeviceSources(pAttributes, ppDevicesOut, &count);
+		if(!SUCCEEDED(hr))
+		{
+			SafeRelease(&pAttributes);
+			throw std::runtime_error("MFEnumDeviceSources failed");
+		}
+
+		SafeRelease(&pAttributes);
+		return count;
+	}
+
+	std::vector<std::vector<std::wstring> > ListDevices()
+	{
+		std::vector<std::vector<std::wstring> > out;
+
+		IMFActivate **ppDevices = NULL;
+		int count = this->EnumDevices(&ppDevices);
+		
+		//For each device
+		for(int i=0; i<count; i++)
+		{
+			IMFActivate *pActivate = ppDevices[i];
+			wchar_t *vd_pFriendlyName = NULL;
+
+			//Get friendly names for devices
+			HRESULT hr = pActivate->GetAllocatedString(
+				MF_DEVSOURCE_ATTRIBUTE_FRIENDLY_NAME,
+				&vd_pFriendlyName,
+				NULL
+				);
+			if(!SUCCEEDED(hr))
+			{
+				SafeRelease(ppDevices);
+				CoTaskMemFree(vd_pFriendlyName);
+				throw std::runtime_error("GetAllocatedString failed");
+			}
+
+			wchar_t *symbolicLink = NULL;
+			hr = pActivate->GetAllocatedString(
+				MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK,
+				&symbolicLink,
+				NULL
+				);
+			if(!SUCCEEDED(hr))
+			{
+				SafeRelease(ppDevices);
+				CoTaskMemFree(vd_pFriendlyName);
+				CoTaskMemFree(symbolicLink);
+				throw std::runtime_error("GetAllocatedString failed");
+			}
+
+			std::vector<std::wstring> src;
+			src.push_back(symbolicLink);
+			src.push_back(vd_pFriendlyName);
+			out.push_back(src);
+
+			CoTaskMemFree(vd_pFriendlyName);
+			CoTaskMemFree(symbolicLink);
+		}
+
+		SafeRelease(ppDevices);
+		return out;
+	}
+};
+
+std::vector<std::vector<std::wstring> > List_in_devices()
+{
+	class WmfListDevices wmfListDevices;
+	std::vector<std::vector<std::wstring> > out = wmfListDevices.ListDevices();
+
 	return out;
 }

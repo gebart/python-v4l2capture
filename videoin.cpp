@@ -234,10 +234,17 @@ PyObject *Device_manager_close(Device_manager *self, PyObject *args)
 PyObject *Device_manager_list_devices(Device_manager *self)
 {	
 	PyObject *out = PyList_New(0);
-	std::vector<std::string> devLi = List_in_devices();
+	std::vector<std::vector<std::wstring> > devLi = List_in_devices();
 	for(unsigned i=0; i<devLi.size(); i++)
 	{
-		PyList_Append(out, PyString_FromString(devLi[i].c_str()));
+		PyObject *deviceTuple = PyTuple_New(devLi[i].size());
+		for(unsigned j=0; j<devLi[i].size(); j++)
+		{
+			const wchar_t *str = devLi[i][j].c_str();
+			PyTuple_SetItem(deviceTuple, j, PyUnicode_FromWideChar(str, wcslen(str)));
+		}
+		PyList_Append(out, deviceTuple);
+		Py_CLEAR(deviceTuple);
 	}
 	PyList_Sort(out);
 	return out;

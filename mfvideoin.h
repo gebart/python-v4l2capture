@@ -8,7 +8,15 @@
 #include <mfreadwrite.h>
 #include "base.h"
 
-class MfVideoIn : public Base_Video_In
+class WmfBase : public Base_Video_In
+{
+public:
+	WmfBase();
+	virtual ~WmfBase();
+
+};
+
+class MfVideoIn : public WmfBase
 {
 public:
 	MfVideoIn(const char *devName);
@@ -24,10 +32,7 @@ public:
 	virtual int GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut);
 
 protected:
-	virtual void InitWmf();
-	virtual void DeinitWmf();
-
-	int initDone;
+	
 	IMFSourceReader* reader;
 	IMFMediaSource* source;
 	int asyncMode;
@@ -36,6 +41,6 @@ protected:
 };
 
 void *MfVideoIn_Worker_thread(void *arg);
-std::vector<std::string> List_in_devices();
+std::vector<std::vector<std::wstring> > List_in_devices();
 
 #endif //MFVIDEOIN_H
