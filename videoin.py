@@ -1,5 +1,5 @@
 
-import videolive
+import videolive, time
 
 if __name__=="__main__":
 	inManager = videolive.Video_in_manager()
@@ -12,7 +12,8 @@ if __name__=="__main__":
 		print "No source devices detected"
 		exit(0)
 
-	firstDev = open(devs[0][0])
+	firstDev = inManager.open(devs[0][0])
 	print firstDev
 
-	
+	for i in range(10):
+		time.sleep(1)

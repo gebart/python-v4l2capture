@@ -39,6 +39,9 @@ protected:
 	int asyncMode;
 	std::string devName;
 	class SourceReaderCB* readerCallback;
+	int stopping;
+	int stopped;
+	CRITICAL_SECTION lock;
 };
 
 void *MfVideoIn_Worker_thread(void *arg);

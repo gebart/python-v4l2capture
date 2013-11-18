@@ -491,27 +491,44 @@ MfVideoIn::MfVideoIn(const char *devNameIn) : WmfBase()
 	this->reader = NULL;
 	this->source = NULL;
 	this->readerCallback = NULL;
+	this->stopping = 0;
+	this->stopped = 0;
+	InitializeCriticalSection(&lock);
 }
 
 MfVideoIn::~MfVideoIn()
 {
+	this->WaitForStop();
+
 	SafeRelease(&reader);
 	SafeRelease(&source);
+	DeleteCriticalSection(&lock);
 }
 
 void MfVideoIn::Stop()
 {
-	
+	EnterCriticalSection(&lock);
+	this->stopping = 1;
+	LeaveCriticalSection(&lock);
 }
 
 void MfVideoIn::WaitForStop()
 {
+	this->Stop();
 
+	int waiting = 1;
+	while(waiting)
+	{
+		EnterCriticalSection(&lock);
+		waiting = !this->stopped;
+		LeaveCriticalSection(&lock);
+		Sleep(10);
+	}
 }
 
 void MfVideoIn::OpenDevice()
 {
-
+	cout << "MfVideoIn::OpenDevice()" << endl;
 }
 
 void MfVideoIn::SetFormat(const char *fmt, int width, int height)
@@ -521,7 +538,7 @@ void MfVideoIn::SetFormat(const char *fmt, int width, int height)
 
 void MfVideoIn::StartDevice(int buffer_count)
 {
-
+	cout << "MfVideoIn::StartDevice()" << endl;
 }
 
 void MfVideoIn::StopDevice()
@@ -531,7 +548,7 @@ void MfVideoIn::StopDevice()
 
 void MfVideoIn::CloseDevice()
 {
-
+	cout << "MfVideoIn::CloseDevice()" << endl;
 }
 
 int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
@@ -541,11 +558,19 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 
 void MfVideoIn::Run()
 {
+	int running = 1;
 	while(1)
 	{
-		cout << "running" << endl;
 		Sleep(10);
+
+		EnterCriticalSection(&lock);
+		running = !this->stopping;
+		LeaveCriticalSection(&lock);
 	}
+
+	EnterCriticalSection(&lock);
+	this->stopped = 1;
+	LeaveCriticalSection(&lock);
 }
 
 //***************************************************************
