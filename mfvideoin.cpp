@@ -7,8 +7,6 @@
 using namespace std;
 
 #include <mfapi.h>
-#include <mfidl.h>
-#include <mfreadwrite.h>
 #include <Mferror.h>
 #include <Shlwapi.h>
 
@@ -467,14 +465,20 @@ public:
 
 //***************************************************************************
 
-MfVideoIn::MfVideoIn(const char *devName) : Base_Video_In()
+MfVideoIn::MfVideoIn(const char *devNameIn) : Base_Video_In()
 {
-
+	this->initDone = 0;
+	this->asyncMode = 1;
+	this->devName = devNameIn;
+	this->reader = NULL;
+	this->source = NULL;
+	this->readerCallback = NULL;
+	this->InitWmf();
 }
 
 MfVideoIn::~MfVideoIn()
 {
-
+	this->DeinitWmf();
 }
 
 void MfVideoIn::Stop()
@@ -515,6 +519,41 @@ void MfVideoIn::CloseDevice()
 int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 {
 	return 0;
+}
+
+//***************************************************************
+
+void MfVideoIn::InitWmf()
+{
+	if(this->initDone)
+		throw runtime_error("Media Foundation init already done");
+
+	HRESULT hr = MFStartup(MF_VERSION);
+	if(!SUCCEEDED(hr))
+		throw std::runtime_error("Media foundation startup failed");
+
+	hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+	if(!SUCCEEDED(hr))
+		throw std::runtime_error("CoInitializeEx failed");
+
+	this->initDone = true;
+}
+
+void MfVideoIn::DeinitWmf()
+{
+	if(!this->initDone)
+		throw runtime_error("Media Foundation init not done");
+
+	SafeRelease(&reader);
+	reader = NULL;
+	SafeRelease(&source);
+	source = NULL;
+
+	MFShutdown();
+
+	CoUninitialize();
+
+	this->initDone = false;
 }
 
 //************************************************************
