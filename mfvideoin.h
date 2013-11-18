@@ -41,6 +41,10 @@ protected:
 	class SourceReaderCB* readerCallback;
 	int stopping;
 	int stopped;
+	int openDevFlag;
+	int startDevFlag;
+	int stopDevFlag;
+	int closeDevFlag;
 	CRITICAL_SECTION lock;
 };
 
