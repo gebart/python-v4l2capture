@@ -19,7 +19,8 @@ if os.name == "nt":
                           library_dirs=['C:\Dev\Lib\libjpeg-turbo-win\lib', "C:\Dev\Lib\pthreads\pthreads.2"],
                         include_dirs=['C:\Dev\Lib\libjpeg-turbo-win\include', "C:\Dev\Lib\pthreads\pthreads.2"],  
 						extra_link_args=["/MANIFEST"],
-			libraries = ["pthreadVC2", "jpeg"])
+			libraries = ["pthreadVC2", "jpeg", "Mfplat", "Mf", "Mfreadwrite", "Ole32", "mfuuid", "Shlwapi"])
+
 else:
     videolive = Extension("videolive", ["v4l2capture.cpp", "v4l2out.cpp", "pixfmt.cpp", "libvideolive.cpp", "videoout.cpp", "videoin.cpp"], 
 			define_macros=[('_'+os.name.upper(), None)],
