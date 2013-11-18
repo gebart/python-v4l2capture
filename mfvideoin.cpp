@@ -649,12 +649,8 @@ public:
 			CoTaskMemFree(symbolicLink);
 		}
 
-		cout << "1, " << (long) ppDevices << endl;
 		if(ppDevices) 
 			SafeRelease(ppDevices);
-		else
-			cout << "skip" << endl;
-		cout << "2" << endl;
 
 		return out;
 	}
