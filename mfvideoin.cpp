@@ -601,12 +601,11 @@ public:
 
 	std::vector<std::vector<std::wstring> > ListDevices()
 	{
-		cout << "a" << end;
 		std::vector<std::vector<std::wstring> > out;
 
 		IMFActivate **ppDevices = NULL;
 		int count = this->EnumDevices(&ppDevices);
-		
+		cout << "count" << count << endl;
 		//For each device
 		for(int i=0; i<count; i++)
 		{
@@ -640,6 +639,7 @@ public:
 				throw std::runtime_error("GetAllocatedString failed");
 			}
 
+			cout << i << endl;
 			std::vector<std::wstring> src;
 			src.push_back(symbolicLink);
 			src.push_back(vd_pFriendlyName);
@@ -649,7 +649,10 @@ public:
 			CoTaskMemFree(symbolicLink);
 		}
 
+		cout << "1, " << (long) ppDevices << endl;
 		SafeRelease(ppDevices);
+		cout << "2" << endl;
+
 		return out;
 	}
 };
