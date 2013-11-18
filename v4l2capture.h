@@ -124,7 +124,7 @@ public:
 
 void *Video_in_Worker_thread(void *arg);
 
-std::vector<std::string> List_in_devices();
+std::vector<std::vector<std::wstring> > List_in_devices();
 
 // **********************************************************************
 
