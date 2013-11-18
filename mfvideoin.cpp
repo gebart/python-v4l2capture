@@ -13,6 +13,7 @@ using namespace std;
 #include "mfvideoin.h"
 
 #define MAX_DEVICE_ID_LEN 100
+int EnumDevices(IMFActivate ***ppDevicesOut);
 
 template <class T> void SafeRelease(T **ppT)
 {
@@ -484,7 +485,7 @@ WmfBase::~WmfBase()
 
 //***************************************************************************
 
-MfVideoIn::MfVideoIn(const char *devNameIn) : WmfBase()
+MfVideoIn::MfVideoIn(const wchar_t *devNameIn) : WmfBase()
 {
 	this->asyncMode = 1;
 	this->devName = devNameIn;
@@ -572,27 +573,232 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 	return 0;
 }
 
+//***************************************************************
+
 void MfVideoIn::Run()
 {
 	int running = 1;
-	while(1)
+	try
+	{
+	while(running)
 	{
 		EnterCriticalSection(&lock);
 		running = !this->stopping;
+		int openDevFlagTmp = this->openDevFlag;
+		this->openDevFlag = 0;
+		int startDevFlagTmp = this->startDevFlag;
+		this->startDevFlag = 0;
+		int stopDevFlagTmp = this->stopDevFlag;
+		this->stopDevFlag = 0;
+		int closeDevFlagTmp = this->closeDevFlag;
+		this->closeDevFlag = 0;
 		LeaveCriticalSection(&lock);
 		if(!running) continue;
 
+		if(openDevFlagTmp)
+		{
+			this->OpenDeviceInternal();
+		}
 
+		if(startDevFlagTmp)
+		{
+			this->StartDeviceInternal();
+		}
 
-
-
+		if(this->reader != NULL)
+			this->ReadFramesInternal();
 
 		Sleep(10);
+	}
+	}
+	catch(std::exception &err)
+	{
+		cout << err.what() << endl;
 	}
 
 	EnterCriticalSection(&lock);
 	this->stopped = 1;
 	LeaveCriticalSection(&lock);
+}
+
+void MfVideoIn::OpenDeviceInternal()
+{
+	//Check if source is already available
+	if(this->source != NULL) 
+		throw runtime_error("Device already open");
+	
+	//Open a new source
+	IMFActivate **ppDevices = NULL;
+	int count = EnumDevices(&ppDevices);
+	int devIndex = -1;
+
+	//Find device
+	for(int i=0; i<count; i++)
+	{
+		IMFActivate *pActivate = ppDevices[i];
+		wchar_t *symbolicLink = NULL;
+		HRESULT hr = pActivate->GetAllocatedString(
+			MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK,
+			&symbolicLink,
+			NULL
+			);
+		if(!SUCCEEDED(hr))
+		{
+			SafeRelease(ppDevices);
+			throw std::runtime_error("GetAllocatedString failed");
+		}
+
+		if(wcscmp(symbolicLink, this->devName.c_str())==0)
+		{
+			devIndex = i;
+		}
+		CoTaskMemFree(symbolicLink);
+	}
+
+	if(devIndex == -1) 
+		throw runtime_error("Device not found");
+
+	IMFActivate *pActivate = ppDevices[devIndex];
+		
+	//Activate device object
+	IMFMediaSource *sourceTmp = NULL;
+	HRESULT hr = pActivate->ActivateObject(
+		__uuidof(IMFMediaSource),
+		(void**)&sourceTmp
+		);
+	if(!SUCCEEDED(hr))
+	{
+		SafeRelease(ppDevices);
+		throw std::runtime_error("ActivateObject failed");
+	}
+
+	this->source = sourceTmp;
+
+	SafeRelease(ppDevices);
+}
+
+void MfVideoIn::StartDeviceInternal()
+{
+	//Create reader
+	IMFAttributes *pAttributes = NULL;
+	HRESULT hr = MFCreateAttributes(&pAttributes, 1);
+	if(!SUCCEEDED(hr))
+		throw std::runtime_error("MFCreateAttributes failed");
+		
+	if(source==NULL)
+		throw std::runtime_error("Source not open");
+
+	//Set attributes for reader
+	if(this->asyncMode)
+	{
+		this->readerCallback = new SourceReaderCB();
+
+		hr = pAttributes->SetUnknown(MF_SOURCE_READER_ASYNC_CALLBACK, this->readerCallback);
+	}
+
+	IMFSourceReader *readerTmp = NULL;
+	hr = MFCreateSourceReaderFromMediaSource(this->source, pAttributes, &readerTmp);
+	if(!SUCCEEDED(hr))
+	{
+		SafeRelease(&pAttributes);
+		throw std::runtime_error("MFCreateSourceReaderFromMediaSource failed");
+	}
+
+	this->reader = readerTmp;
+
+	SafeRelease(&pAttributes);
+}
+
+void MfVideoIn::ReadFramesInternal()
+{
+	//Check if reader is ready
+	if(this->reader == NULL)
+		throw std::runtime_error("Reader not ready for this source");
+
+	HRESULT hr = S_OK;
+	IMFSample *pSample = NULL;
+	DWORD streamIndex=0, flags=0;
+	LONGLONG llTimeStamp=0;
+
+	if(this->asyncMode)
+	{
+		if(!this->readerCallback->GetPending())
+		{
+			hr = this->reader->ReadSample(
+				MF_SOURCE_READER_ANY_STREAM,    // Stream index.
+				0, NULL, NULL, NULL, NULL
+				);
+			this->readerCallback->SetPending();
+		}
+
+		HRESULT hrStatus = S_OK;
+		DWORD dwStreamIndex = 0;
+		DWORD dwStreamFlags = 0; 
+		LONGLONG llTimestamp = 0;
+		char *frame = NULL;
+		DWORD buffLen = 0;
+
+		int found = this->readerCallback->GetFrame(&hrStatus, &dwStreamIndex,
+			&dwStreamFlags, &llTimestamp, &frame, &buffLen);
+
+		//cout << (long) frame << "," << buffLen << endl;
+		if(found)
+		{
+			if((frame == NULL) != (buffLen == 0))
+				throw runtime_error("Frame buffer corruption detected");
+			/*PyObject* out = StaticObjToPythonObj(this->reader, 
+				streamIndex, 
+				flags, 
+				llTimeStamp, 
+				frame, buffLen);*/
+			if(frame) delete [] frame;
+				
+			//SetSampleMetaData(this->reader, streamIndex, out);
+			
+			
+			return;
+		}
+		else
+			return;
+	}
+	else
+	{
+		hr = this->reader->ReadSample(
+			MF_SOURCE_READER_ANY_STREAM,    // Stream index.
+			0,                              // Flags.
+			&streamIndex,                   // Receives the actual stream index. 
+			&flags,                         // Receives status flags.
+			&llTimeStamp,                   // Receives the time stamp.
+			&pSample                        // Receives the sample or NULL.
+			);
+		
+		if (FAILED(hr))
+		{
+			return;
+		}
+
+		if(pSample!=NULL)
+		{
+			char *frame = NULL;
+			DWORD buffLen = SampleToStaticObj(pSample, &frame);
+
+			/*PyObject* out = StaticObjToPythonObj(pReader, 
+				streamIndex, 
+				flags, 
+				llTimeStamp, 
+				frame, buffLen);*/
+
+			//SetSampleMetaData(pReader, streamIndex, out);
+
+
+			pSample->Release();
+			if(frame != NULL) delete [] frame;
+			return;
+		}
+
+		if(pSample) pSample->Release();
+	}
+
 }
 
 //***************************************************************
@@ -607,6 +813,40 @@ void *MfVideoIn_Worker_thread(void *arg)
 
 //******************************************************************
 
+int EnumDevices(IMFActivate ***ppDevicesOut)
+{
+	//Warning: the result from this function must be manually freed!
+
+	//Allocate memory to store devices
+	IMFAttributes *pAttributes = NULL;
+	*ppDevicesOut = NULL;
+	HRESULT hr = MFCreateAttributes(&pAttributes, 1);
+	if(!SUCCEEDED(hr))
+		throw std::runtime_error("MFCreateAttributes failed");
+
+	hr = pAttributes->SetGUID(
+           MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
+           MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID
+           );
+	if(!SUCCEEDED(hr))
+	{
+		SafeRelease(&pAttributes);
+		throw std::runtime_error("SetGUID failed");
+	}
+
+	//Get list of devices from media foundation
+	UINT32 count;
+	hr = MFEnumDeviceSources(pAttributes, ppDevicesOut, &count);
+	if(!SUCCEEDED(hr))
+	{
+		SafeRelease(&pAttributes);
+		throw std::runtime_error("MFEnumDeviceSources failed");
+	}
+
+	SafeRelease(&pAttributes);
+	return count;
+}
+
 class WmfListDevices : public WmfBase
 {
 public:
@@ -620,47 +860,12 @@ public:
 
 	}
 
-	
-	int EnumDevices(IMFActivate ***ppDevicesOut)
-	{
-		//Warning: the result from this function must be manually freed!
-
-		//Allocate memory to store devices
-		IMFAttributes *pAttributes = NULL;
-		*ppDevicesOut = NULL;
-		HRESULT hr = MFCreateAttributes(&pAttributes, 1);
-		if(!SUCCEEDED(hr))
-			throw std::runtime_error("MFCreateAttributes failed");
-
-		hr = pAttributes->SetGUID(
-            MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE,
-            MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID
-            );
-		if(!SUCCEEDED(hr))
-		{
-			SafeRelease(&pAttributes);
-			throw std::runtime_error("SetGUID failed");
-		}
-
-		//Get list of devices from media foundation
-		UINT32 count;
-		hr = MFEnumDeviceSources(pAttributes, ppDevicesOut, &count);
-		if(!SUCCEEDED(hr))
-		{
-			SafeRelease(&pAttributes);
-			throw std::runtime_error("MFEnumDeviceSources failed");
-		}
-
-		SafeRelease(&pAttributes);
-		return count;
-	}
-
 	std::vector<std::vector<std::wstring> > ListDevices()
 	{
 		std::vector<std::vector<std::wstring> > out;
 
 		IMFActivate **ppDevices = NULL;
-		int count = this->EnumDevices(&ppDevices);
+		int count = EnumDevices(&ppDevices);
 		
 		//For each device
 		for(int i=0; i<count; i++)

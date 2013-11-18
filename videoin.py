@@ -12,8 +12,11 @@ if __name__=="__main__":
 		print "No source devices detected"
 		exit(0)
 
-	firstDev = inManager.open(devs[0][0])
-	print firstDev
+	inManager.open(devs[0][0])
+	
+	time.sleep(1)
+	inManager.start(devs[0][0])
+	
 
 	for i in range(10):
 		time.sleep(1)

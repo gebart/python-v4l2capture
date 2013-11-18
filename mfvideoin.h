@@ -19,7 +19,7 @@ public:
 class MfVideoIn : public WmfBase
 {
 public:
-	MfVideoIn(const char *devName);
+	MfVideoIn(const wchar_t *devName);
 	virtual ~MfVideoIn();
 
 	virtual void Stop();
@@ -37,7 +37,7 @@ protected:
 	IMFSourceReader* reader;
 	IMFMediaSource* source;
 	int asyncMode;
-	std::string devName;
+	std::wstring devName;
 	class SourceReaderCB* readerCallback;
 	int stopping;
 	int stopped;
@@ -46,6 +46,10 @@ protected:
 	int stopDevFlag;
 	int closeDevFlag;
 	CRITICAL_SECTION lock;
+
+	void OpenDeviceInternal();
+	void StartDeviceInternal();
+	void ReadFramesInternal();
 };
 
 void *MfVideoIn_Worker_thread(void *arg);

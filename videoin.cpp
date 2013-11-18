@@ -55,7 +55,14 @@ PyObject *Device_manager_open(Device_manager *self, PyObject *args)
 	Video_in_Manager *threadArgs = new Video_in_Manager(devarg);
 	#endif
 	#ifdef _NT
-	MfVideoIn *threadArgs = new MfVideoIn(devarg);
+	wchar_t *tmpDevName = new wchar_t[strlen(devarg)+1];
+	size_t returnValue;
+	//returnValue = mbstowcs(tmpDevName, devarg, strlen(devarg)+1);
+	mbstowcs_s(&returnValue, tmpDevName, strlen(devarg)+1, devarg, strlen(devarg)+1);
+	std::wstring tmpDevName2(tmpDevName);
+	delete [] tmpDevName;
+
+	MfVideoIn *threadArgs = new MfVideoIn(tmpDevName2.c_str());
 	#endif
 
 	(*self->threadArgStore)[devarg] = threadArgs;
