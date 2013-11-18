@@ -501,7 +501,7 @@ MfVideoIn::~MfVideoIn()
 
 void MfVideoIn::Stop()
 {
-		
+	
 }
 
 void MfVideoIn::WaitForStop()
@@ -537,6 +537,15 @@ void MfVideoIn::CloseDevice()
 int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 {
 	return 0;
+}
+
+void MfVideoIn::Run()
+{
+	while(1)
+	{
+		cout << "running" << endl;
+		Sleep(10);
+	}
 }
 
 //***************************************************************

@@ -31,6 +31,7 @@ public:
 	virtual void CloseDevice();
 	virtual int GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut);
 
+	void Run();
 protected:
 	
 	IMFSourceReader* reader;
