@@ -9,17 +9,17 @@
 class MfVideoIn : public Base_Video_In
 {
 public:
-	MfVideoIn(const char *devName) : Base_Video_In() {};
-	virtual ~MfVideoIn() {};
+	MfVideoIn(const char *devName);
+	virtual ~MfVideoIn();
 
-	virtual void Stop() {};
-	virtual void WaitForStop() {};
-	virtual void OpenDevice() {};
-	virtual void SetFormat(const char *fmt, int width, int height) {};
-	virtual void StartDevice(int buffer_count) {};
-	virtual void StopDevice() {};
-	virtual void CloseDevice() {};
-	virtual int GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut) {return 0;};
+	virtual void Stop();
+	virtual void WaitForStop();
+	virtual void OpenDevice();
+	virtual void SetFormat(const char *fmt, int width, int height);
+	virtual void StartDevice(int buffer_count);
+	virtual void StopDevice();
+	virtual void CloseDevice();
+	virtual int GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut);
 };
 
 void *MfVideoIn_Worker_thread(void *arg);
