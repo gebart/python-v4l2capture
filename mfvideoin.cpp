@@ -601,6 +601,7 @@ public:
 
 	std::vector<std::vector<std::wstring> > ListDevices()
 	{
+		cout << "a" << end;
 		std::vector<std::vector<std::wstring> > out;
 
 		IMFActivate **ppDevices = NULL;
