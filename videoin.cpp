@@ -236,7 +236,7 @@ PyObject *Device_manager_list_devices(Device_manager *self)
 {	
 	PyObject *out = PyList_New(0);
 	std::vector<std::vector<std::wstring> > devLi = List_in_devices();
-	std::cout <<"z"<< std::endl;
+	
 	for(unsigned i=0; i<devLi.size(); i++)
 	{
 		PyObject *deviceTuple = PyTuple_New(devLi[i].size());
