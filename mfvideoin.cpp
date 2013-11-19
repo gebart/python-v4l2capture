@@ -268,46 +268,6 @@ DWORD SampleToStaticObj(IMFSample *pSample, char **buff)
 	return pcbCurrentLength;
 }
 
-/*void SetSampleMetaData(IMFSourceReader *pReader, DWORD streamIndex, PyObject *out)
-{
-	//Set meta data in output object
-	IMFMediaType *pCurrentType = NULL;
-	LONG plStride = 0;
-	GUID majorType=GUID_NULL, subType=GUID_NULL;
-	UINT32 width = 0;
-	UINT32 height = 0;
-
-	HRESULT hr = pReader->GetCurrentMediaType(streamIndex, &pCurrentType);
-	if(!SUCCEEDED(hr)) cout << "Error 3\n";
-	BOOL isComp = FALSE;
-	hr = pCurrentType->IsCompressedFormat(&isComp);
-	PyDict_SetItemStringAndDeleteVar(out, "isCompressed", PyBool_FromLong(isComp));
-	hr = pCurrentType->GetGUID(MF_MT_MAJOR_TYPE, &majorType);
-	LPCWSTR typePtr = GetGUIDNameConst(majorType);
-	if(!SUCCEEDED(hr)) cout << "Error 4\n";
-	hr = pCurrentType->GetGUID(MF_MT_SUBTYPE, &subType);
-	if(!SUCCEEDED(hr)) cout << "Error 5\n";
-	int isVideo = (majorType==MFMediaType_Video);
-	if(isVideo)
-	{
-		GetDefaultStride(pCurrentType, &plStride);
-		hr = MFGetAttributeSize(pCurrentType, MF_MT_FRAME_SIZE, &width, &height);
-		if(!SUCCEEDED(hr)) cout << "Error 20\n";
-	}
-
-	LPCWSTR subTypePtr = GetGUIDNameConst(subType);
-	//if(subTypePtr!=0) wcout << "subtype\t" << subTypePtr << "\n";
-
-	PyDict_SetItemStringAndDeleteVar(out, "isCompressed", PyBool_FromLong(isComp));
-	if(typePtr!=NULL) PyDict_SetItemStringAndDeleteVar(out, "type", PyUnicode_FromWideChar(typePtr, wcslen(typePtr)));
-	if(subTypePtr!=NULL) PyDict_SetItemStringAndDeleteVar(out, "subtype", PyUnicode_FromWideChar(subTypePtr, wcslen(subTypePtr)));
-	if(!isComp) PyDict_SetItemStringAndDeleteVar(out, "stride", PyInt_FromLong(plStride));
-	PyDict_SetItemStringAndDeleteVar(out, "width", PyInt_FromLong(width));
-	PyDict_SetItemStringAndDeleteVar(out, "height", PyInt_FromLong(height));
-
-}
-*/
-
 class SourceReaderCB : public IMFSourceReaderCallback
 {
 	//http://msdn.microsoft.com/en-us/library/windows/desktop/gg583871%28v=vs.85%29.aspx
@@ -585,9 +545,9 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 	metaOut->width;
 	metaOut->height;
 	metaOut->buffLen = this->frameLenBuff[0];
-	metaOut->sequence;
-	metaOut->tv_sec;
-	metaOut->tv_usec;
+	metaOut->sequence = 0;
+	metaOut->tv_sec = (unsigned long)(this->llTimestampBuff[0] / 1e7); //in 100-nanosecond units
+	metaOut->tv_usec = (unsigned long)((this->llTimestampBuff[0] - metaOut->tv_sec * 1e7) / 10);
 
 	this->frameBuff.erase(this->frameBuff.begin());
 	this->frameLenBuff.erase(this->frameLenBuff.begin());
@@ -595,6 +555,13 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 	this->dwStreamIndexBuff.erase(this->dwStreamIndexBuff.begin());
 	this->dwStreamFlagsBuff.erase(this->dwStreamFlagsBuff.begin());
 	this->llTimestampBuff.erase(this->llTimestampBuff.begin());
+
+	/*this->plStrideBuff.erase(this->plStrideBuff.begin());
+	this->majorTypeBuff.erase(this->majorTypeBuff.begin());
+	this->subTypeBuff.erase(this->subTypeBuff.begin());
+	this->widthBuff.erase(this->widthBuff.begin());
+	this->heightBuff.erase(this->heightBuff.begin());
+	this->isCompressedBuff.erase(this->isCompressedBuff.begin());*/
 
 	return 1;
 }
@@ -737,6 +704,44 @@ void MfVideoIn::StartDeviceInternal()
 	SafeRelease(&pAttributes);
 }
 
+void MfVideoIn::SetSampleMetaData(DWORD streamIndex)
+{
+	//Set meta data in output object
+	/*IMFMediaType *pCurrentType = NULL;
+	LONG plStride = 0;
+	GUID majorType=GUID_NULL, subType=GUID_NULL;
+	UINT32 width = 0;
+	UINT32 height = 0;
+
+	HRESULT hr = this->reader->GetCurrentMediaType(streamIndex, &pCurrentType);
+	if(!SUCCEEDED(hr)) cout << "Error 3\n";
+	BOOL isComp = FALSE;
+	hr = pCurrentType->IsCompressedFormat(&isComp);
+	//PyDict_SetItemStringAndDeleteVar(out, "isCompressed", PyBool_FromLong(isComp));
+	hr = pCurrentType->GetGUID(MF_MT_MAJOR_TYPE, &majorType);
+	LPCWSTR typePtr = GetGUIDNameConst(majorType);
+	if(!SUCCEEDED(hr)) cout << "Error 4\n";
+	hr = pCurrentType->GetGUID(MF_MT_SUBTYPE, &subType);
+	if(!SUCCEEDED(hr)) cout << "Error 5\n";
+	int isVideo = (majorType==MFMediaType_Video);
+	if(isVideo)
+	{
+		GetDefaultStride(pCurrentType, &plStride);
+		hr = MFGetAttributeSize(pCurrentType, MF_MT_FRAME_SIZE, &width, &height);
+		if(!SUCCEEDED(hr)) cout << "Error 20\n";
+	}
+
+	LPCWSTR subTypePtr = GetGUIDNameConst(subType);
+
+	this->plStrideBuff.push_back(plStride);
+	this->majorTypeBuff.push_back(typePtr);
+	this->subTypeBuff.push_back(subTypePtr);
+	this->widthBuff.push_back(width);
+	this->heightBuff.push_back(height);
+	this->isCompressedBuff.push_back(isComp);*/
+
+}
+
 void MfVideoIn::ReadFramesInternal()
 {
 	//Check if reader is ready
@@ -786,6 +791,13 @@ void MfVideoIn::ReadFramesInternal()
 				this->dwStreamIndexBuff.erase(this->dwStreamIndexBuff.begin());
 				this->dwStreamFlagsBuff.erase(this->dwStreamFlagsBuff.begin());
 				this->llTimestampBuff.erase(this->llTimestampBuff.begin());
+
+				/*this->plStrideBuff.erase(this->plStrideBuff.begin());
+				this->majorTypeBuff.erase(this->majorTypeBuff.begin());
+				this->subTypeBuff.erase(this->subTypeBuff.begin());
+				this->widthBuff.erase(this->widthBuff.begin());
+				this->heightBuff.erase(this->heightBuff.begin());
+				this->isCompressedBuff.erase(this->isCompressedBuff.begin());*/
 			}
 
 			//Copy frame to output buffer
@@ -797,6 +809,8 @@ void MfVideoIn::ReadFramesInternal()
 				this->dwStreamIndexBuff.push_back(dwStreamIndex);
 				this->dwStreamFlagsBuff.push_back(dwStreamFlags);
 				this->llTimestampBuff.push_back(llTimestamp);
+
+				this->SetSampleMetaData(dwStreamIndex);
 			}
 			else
 			{
@@ -841,6 +855,13 @@ void MfVideoIn::ReadFramesInternal()
 				this->dwStreamIndexBuff.erase(this->dwStreamIndexBuff.begin());
 				this->dwStreamFlagsBuff.erase(this->dwStreamFlagsBuff.begin());
 				this->llTimestampBuff.erase(this->llTimestampBuff.begin());
+
+				/*this->plStrideBuff.erase(this->plStrideBuff.begin());
+				this->majorTypeBuff.erase(this->majorTypeBuff.begin());
+				this->subTypeBuff.erase(this->subTypeBuff.begin());
+				this->widthBuff.erase(this->widthBuff.begin());
+				this->heightBuff.erase(this->heightBuff.begin());
+				this->isCompressedBuff.erase(this->isCompressedBuff.begin());*/
 			}
 
 			//Copy frame to output buffer
@@ -852,6 +873,8 @@ void MfVideoIn::ReadFramesInternal()
 				this->dwStreamIndexBuff.push_back(streamIndex);
 				this->dwStreamFlagsBuff.push_back(flags);
 				this->llTimestampBuff.push_back(llTimeStamp);
+
+				this->SetSampleMetaData(streamIndex);
 			}
 			else
 			{
@@ -859,9 +882,6 @@ void MfVideoIn::ReadFramesInternal()
 			}
 
 			LeaveCriticalSection(&lock);	
-
-			//SetSampleMetaData(pReader, streamIndex, out);
-
 
 			pSample->Release();
 			return;

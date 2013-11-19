@@ -13,12 +13,23 @@
 from distutils.core import Extension, setup
 import os
 
+debug = 1
+
+
 if os.name == "nt":
+    if debug:
+        c_args=['/Zi', '/EHsc']
+	l_args=["/MANIFEST", "/DEBUG"]
+    else:
+        c_args=[]
+        l_args=["/MANIFEST"]
+    
     videolive = Extension("videolive", ["pixfmt.cpp", "libvideolive.cpp", "videoout.cpp", "videoin.cpp", "mfvideoin.cpp", "mfvideoout.cpp"],
 						define_macros=[('_'+os.name.upper(), None)],
                           library_dirs=['C:\Dev\Lib\libjpeg-turbo-win\lib', "C:\Dev\Lib\pthreads\pthreads.2"],
-                        include_dirs=['C:\Dev\Lib\libjpeg-turbo-win\include', "C:\Dev\Lib\pthreads\pthreads.2"],  
-						extra_link_args=["/MANIFEST"],
+                        include_dirs=['C:\Dev\Lib\libjpeg-turbo-win\include', "C:\Dev\Lib\pthreads\pthreads.2"],
+                          extra_compile_args=c_args,
+						extra_link_args=l_args,
 			libraries = ["pthreadVC2", "jpeg", "Mfplat", "Mf", "Mfreadwrite", "Ole32", "mfuuid", "Shlwapi"])
 
 else:

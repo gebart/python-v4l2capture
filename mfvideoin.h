@@ -55,8 +55,15 @@ protected:
     std::vector<DWORD> dwStreamFlagsBuff;
 	std::vector<LONGLONG> llTimestampBuff;
 
+	std::vector<LONG> plStrideBuff;
+	std::vector<std::wstring> majorTypeBuff, subTypeBuff;
+	std::vector<UINT32> widthBuff;
+	std::vector<UINT32> heightBuff;
+	std::vector<char> isCompressedBuff;
+
 	void OpenDeviceInternal();
 	void StartDeviceInternal();
+	void SetSampleMetaData(DWORD streamIndex);
 	void ReadFramesInternal();
 	void StopDeviceInternal();
 	void CloseDeviceInternal();
