@@ -556,12 +556,7 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 	this->dwStreamFlagsBuff.erase(this->dwStreamFlagsBuff.begin());
 	this->llTimestampBuff.erase(this->llTimestampBuff.begin());
 
-	/*this->plStrideBuff.erase(this->plStrideBuff.begin());
-	this->majorTypeBuff.erase(this->majorTypeBuff.begin());
-	this->subTypeBuff.erase(this->subTypeBuff.begin());
-	this->widthBuff.erase(this->widthBuff.begin());
-	this->heightBuff.erase(this->heightBuff.begin());
-	this->isCompressedBuff.erase(this->isCompressedBuff.begin());*/
+	this->PopFrontMetaDataBuff();
 
 	return 1;
 }
@@ -732,14 +727,25 @@ void MfVideoIn::SetSampleMetaData(DWORD streamIndex)
 	}
 
 	LPCWSTR subTypePtr = GetGUIDNameConst(subType);
-
-	this->plStrideBuff.push_back(plStride);
-	this->majorTypeBuff.push_back(typePtr);
-	this->subTypeBuff.push_back(subTypePtr);
+	*/
+	//this->plStrideBuff.push_back(plStride);
+	//std::wstring tmp(L"test");
+	//this->majorTypeBuff.push_back(tmp);
+	/*this->subTypeBuff.push_back(subTypePtr);
 	this->widthBuff.push_back(width);
 	this->heightBuff.push_back(height);
 	this->isCompressedBuff.push_back(isComp);*/
 
+}
+
+void MfVideoIn::PopFrontMetaDataBuff()
+{
+	//this->plStrideBuff.erase(this->plStrideBuff.begin());
+	//if(this->majorTypeBuff.size()>0) this->majorTypeBuff.erase(this->majorTypeBuff.begin());
+	/*this->subTypeBuff.erase(this->subTypeBuff.begin());
+	this->widthBuff.erase(this->widthBuff.begin());
+	this->heightBuff.erase(this->heightBuff.begin());
+	this->isCompressedBuff.erase(this->isCompressedBuff.begin());*/
 }
 
 void MfVideoIn::ReadFramesInternal()
@@ -792,12 +798,7 @@ void MfVideoIn::ReadFramesInternal()
 				this->dwStreamFlagsBuff.erase(this->dwStreamFlagsBuff.begin());
 				this->llTimestampBuff.erase(this->llTimestampBuff.begin());
 
-				/*this->plStrideBuff.erase(this->plStrideBuff.begin());
-				this->majorTypeBuff.erase(this->majorTypeBuff.begin());
-				this->subTypeBuff.erase(this->subTypeBuff.begin());
-				this->widthBuff.erase(this->widthBuff.begin());
-				this->heightBuff.erase(this->heightBuff.begin());
-				this->isCompressedBuff.erase(this->isCompressedBuff.begin());*/
+				this->PopFrontMetaDataBuff();
 			}
 
 			//Copy frame to output buffer
@@ -856,12 +857,7 @@ void MfVideoIn::ReadFramesInternal()
 				this->dwStreamFlagsBuff.erase(this->dwStreamFlagsBuff.begin());
 				this->llTimestampBuff.erase(this->llTimestampBuff.begin());
 
-				/*this->plStrideBuff.erase(this->plStrideBuff.begin());
-				this->majorTypeBuff.erase(this->majorTypeBuff.begin());
-				this->subTypeBuff.erase(this->subTypeBuff.begin());
-				this->widthBuff.erase(this->widthBuff.begin());
-				this->heightBuff.erase(this->heightBuff.begin());
-				this->isCompressedBuff.erase(this->isCompressedBuff.begin());*/
+				this->PopFrontMetaDataBuff();
 			}
 
 			//Copy frame to output buffer

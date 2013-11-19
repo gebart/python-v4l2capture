@@ -64,6 +64,7 @@ protected:
 	void OpenDeviceInternal();
 	void StartDeviceInternal();
 	void SetSampleMetaData(DWORD streamIndex);
+	void PopFrontMetaDataBuff();
 	void ReadFramesInternal();
 	void StopDeviceInternal();
 	void CloseDeviceInternal();
