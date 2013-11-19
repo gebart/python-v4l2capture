@@ -552,7 +552,7 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 	//wcout << this->majorTypeBuff[0] << "," << this->subTypeBuff[0] << endl;
 
 	if(wcscmp(this->subTypeBuff[0].c_str(), L"MFVideoFormat_YUY2")==0)
-		currentPixFmt = "YUY2";
+		currentPixFmt = "YUYV"; //YUYV = YUY2
 	
 	//Do conversion to rgb
 	unsigned char *buffConv = NULL;
