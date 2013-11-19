@@ -583,7 +583,7 @@ void MfVideoIn::Run()
 	while(running)
 	{
 		EnterCriticalSection(&lock);
-		running = !this->stopping;
+		running = !this->stopping || this->stopDevFlag || this->closeDevFlag;
 		int openDevFlagTmp = this->openDevFlag;
 		this->openDevFlag = 0;
 		int startDevFlagTmp = this->startDevFlag;
@@ -805,7 +805,6 @@ void MfVideoIn::ReadFramesInternal()
 
 void MfVideoIn::StopDeviceInternal()
 {
-	cout << "MfVideoIn::StopDeviceInternal()" << endl;
 	if(this->reader == NULL)
 		throw runtime_error("Device is not running");
 
@@ -819,8 +818,6 @@ void MfVideoIn::StopDeviceInternal()
 
 void MfVideoIn::CloseDeviceInternal()
 {
-	cout << "MfVideoIn::CloseDeviceInternal()" << endl;
-
 	if(this->source == NULL)
 		throw runtime_error("Device is not open");
 
