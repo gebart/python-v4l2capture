@@ -11,6 +11,7 @@ using namespace std;
 #include <Shlwapi.h>
 
 #include "mfvideoin.h"
+#include "pixfmt.h"
 
 #define MAX_DEVICE_ID_LEN 100
 int EnumDevices(IMFActivate ***ppDevicesOut);
@@ -544,23 +545,43 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 		return 0;
 	}
 
-	*buffOut = (unsigned char *)this->frameBuff[0];
+	unsigned char* currentBuff = (unsigned char *)this->frameBuff[0];
+	std::string currentPixFmt = "Unknown";
+	unsigned currentBuffLen = this->frameLenBuff[0];
 
 	//wcout << this->majorTypeBuff[0] << "," << this->subTypeBuff[0] << endl;
 
 	if(wcscmp(this->subTypeBuff[0].c_str(), L"MFVideoFormat_YUY2")==0)
-	{
-		metaOut->fmt = "YUY2";
+		currentPixFmt = "YUY2";
+	
+	//Do conversion to rgb
+	unsigned char *buffConv = NULL;
+	unsigned buffConvLen;
+	int ok = DecodeFrame(currentBuff, currentBuffLen, 
+		currentPixFmt.c_str(),
+		this->widthBuff[0], this->heightBuff[0],
+		"RGB24",
+		&buffConv,
+		&buffConvLen);
 
-		//Do conversion to rgb
-		//TODO
+	if(ok)
+	{
+		delete [] currentBuff; //Now unneeded
+		currentBuff = buffConv;
+		currentPixFmt = "RGB24";
+		currentBuffLen = buffConvLen;
 	}
 	else
-		metaOut->fmt = "Unknown";
+	{
+		cout << "Cannot convert from pix format ";
+		wcout << this->subTypeBuff[0] << endl;
+	}
 
+	*buffOut = currentBuff;
+	metaOut->fmt = currentPixFmt;
 	metaOut->width = this->widthBuff[0];
 	metaOut->height = this->heightBuff[0];
-	metaOut->buffLen = this->frameLenBuff[0];
+	metaOut->buffLen = currentBuffLen;
 	metaOut->sequence = 0;
 	metaOut->tv_sec = (unsigned long)(this->llTimestampBuff[0] / 1e7); //in 100-nanosecond units
 	metaOut->tv_usec = (unsigned long)((this->llTimestampBuff[0] - metaOut->tv_sec * 1e7) / 10);
