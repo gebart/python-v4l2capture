@@ -14,6 +14,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdlib.h>
 
 #include "pixfmt.h"
 
@@ -80,6 +81,18 @@ int my_ioctl(int fd, int request, void *arg, int utimeout = -1)
 		}
 		usleep(1000);
 	}
+}
+
+std::wstring CharArrayToWString(const char *in)
+{
+	size_t inLen = strlen(in)+1;
+	wchar_t *tmpDevName = new wchar_t[inLen];
+	//size_t returnValue;
+	mbstowcs(tmpDevName, in, inLen);
+	//mbstowcs_s(&returnValue, tmpDevName, inLen, in, inLen);
+	std::wstring tmpDevName2(tmpDevName);
+	delete [] tmpDevName;
+	return tmpDevName2;
 }
 
 // **************************************************************************
@@ -619,9 +632,9 @@ void *Video_in_Worker_thread(void *arg)
 	return NULL;
 }
 
-std::vector<std::string> List_in_devices()
+std::vector<std::vector<std::wstring> > List_in_devices()
 {
-	std::vector<std::string> out;
+	std::vector<std::vector<std::wstring> > out;
 	const char dir[] = "/dev";
 	DIR *dp;
 	struct dirent *dirp;
@@ -633,8 +646,12 @@ std::vector<std::string> List_in_devices()
 	while ((dirp = readdir(dp)) != NULL) {
 		if (strncmp(dirp->d_name, "video", 5) != 0) continue;
 		std::string tmp = "/dev/";
+		std::vector<std::wstring> row;
 		tmp.append(dirp->d_name);
-		out.push_back(tmp);
+
+		std::wstring tmpDevName = CharArrayToWString(tmp.c_str());
+		row.push_back(tmpDevName);
+		out.push_back(row);
 	}
 	closedir(dp);
 	return out;
