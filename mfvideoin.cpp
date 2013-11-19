@@ -596,17 +596,19 @@ void MfVideoIn::Run()
 		if(!running) continue;
 
 		if(openDevFlagTmp)
-		{
 			this->OpenDeviceInternal();
-		}
 
 		if(startDevFlagTmp)
-		{
 			this->StartDeviceInternal();
-		}
 
 		if(this->reader != NULL)
 			this->ReadFramesInternal();
+
+		if(stopDevFlagTmp)
+			this->StopDeviceInternal();
+
+		if(closeDevFlagTmp)
+			this->CloseDeviceInternal();
 
 		Sleep(10);
 	}
@@ -799,6 +801,31 @@ void MfVideoIn::ReadFramesInternal()
 		if(pSample) pSample->Release();
 	}
 
+}
+
+void MfVideoIn::StopDeviceInternal()
+{
+	cout << "MfVideoIn::StopDeviceInternal()" << endl;
+	if(this->reader == NULL)
+		throw runtime_error("Device is not running");
+
+	//Shut down reader
+	SafeRelease(&this->reader);
+
+	//Reader callback seems to automatically delete
+	this->readerCallback = NULL;
+
+}
+
+void MfVideoIn::CloseDeviceInternal()
+{
+	cout << "MfVideoIn::CloseDeviceInternal()" << endl;
+
+	if(this->source == NULL)
+		throw runtime_error("Device is not open");
+
+	//Shut down source
+	SafeRelease(&this->source);
 }
 
 //***************************************************************

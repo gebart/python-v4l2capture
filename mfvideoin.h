@@ -50,6 +50,8 @@ protected:
 	void OpenDeviceInternal();
 	void StartDeviceInternal();
 	void ReadFramesInternal();
+	void StopDeviceInternal();
+	void CloseDeviceInternal();
 };
 
 void *MfVideoIn_Worker_thread(void *arg);
