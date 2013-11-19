@@ -13,8 +13,7 @@
 from distutils.core import Extension, setup
 import os
 
-debug = 1
-
+debug = 0
 
 if os.name == "nt":
     if debug:

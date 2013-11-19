@@ -546,9 +546,20 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 
 	*buffOut = (unsigned char *)this->frameBuff[0];
 
-	metaOut->fmt = "RGB24";
-	metaOut->width;
-	metaOut->height;
+	//wcout << this->majorTypeBuff[0] << "," << this->subTypeBuff[0] << endl;
+
+	if(wcscmp(this->subTypeBuff[0].c_str(), L"MFVideoFormat_YUY2")==0)
+	{
+		metaOut->fmt = "YUY2";
+
+		//Do conversion to rgb
+		//TODO
+	}
+	else
+		metaOut->fmt = "Unknown";
+
+	metaOut->width = this->widthBuff[0];
+	metaOut->height = this->heightBuff[0];
 	metaOut->buffLen = this->frameLenBuff[0];
 	metaOut->sequence = 0;
 	metaOut->tv_sec = (unsigned long)(this->llTimestampBuff[0] / 1e7); //in 100-nanosecond units
@@ -735,23 +746,22 @@ void MfVideoIn::SetSampleMetaData(DWORD streamIndex)
 	LPCWSTR subTypePtr = GetGUIDNameConst(subType);
 	
 	this->plStrideBuff.push_back(plStride);
-	//std::wstring tmp(L"test");
-	//this->majorTypeBuff.push_back(tmp);
-	/*this->subTypeBuff.push_back(subTypePtr);
+	this->majorTypeBuff.push_back(typePtr);
+	this->subTypeBuff.push_back(subTypePtr);
 	this->widthBuff.push_back(width);
 	this->heightBuff.push_back(height);
-	this->isCompressedBuff.push_back(isComp);*/
+	this->isCompressedBuff.push_back(isComp);
 
 }
 
 void MfVideoIn::PopFrontMetaDataBuff()
 {
 	if(this->plStrideBuff.size()>0) this->plStrideBuff.erase(this->plStrideBuff.begin());
-	//if(this->majorTypeBuff.size()>0) this->majorTypeBuff.erase(this->majorTypeBuff.begin());
-	/*this->subTypeBuff.erase(this->subTypeBuff.begin());
+	if(this->majorTypeBuff.size()>0) this->majorTypeBuff.erase(this->majorTypeBuff.begin());
+	this->subTypeBuff.erase(this->subTypeBuff.begin());
 	this->widthBuff.erase(this->widthBuff.begin());
 	this->heightBuff.erase(this->heightBuff.begin());
-	this->isCompressedBuff.erase(this->isCompressedBuff.begin());*/
+	this->isCompressedBuff.erase(this->isCompressedBuff.begin());
 }
 
 void MfVideoIn::ReadFramesInternal()
