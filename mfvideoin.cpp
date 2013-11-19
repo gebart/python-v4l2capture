@@ -431,8 +431,8 @@ WmfBase::WmfBase() : Base_Video_In()
 	if(!SUCCEEDED(hr))
 		throw std::runtime_error("Media foundation startup failed");
 
-	hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-	if(!SUCCEEDED(hr))
+	hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+	if(hr == RPC_E_CHANGED_MODE)
 		throw std::runtime_error("CoInitializeEx failed");
 }
 
