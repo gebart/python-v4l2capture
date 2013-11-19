@@ -499,6 +499,7 @@ MfVideoIn::MfVideoIn(const wchar_t *devNameIn) : WmfBase()
 	this->startDevFlag = 0;
 	this->stopDevFlag = 0;
 	this->closeDevFlag = 0;
+	this->maxBuffSize = 10;
 	InitializeCriticalSection(&lock);
 }
 
@@ -570,7 +571,32 @@ void MfVideoIn::CloseDevice()
 
 int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 {
-	return 0;
+	if(buffOut==NULL)
+		throw runtime_error("Buffer ptr cannot be null");
+	if(metaOut==NULL)
+		throw runtime_error("Meta data pointer cannot be null");
+
+	if(this->frameBuff.size() == 0)
+		return 0;
+
+	*buffOut = (unsigned char *)this->frameBuff[0];
+
+	metaOut->fmt = "RGB24";
+	metaOut->width;
+	metaOut->height;
+	metaOut->buffLen = this->frameLenBuff[0];
+	metaOut->sequence;
+	metaOut->tv_sec;
+	metaOut->tv_usec;
+
+	this->frameBuff.erase(this->frameBuff.begin());
+	this->frameLenBuff.erase(this->frameLenBuff.begin());
+	this->hrStatusBuff.erase(this->hrStatusBuff.begin());
+	this->dwStreamIndexBuff.erase(this->dwStreamIndexBuff.begin());
+	this->dwStreamFlagsBuff.erase(this->dwStreamFlagsBuff.begin());
+	this->llTimestampBuff.erase(this->llTimestampBuff.begin());
+
+	return 1;
 }
 
 //***************************************************************
@@ -748,16 +774,36 @@ void MfVideoIn::ReadFramesInternal()
 		{
 			if((frame == NULL) != (buffLen == 0))
 				throw runtime_error("Frame buffer corruption detected");
-			/*PyObject* out = StaticObjToPythonObj(this->reader, 
-				streamIndex, 
-				flags, 
-				llTimeStamp, 
-				frame, buffLen);*/
-			if(frame) delete [] frame;
-				
-			//SetSampleMetaData(this->reader, streamIndex, out);
-			
-			
+
+			EnterCriticalSection(&lock);
+
+			//Ensure the buffer does not overflow
+			while(this->frameBuff.size() >= this->maxBuffSize)
+			{
+				this->frameBuff.erase(this->frameBuff.begin());
+				this->frameLenBuff.erase(this->frameLenBuff.begin());
+				this->hrStatusBuff.erase(this->hrStatusBuff.begin());
+				this->dwStreamIndexBuff.erase(this->dwStreamIndexBuff.begin());
+				this->dwStreamFlagsBuff.erase(this->dwStreamFlagsBuff.begin());
+				this->llTimestampBuff.erase(this->llTimestampBuff.begin());
+			}
+
+			//Copy frame to output buffer
+			if(this->frameBuff.size() < this->maxBuffSize)
+			{
+				this->frameBuff.push_back(frame);
+				this->frameLenBuff.push_back(buffLen);
+				this->hrStatusBuff.push_back(hrStatus);
+				this->dwStreamIndexBuff.push_back(dwStreamIndex);
+				this->dwStreamFlagsBuff.push_back(dwStreamFlags);
+				this->llTimestampBuff.push_back(llTimestamp);
+			}
+			else
+			{
+				delete [] frame;
+			}
+
+			LeaveCriticalSection(&lock);			
 			return;
 		}
 		else
@@ -784,17 +830,40 @@ void MfVideoIn::ReadFramesInternal()
 			char *frame = NULL;
 			DWORD buffLen = SampleToStaticObj(pSample, &frame);
 
-			/*PyObject* out = StaticObjToPythonObj(pReader, 
-				streamIndex, 
-				flags, 
-				llTimeStamp, 
-				frame, buffLen);*/
+			EnterCriticalSection(&lock);
+
+			//Ensure the buffer does not overflow
+			while(this->frameBuff.size() >= this->maxBuffSize)
+			{
+				this->frameBuff.erase(this->frameBuff.begin());
+				this->frameLenBuff.erase(this->frameLenBuff.begin());
+				this->hrStatusBuff.erase(this->hrStatusBuff.begin());
+				this->dwStreamIndexBuff.erase(this->dwStreamIndexBuff.begin());
+				this->dwStreamFlagsBuff.erase(this->dwStreamFlagsBuff.begin());
+				this->llTimestampBuff.erase(this->llTimestampBuff.begin());
+			}
+
+			//Copy frame to output buffer
+			if(this->frameBuff.size() < this->maxBuffSize)
+			{
+				this->frameBuff.push_back(frame);
+				this->frameLenBuff.push_back(buffLen);
+				this->hrStatusBuff.push_back(hr);
+				this->dwStreamIndexBuff.push_back(streamIndex);
+				this->dwStreamFlagsBuff.push_back(flags);
+				this->llTimestampBuff.push_back(llTimeStamp);
+			}
+			else
+			{
+				delete [] frame;
+			}
+
+			LeaveCriticalSection(&lock);	
 
 			//SetSampleMetaData(pReader, streamIndex, out);
 
 
 			pSample->Release();
-			if(frame != NULL) delete [] frame;
 			return;
 		}
 

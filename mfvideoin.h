@@ -46,6 +46,14 @@ protected:
 	int stopDevFlag;
 	int closeDevFlag;
 	CRITICAL_SECTION lock;
+	unsigned maxBuffSize;
+
+	std::vector<char *> frameBuff;
+	std::vector<DWORD> frameLenBuff;
+	std::vector<HRESULT> hrStatusBuff;
+	std::vector<DWORD> dwStreamIndexBuff;
+    std::vector<DWORD> dwStreamFlagsBuff;
+	std::vector<LONGLONG> llTimestampBuff;
 
 	void OpenDeviceInternal();
 	void StartDeviceInternal();
