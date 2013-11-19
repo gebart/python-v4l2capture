@@ -536,8 +536,13 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 	if(metaOut==NULL)
 		throw runtime_error("Meta data pointer cannot be null");
 
+	EnterCriticalSection(&lock);
+
 	if(this->frameBuff.size() == 0)
+	{
+		LeaveCriticalSection(&lock);
 		return 0;
+	}
 
 	*buffOut = (unsigned char *)this->frameBuff[0];
 
@@ -557,6 +562,8 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 	this->llTimestampBuff.erase(this->llTimestampBuff.begin());
 
 	this->PopFrontMetaDataBuff();
+
+	LeaveCriticalSection(&lock);
 
 	return 1;
 }
@@ -702,7 +709,7 @@ void MfVideoIn::StartDeviceInternal()
 void MfVideoIn::SetSampleMetaData(DWORD streamIndex)
 {
 	//Set meta data in output object
-	/*IMFMediaType *pCurrentType = NULL;
+	IMFMediaType *pCurrentType = NULL;
 	LONG plStride = 0;
 	GUID majorType=GUID_NULL, subType=GUID_NULL;
 	UINT32 width = 0;
@@ -712,7 +719,6 @@ void MfVideoIn::SetSampleMetaData(DWORD streamIndex)
 	if(!SUCCEEDED(hr)) cout << "Error 3\n";
 	BOOL isComp = FALSE;
 	hr = pCurrentType->IsCompressedFormat(&isComp);
-	//PyDict_SetItemStringAndDeleteVar(out, "isCompressed", PyBool_FromLong(isComp));
 	hr = pCurrentType->GetGUID(MF_MT_MAJOR_TYPE, &majorType);
 	LPCWSTR typePtr = GetGUIDNameConst(majorType);
 	if(!SUCCEEDED(hr)) cout << "Error 4\n";
@@ -727,8 +733,8 @@ void MfVideoIn::SetSampleMetaData(DWORD streamIndex)
 	}
 
 	LPCWSTR subTypePtr = GetGUIDNameConst(subType);
-	*/
-	//this->plStrideBuff.push_back(plStride);
+	
+	this->plStrideBuff.push_back(plStride);
 	//std::wstring tmp(L"test");
 	//this->majorTypeBuff.push_back(tmp);
 	/*this->subTypeBuff.push_back(subTypePtr);
@@ -740,7 +746,7 @@ void MfVideoIn::SetSampleMetaData(DWORD streamIndex)
 
 void MfVideoIn::PopFrontMetaDataBuff()
 {
-	//this->plStrideBuff.erase(this->plStrideBuff.begin());
+	if(this->plStrideBuff.size()>0) this->plStrideBuff.erase(this->plStrideBuff.begin());
 	//if(this->majorTypeBuff.size()>0) this->majorTypeBuff.erase(this->majorTypeBuff.begin());
 	/*this->subTypeBuff.erase(this->subTypeBuff.begin());
 	this->widthBuff.erase(this->widthBuff.begin());
