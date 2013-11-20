@@ -9,15 +9,18 @@
 class MfVideoOut : public Base_Video_Out
 {
 public:
-	MfVideoOut(const char *devName) : Base_Video_Out() {};
-	virtual ~MfVideoOut() {};
+	MfVideoOut(const char *devName);
+	virtual ~MfVideoOut();
 
-	void SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height) {};
-	void Stop() {};
-	int WaitForStop() {return 1;};
+	void SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height);
+	void Stop();
+	int WaitForStop();
 
-	virtual void SetOutputSize(int width, int height) {};
-	virtual void SetOutputPxFmt(const char *fmt) {};
+	virtual void SetOutputSize(int width, int height);
+	virtual void SetOutputPxFmt(const char *fmt);
+
+	void Run();
+
 };
 
 void *MfVideoOut_Worker_thread(void *arg);
