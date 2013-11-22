@@ -202,6 +202,9 @@ CBallStream::CBallStream(HRESULT *phr,
 	memset(&this->txo, 0x00, sizeof(OVERLAPPED));
 	this->pipeHandle = 0;
 
+	this->currentFrame = NULL;
+	this->currentFrameLen = 0;
+
 } // (Constructor)
 
 //
@@ -209,9 +212,15 @@ CBallStream::CBallStream(HRESULT *phr,
 //
 CBallStream::~CBallStream()
 {
+	if(this->pipeHandle != 0)
+		CloseHandle(this->pipeHandle);
+	if(this->currentFrame != NULL)
+		delete [] this->currentFrame;
+	this->currentFrame = NULL;
+	this->currentFrameLen = 0;
 
+	this->pipeHandle = 0;
 } // (Destructor)
-
 
 HRESULT CBallStream::QueryInterface(REFIID riid, void **ppv)
 {   
@@ -253,18 +262,26 @@ HRESULT CBallStream::FillBuffer(IMediaSample *pms)
     pms->GetPointer(&pData);
     lDataLen = pms->GetSize();
 
-	unsigned cursor = 0;
-	for(LONG y=0; y < height; y++)
+	if(this->currentFrameLen != lDataLen || this->currentFrame == NULL)
+	{
+		this->currentFrame = new BYTE[lDataLen];
+		this->currentFrameLen = lDataLen;
+	
+		long cursor = 0;
+		for(LONG y=0; y < height; y++)
 		for(LONG x=0; x < width; x++)
 		{
-			if(cursor > lDataLen) continue;
+			if(cursor > this->currentFrameLen) continue;
 
-			pData[cursor] = x % 255; //Blue
-			pData[cursor+1] = y % 255; //Green
-			pData[cursor+2] = rand(); //Red 
+			this->currentFrame[cursor] = x % 255; //Blue
+			this->currentFrame[cursor+1] = y % 255; //Green
+			this->currentFrame[cursor+2] = rand(); //Red 
 
 			cursor += 3;
 		}
+	}
+
+	memcpy(pData, this->currentFrame, lDataLen);
 
     return NOERROR;
 

@@ -107,6 +107,9 @@ private:
 	OVERLAPPED rxo;
 	OVERLAPPED txo;
 
+	BYTE *currentFrame;
+	LONG currentFrameLen;
+
     // set up the palette appropriately
     //enum Colour {Red, Blue, Green, Yellow};
     //HRESULT SetPaletteEntries(Colour colour);
