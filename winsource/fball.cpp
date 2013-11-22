@@ -261,7 +261,7 @@ void CBallStream::UpdateNamedPipe()
 			NULL);
 	}
 
-	/*if(this->pipeHandle == INVALID_HANDLE_VALUE)
+	if(this->pipeHandle == INVALID_HANDLE_VALUE)
 	{
 	for(DWORD i=0; i<this->currentFrameLen; i++)
 	{
@@ -271,16 +271,6 @@ void CBallStream::UpdateNamedPipe()
 			this->currentFrame[i] = 0x0;
 	}
 	}
-	else
-	{
-	for(DWORD i=0; i<this->currentFrameLen; i++)
-	{
-		if(i%3==0)
-			this->currentFrame[i] = 0x255;
-		else
-			this->currentFrame[i] = 0x0;
-	}
-	}*/
 
 	if(this->pipeHandle != INVALID_HANDLE_VALUE)
 	{
@@ -320,7 +310,7 @@ void CBallStream::UpdateNamedPipe()
 		{
 			for(DWORD i=0; i<bytesRead; i++)
 			{
-				this->currentFrame[testCursor] = 0x255;
+				this->currentFrame[testCursor] = buff[i];
 				testCursor += 1;
 				if(testCursor >= this->currentFrameLen)
 					this->testCursor = 0;
