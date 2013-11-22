@@ -232,7 +232,11 @@ HRESULT CBallStream::FillBuffer(IMediaSample *pms)
 {
     REFERENCE_TIME rtNow;
     
+	VIDEOINFOHEADER *pvi = (VIDEOINFOHEADER *)(m_mt.Format());
     REFERENCE_TIME avgFrameTime = ((VIDEOINFOHEADER*)m_mt.pbFormat)->AvgTimePerFrame;
+
+	LONG width = pvi->bmiHeader.biWidth;
+	LONG height = pvi->bmiHeader.biHeight;
 
     rtNow = m_rtLastTime;
     m_rtLastTime += avgFrameTime;
@@ -243,10 +247,19 @@ HRESULT CBallStream::FillBuffer(IMediaSample *pms)
     long lDataLen;
     pms->GetPointer(&pData);
     lDataLen = pms->GetSize();
-    for(int i = 0; i < lDataLen; ++i)
-	{
-		pData[i] = rand();
-	}
+
+	unsigned cursor = 0;
+	for(LONG y=0; y < height; y++)
+		for(LONG x=0; x < width; x++)
+		{
+			if(cursor > lDataLen) continue;
+
+			pData[cursor] = x % 255; //Blue
+			pData[cursor+1] = y % 255; //Green
+			pData[cursor+2] = rand(); //Red 
+
+			cursor += 3;
+		}
 
     return NOERROR;
 
