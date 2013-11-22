@@ -29,6 +29,7 @@ public:
     // The only allowed way to create Bouncing balls!
     static CUnknown * WINAPI CreateInstance(LPUNKNOWN lpunk, HRESULT *phr);
 
+	STDMETHODIMP QueryInterface(REFIID riid, void **ppv);
 	IFilterGraph *GetGraph() {return m_pGraph;}
 private:
 
@@ -89,25 +90,25 @@ public:
 
 private:
 
-    int m_iImageHeight;                 // The current image height
-    int m_iImageWidth;                  // And current image width
-    int m_iRepeatTime;                  // Time in msec between frames
-    const int m_iDefaultRepeatTime;     // Initial m_iRepeatTime
+    //int m_iImageHeight;                 // The current image height
+    //int m_iImageWidth;                  // And current image width
+    //int m_iRepeatTime;                  // Time in msec between frames
+    //const int m_iDefaultRepeatTime;     // Initial m_iRepeatTime
 
-    BYTE m_BallPixel[4];                // Represents one coloured ball
-    int m_iPixelSize;                   // The pixel size in bytes
-    PALETTEENTRY m_Palette[256];        // The optimal palette for the image
+    //BYTE m_BallPixel[4];                // Represents one coloured ball
+    //int m_iPixelSize;                   // The pixel size in bytes
+    //PALETTEENTRY m_Palette[256];        // The optimal palette for the image
 
     CCritSec m_cSharedState;            // Lock on m_rtSampleTime and m_Ball
     CRefTime m_rtSampleTime;            // The time stamp for each sample
-    CBall *m_Ball;                      // The current ball object
+    //CBall *m_Ball;                      // The current ball object
 	CBouncingBall *m_pParent;
 
 	REFERENCE_TIME m_rtLastTime;
 
     // set up the palette appropriately
-    enum Colour {Red, Blue, Green, Yellow};
-    HRESULT SetPaletteEntries(Colour colour);
+    //enum Colour {Red, Blue, Green, Yellow};
+    //HRESULT SetPaletteEntries(Colour colour);
 
 }; // CBallStream
     
