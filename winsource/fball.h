@@ -1,4 +1,6 @@
-
+// {3A24BD2F-B9B1-4B32-9A1E-17791624B6AB}
+DEFINE_GUID(CLSID_BouncingBall,
+0x3a24bd2f, 0xb9b1, 0x4b32, 0x9a, 0x1e, 0x17, 0x79, 0x16, 0x24, 0xb6, 0xab);
 
 #define DECLARE_PTR(type, ptr, expr) type* ptr = (type*)(expr);
 
