@@ -190,14 +190,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ball.cpp" />
     <ClCompile Include="fball.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ball.def" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ball.h" />
     <ClInclude Include="fball.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>

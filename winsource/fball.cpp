@@ -2,7 +2,6 @@
 #include <streams.h>
 #include <olectl.h>
 #include <initguid.h>
-#include "ball.h"
 #include "fball.h"
 
 #pragma warning(disable:4710)  // 'function': function not inlined (optimzation)
