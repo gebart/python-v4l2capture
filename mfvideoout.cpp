@@ -14,6 +14,11 @@ MfVideoOut::MfVideoOut(const char *devName) : Base_Video_Out()
 	hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	if(hr == RPC_E_CHANGED_MODE)
 		throw std::runtime_error("CoInitializeEx failed");
+
+
+
+
+
 }
 
 MfVideoOut::~MfVideoOut()
