@@ -216,10 +216,11 @@ CBouncingBall::CBouncingBall(LPUNKNOWN lpunk, HRESULT *phr) :
 CBallStream::CBallStream(HRESULT *phr,
                          CBouncingBall *pParent,
                          LPCWSTR pPinName) :
-    CSourceStream(NAME("Bouncing Ball"),phr, pParent, pPinName),
-    m_iImageWidth(320),
-    m_iImageHeight(240),
-    m_iDefaultRepeatTime(20)
+    CSourceStream(NAME("Bouncing Ball"),phr, pParent, pPinName), 
+		m_pParent(pParent), 
+		m_iDefaultRepeatTime(20),
+		m_iImageWidth(320),
+		m_iImageHeight(240)
 {
     ASSERT(phr);
     CAutoLock cAutoLock(&m_cSharedState);
@@ -246,6 +247,21 @@ CBallStream::~CBallStream()
 } // (Destructor)
 
 
+HRESULT CBallStream::QueryInterface(REFIID riid, void **ppv)
+{   
+    // Standard OLE stuff
+    if(riid == _uuidof(IAMStreamConfig))
+        *ppv = (IAMStreamConfig*)this;
+    else if(riid == _uuidof(IKsPropertySet))
+        *ppv = (IKsPropertySet*)this;
+    else
+        return CSourceStream::QueryInterface(riid, ppv);
+
+    AddRef();
+    return S_OK;
+}
+
+
 //
 // FillBuffer
 //
@@ -253,35 +269,24 @@ CBallStream::~CBallStream()
 //
 HRESULT CBallStream::FillBuffer(IMediaSample *pms)
 {
-    CheckPointer(pms,E_POINTER);
-    ASSERT(m_Ball);
+    REFERENCE_TIME rtNow;
+    
+    REFERENCE_TIME avgFrameTime = ((VIDEOINFOHEADER*)m_mt.pbFormat)->AvgTimePerFrame;
+
+    rtNow = m_rtLastTime;
+    m_rtLastTime += avgFrameTime;
+    pms->SetTime(&rtNow, &m_rtLastTime);
+    pms->SetSyncPoint(TRUE);
 
     BYTE *pData;
     long lDataLen;
-
     pms->GetPointer(&pData);
     lDataLen = pms->GetSize();
+    for(int i = 0; i < lDataLen; ++i)
+	{
+		pData[i] = rand();
+	}
 
-    ZeroMemory(pData, lDataLen);
-    {
-        CAutoLock cAutoLockShared(&m_cSharedState);
-
-        // If we haven't just cleared the buffer delete the old
-        // ball and move the ball on
-
-        m_Ball->MoveBall(m_rtSampleTime - (LONG) m_iRepeatTime);
-        m_Ball->PlotBall(pData, m_BallPixel, m_iPixelSize);
-
-        // The current time is the sample's start
-        CRefTime rtStart = m_rtSampleTime;
-
-        // Increment to find the finish time
-        m_rtSampleTime += (LONG)m_iRepeatTime;
-
-        pms->SetTime((REFERENCE_TIME *) &rtStart,(REFERENCE_TIME *) &m_rtSampleTime);
-    }
-
-    pms->SetSyncPoint(TRUE);
     return NOERROR;
 
 } // FillBuffer
@@ -345,7 +350,7 @@ STDMETHODIMP CBallStream::Notify(IBaseFilter * pSender, Quality q)
 // 4    return 8 bit palettised format
 // (iPosition > 4 is invalid)
 //
-HRESULT CBallStream::GetMediaType(int iPosition, CMediaType *pmt)
+/*HRESULT CBallStream::GetMediaType(int iPosition, CMediaType *pmt)
 {
     CheckPointer(pmt,E_POINTER);
 
@@ -464,7 +469,7 @@ HRESULT CBallStream::GetMediaType(int iPosition, CMediaType *pmt)
     return NOERROR;
 
 } // GetMediaType
-
+*/
 
 //
 // CheckMediaType
@@ -473,7 +478,7 @@ HRESULT CBallStream::GetMediaType(int iPosition, CMediaType *pmt)
 // image size that gives room to bounce.
 // Returns E_INVALIDARG if the mediatype is not acceptable
 //
-HRESULT CBallStream::CheckMediaType(const CMediaType *pMediaType)
+/*HRESULT CBallStream::CheckMediaType(const CMediaType *pMediaType)
 {
     CheckPointer(pMediaType,E_POINTER);
 
@@ -525,7 +530,7 @@ HRESULT CBallStream::CheckMediaType(const CMediaType *pMediaType)
     return S_OK;  // This format is acceptable.
 
 } // CheckMediaType
-
+*/
 
 //
 // DecideBufferSize
@@ -534,7 +539,7 @@ HRESULT CBallStream::CheckMediaType(const CMediaType *pMediaType)
 // negotiated. So we have a look at m_mt to see what size image we agreed.
 // Then we can ask for buffers of the correct size to contain them.
 //
-HRESULT CBallStream::DecideBufferSize(IMemAllocator *pAlloc,
+/*HRESULT CBallStream::DecideBufferSize(IMemAllocator *pAlloc,
                                       ALLOCATOR_PROPERTIES *pProperties)
 {
     CheckPointer(pAlloc,E_POINTER);
@@ -575,7 +580,7 @@ HRESULT CBallStream::DecideBufferSize(IMemAllocator *pAlloc,
     return NOERROR;
 
 } // DecideBufferSize
-
+*/
 
 //
 // SetMediaType
@@ -586,9 +591,11 @@ HRESULT CBallStream::SetMediaType(const CMediaType *pMediaType)
 {
     CAutoLock cAutoLock(m_pFilter->pStateLock());
 
-    // Pass the call up to my base class
-
+	// Pass the call up to my base class
+	DECLARE_PTR(VIDEOINFOHEADER, pvi, pMediaType->Format());
     HRESULT hr = CSourceStream::SetMediaType(pMediaType);
+
+    //HRESULT hr = CSourceStream::SetMediaType(pMediaType);
 
     if(SUCCEEDED(hr))
     {
@@ -661,7 +668,7 @@ HRESULT CBallStream::SetMediaType(const CMediaType *pMediaType)
 //
 // As we go active reset the stream time to zero
 //
-HRESULT CBallStream::OnThreadCreate()
+/*HRESULT CBallStream::OnThreadCreate()
 {
     CAutoLock cAutoLockShared(&m_cSharedState);
     m_rtSampleTime = 0;
@@ -673,7 +680,7 @@ HRESULT CBallStream::OnThreadCreate()
     return NOERROR;
 
 } // OnThreadCreate
-
+*/
 
 //
 // SetPaletteEntries
@@ -728,3 +735,226 @@ HRESULT CBallStream::SetPaletteEntries(Colour color)
 } // SetPaletteEntries
 
 
+//////////////////////////////////////////////////////////////////////////
+// This is called when the output format has been negotiated
+//////////////////////////////////////////////////////////////////////////
+
+// See Directshow help topic for IAMStreamConfig for details on this method
+HRESULT CBallStream::GetMediaType(int iPosition, CMediaType *pmt)
+{
+    if(iPosition < 0) return E_INVALIDARG;
+    if(iPosition > 8) return VFW_S_NO_MORE_ITEMS;
+
+    if(iPosition == 0) 
+    {
+        *pmt = m_mt;
+        return S_OK;
+    }
+
+    DECLARE_PTR(VIDEOINFOHEADER, pvi, pmt->AllocFormatBuffer(sizeof(VIDEOINFOHEADER)));
+    ZeroMemory(pvi, sizeof(VIDEOINFOHEADER));
+
+    pvi->bmiHeader.biCompression = BI_RGB;
+    pvi->bmiHeader.biBitCount    = 24;
+    pvi->bmiHeader.biSize       = sizeof(BITMAPINFOHEADER);
+    pvi->bmiHeader.biWidth      = 80 * iPosition;
+    pvi->bmiHeader.biHeight     = 60 * iPosition;
+    pvi->bmiHeader.biPlanes     = 1;
+    pvi->bmiHeader.biSizeImage  = GetBitmapSize(&pvi->bmiHeader);
+    pvi->bmiHeader.biClrImportant = 0;
+
+    pvi->AvgTimePerFrame = 1000000;
+
+    SetRectEmpty(&(pvi->rcSource)); // we want the whole image area rendered.
+    SetRectEmpty(&(pvi->rcTarget)); // no particular destination rectangle
+
+    pmt->SetType(&MEDIATYPE_Video);
+    pmt->SetFormatType(&FORMAT_VideoInfo);
+    pmt->SetTemporalCompression(FALSE);
+
+    // Work out the GUID for the subtype from the header info.
+    const GUID SubTypeGUID = GetBitmapSubtype(&pvi->bmiHeader);
+    pmt->SetSubtype(&SubTypeGUID);
+    pmt->SetSampleSize(pvi->bmiHeader.biSizeImage);
+    
+    return NOERROR;
+
+} // GetMediaType
+
+// This method is called to see if a given output format is supported
+HRESULT CBallStream::CheckMediaType(const CMediaType *pMediaType)
+{
+    VIDEOINFOHEADER *pvi = (VIDEOINFOHEADER *)(pMediaType->Format());
+    if(*pMediaType != m_mt) 
+        return E_INVALIDARG;
+    return S_OK;
+} // CheckMediaType
+
+// This method is called after the pins are connected to allocate buffers to stream data
+HRESULT CBallStream::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties)
+{
+    CAutoLock cAutoLock(m_pFilter->pStateLock());
+    HRESULT hr = NOERROR;
+
+    VIDEOINFOHEADER *pvi = (VIDEOINFOHEADER *) m_mt.Format();
+    pProperties->cBuffers = 1;
+    pProperties->cbBuffer = pvi->bmiHeader.biSizeImage;
+
+    ALLOCATOR_PROPERTIES Actual;
+    hr = pAlloc->SetProperties(pProperties,&Actual);
+
+    if(FAILED(hr)) return hr;
+    if(Actual.cbBuffer < pProperties->cbBuffer) return E_FAIL;
+
+    return NOERROR;
+} // DecideBufferSize
+
+// Called when graph is run
+HRESULT CBallStream::OnThreadCreate()
+{
+	m_iRepeatTime = m_iDefaultRepeatTime;
+    m_rtLastTime = 0;
+    return NOERROR;
+} // OnThreadCreate
+
+
+//////////////////////////////////////////////////////////////////////////
+//  IAMStreamConfig
+//////////////////////////////////////////////////////////////////////////
+
+HRESULT STDMETHODCALLTYPE CBallStream::SetFormat(AM_MEDIA_TYPE *pmt)
+{
+    DECLARE_PTR(VIDEOINFOHEADER, pvi, m_mt.pbFormat);
+    m_mt = *pmt;
+    IPin* pin; 
+    ConnectedTo(&pin);
+    if(pin)
+    {
+        IFilterGraph *pGraph = m_pParent->GetGraph();
+        pGraph->Reconnect(this);
+    }
+    return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE CBallStream::GetFormat(AM_MEDIA_TYPE **ppmt)
+{
+    *ppmt = CreateMediaType(&m_mt);
+    return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE CBallStream::GetNumberOfCapabilities(int *piCount, int *piSize)
+{
+    *piCount = 8;
+    *piSize = sizeof(VIDEO_STREAM_CONFIG_CAPS);
+    return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE CBallStream::GetStreamCaps(int iIndex, AM_MEDIA_TYPE **pmt, BYTE *pSCC)
+{
+    *pmt = CreateMediaType(&m_mt);
+    DECLARE_PTR(VIDEOINFOHEADER, pvi, (*pmt)->pbFormat);
+
+    if (iIndex == 0) iIndex = 4;
+
+    pvi->bmiHeader.biCompression = BI_RGB;
+    pvi->bmiHeader.biBitCount    = 24;
+    pvi->bmiHeader.biSize       = sizeof(BITMAPINFOHEADER);
+    pvi->bmiHeader.biWidth      = 80 * iIndex;
+    pvi->bmiHeader.biHeight     = 60 * iIndex;
+    pvi->bmiHeader.biPlanes     = 1;
+    pvi->bmiHeader.biSizeImage  = GetBitmapSize(&pvi->bmiHeader);
+    pvi->bmiHeader.biClrImportant = 0;
+
+    SetRectEmpty(&(pvi->rcSource)); // we want the whole image area rendered.
+    SetRectEmpty(&(pvi->rcTarget)); // no particular destination rectangle
+
+    (*pmt)->majortype = MEDIATYPE_Video;
+    (*pmt)->subtype = MEDIASUBTYPE_RGB24;
+    (*pmt)->formattype = FORMAT_VideoInfo;
+    (*pmt)->bTemporalCompression = FALSE;
+    (*pmt)->bFixedSizeSamples= FALSE;
+    (*pmt)->lSampleSize = pvi->bmiHeader.biSizeImage;
+    (*pmt)->cbFormat = sizeof(VIDEOINFOHEADER);
+    
+    DECLARE_PTR(VIDEO_STREAM_CONFIG_CAPS, pvscc, pSCC);
+    
+    pvscc->guid = FORMAT_VideoInfo;
+    pvscc->VideoStandard = AnalogVideo_None;
+    pvscc->InputSize.cx = 640;
+    pvscc->InputSize.cy = 480;
+    pvscc->MinCroppingSize.cx = 80;
+    pvscc->MinCroppingSize.cy = 60;
+    pvscc->MaxCroppingSize.cx = 640;
+    pvscc->MaxCroppingSize.cy = 480;
+    pvscc->CropGranularityX = 80;
+    pvscc->CropGranularityY = 60;
+    pvscc->CropAlignX = 0;
+    pvscc->CropAlignY = 0;
+
+    pvscc->MinOutputSize.cx = 80;
+    pvscc->MinOutputSize.cy = 60;
+    pvscc->MaxOutputSize.cx = 640;
+    pvscc->MaxOutputSize.cy = 480;
+    pvscc->OutputGranularityX = 0;
+    pvscc->OutputGranularityY = 0;
+    pvscc->StretchTapsX = 0;
+    pvscc->StretchTapsY = 0;
+    pvscc->ShrinkTapsX = 0;
+    pvscc->ShrinkTapsY = 0;
+    pvscc->MinFrameInterval = 200000;   //50 fps
+    pvscc->MaxFrameInterval = 50000000; // 0.2 fps
+    pvscc->MinBitsPerSecond = (80 * 60 * 3 * 8) / 5;
+    pvscc->MaxBitsPerSecond = 640 * 480 * 3 * 8 * 50;
+
+    return S_OK;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// IKsPropertySet
+//////////////////////////////////////////////////////////////////////////
+
+
+HRESULT CBallStream::Set(REFGUID guidPropSet, DWORD dwID, void *pInstanceData, 
+                        DWORD cbInstanceData, void *pPropData, DWORD cbPropData)
+{// Set: Cannot set any properties.
+    return E_NOTIMPL;
+}
+
+// Get: Return the pin category (our only property). 
+HRESULT CBallStream::Get(
+    REFGUID guidPropSet,   // Which property set.
+    DWORD dwPropID,        // Which property in that set.
+    void *pInstanceData,   // Instance data (ignore).
+    DWORD cbInstanceData,  // Size of the instance data (ignore).
+    void *pPropData,       // Buffer to receive the property data.
+    DWORD cbPropData,      // Size of the buffer.
+    DWORD *pcbReturned     // Return the size of the property.
+)
+{
+    if (guidPropSet == AMPROPSETID_Pin)
+	{
+		if (dwPropID != AMPROPERTY_PIN_CATEGORY)        return E_PROP_ID_UNSUPPORTED;
+		if (pPropData == NULL && pcbReturned == NULL)   return E_POINTER;
+    
+		if (pcbReturned) *pcbReturned = sizeof(GUID);
+		if (pPropData == NULL)          return S_OK; // Caller just wants to know the size. 
+		if (cbPropData < sizeof(GUID))  return E_UNEXPECTED;// The buffer is too small.
+        
+		*(GUID *)pPropData = PIN_CATEGORY_CAPTURE;
+		return S_OK;
+	}
+
+
+
+	return E_PROP_SET_UNSUPPORTED;
+}
+
+// QuerySupported: Query whether the pin supports the specified property.
+HRESULT CBallStream::QuerySupported(REFGUID guidPropSet, DWORD dwPropID, DWORD *pTypeSupport)
+{
+    if (guidPropSet != AMPROPSETID_Pin) return E_PROP_SET_UNSUPPORTED;
+    if (dwPropID != AMPROPERTY_PIN_CATEGORY) return E_PROP_ID_UNSUPPORTED;
+    // We support getting this property, but not setting it.
+    if (pTypeSupport) *pTypeSupport = KSPROPERTY_SUPPORT_GET; 
+    return S_OK;
+}

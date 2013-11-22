@@ -7,6 +7,8 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //------------------------------------------------------------------------------
 
+#define DECLARE_PTR(type, ptr, expr) type* ptr = (type*)(expr);
+
 //------------------------------------------------------------------------------
 // Forward Declarations
 //------------------------------------------------------------------------------
@@ -27,6 +29,7 @@ public:
     // The only allowed way to create Bouncing balls!
     static CUnknown * WINAPI CreateInstance(LPUNKNOWN lpunk, HRESULT *phr);
 
+	IFilterGraph *GetGraph() {return m_pGraph;}
 private:
 
     // It is only allowed to to create these objects with CreateInstance
@@ -42,7 +45,7 @@ private:
 // data from the source filter. It inherits from DirectShows's base
 // CSourceStream class.
 //------------------------------------------------------------------------------
-class CBallStream : public CSourceStream
+class CBallStream : public CSourceStream, public IAMStreamConfig, public IKsPropertySet
 {
 
 public:
@@ -71,6 +74,19 @@ public:
     // Quality control notifications sent to us
     STDMETHODIMP Notify(IBaseFilter * pSender, Quality q);
 
+	STDMETHODIMP QueryInterface(REFIID riid, void **ppv);
+	STDMETHODIMP_(ULONG) AddRef() { return GetOwner()->AddRef(); }                                                          \
+    STDMETHODIMP_(ULONG) Release() { return GetOwner()->Release(); }
+
+	HRESULT STDMETHODCALLTYPE SetFormat(AM_MEDIA_TYPE *pmt);
+    HRESULT STDMETHODCALLTYPE GetFormat(AM_MEDIA_TYPE **ppmt);
+    HRESULT STDMETHODCALLTYPE GetNumberOfCapabilities(int *piCount, int *piSize);
+    HRESULT STDMETHODCALLTYPE GetStreamCaps(int iIndex, AM_MEDIA_TYPE **pmt, BYTE *pSCC);
+
+	HRESULT STDMETHODCALLTYPE Set(REFGUID guidPropSet, DWORD dwID, void *pInstanceData, DWORD cbInstanceData, void *pPropData, DWORD cbPropData);
+    HRESULT STDMETHODCALLTYPE Get(REFGUID guidPropSet, DWORD dwPropID, void *pInstanceData,DWORD cbInstanceData, void *pPropData, DWORD cbPropData, DWORD *pcbReturned);
+    HRESULT STDMETHODCALLTYPE QuerySupported(REFGUID guidPropSet, DWORD dwPropID, DWORD *pTypeSupport);
+
 private:
 
     int m_iImageHeight;                 // The current image height
@@ -85,6 +101,9 @@ private:
     CCritSec m_cSharedState;            // Lock on m_rtSampleTime and m_Ball
     CRefTime m_rtSampleTime;            // The time stamp for each sample
     CBall *m_Ball;                      // The current ball object
+	CBouncingBall *m_pParent;
+
+	REFERENCE_TIME m_rtLastTime;
 
     // set up the palette appropriately
     enum Colour {Red, Blue, Green, Yellow};
