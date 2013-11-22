@@ -1,12 +1,3 @@
-//------------------------------------------------------------------------------
-// File: FBall.cpp
-//
-// Desc: DirectShow sample code - implementation of filter behaviors
-//       for the bouncing ball source filter.  For more information,
-//       refer to Ball.cpp.
-//
-// Copyright (c) Microsoft Corporation.  All rights reserved.
-//------------------------------------------------------------------------------
 
 #include <streams.h>
 #include <olectl.h>
@@ -197,7 +188,6 @@ CBouncingBall::CBouncingBall(LPUNKNOWN lpunk, HRESULT *phr) :
 
 } // (Constructor)
 
-
 //
 // Constructor
 //
@@ -207,16 +197,8 @@ CBallStream::CBallStream(HRESULT *phr,
     CSourceStream(NAME("Bouncing Ball"),phr, pParent, pPinName), 
 		m_pParent(pParent)
 {
-//    ASSERT(phr);
-  //  CAutoLock cAutoLock(&m_cSharedState);
-
-	    // Set the default media type as 320x240x24@15
     GetMediaType(4, &m_mt);
-
-
-
 } // (Constructor)
-
 
 //
 // Destructor

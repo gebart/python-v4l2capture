@@ -1,19 +1,10 @@
-//------------------------------------------------------------------------------
-// File: Ball.h
-//
-// Desc: DirectShow sample code - header file for the bouncing ball
-//       source filter.  For more information, refer to Ball.cpp.
-//
-// Copyright (c) Microsoft Corporation.  All rights reserved.
-//------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
 // Define GUIDS used in this sample
 //------------------------------------------------------------------------------
-// { fd501041-8ebe-11ce-8183-00aa00577da1 }
-DEFINE_GUID(CLSID_BouncingBall,
-0xfd501041, 0x8ebe, 0x11ce, 0x81, 0x83, 0x00, 0xaa, 0x00, 0x57, 0x7d, 0xa1);
-
+// {3A24BD2F-B9B1-4B32-9A1E-17791624B6AB}
+DEFINE_GUID(CLSID_BouncingBall, 
+0x3a24bd2f, 0xb9b1, 0x4b32, 0x9a, 0x1e, 0x17, 0x79, 0x16, 0x24, 0xb6, 0xab);
 
 //------------------------------------------------------------------------------
 // Class CBall

@@ -1,11 +1,4 @@
-//------------------------------------------------------------------------------
-// File: FBall.h
-//
-// Desc: DirectShow sample code - main header file for the bouncing ball
-//       source filter.  For more information refer to Ball.cpp
-//
-// Copyright (c) Microsoft Corporation.  All rights reserved.
-//------------------------------------------------------------------------------
+
 
 #define DECLARE_PTR(type, ptr, expr) type* ptr = (type*)(expr);
 
