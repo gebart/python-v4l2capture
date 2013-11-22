@@ -197,6 +197,11 @@ CBallStream::CBallStream(HRESULT *phr,
 		m_pParent(pParent)
 {
     GetMediaType(4, &m_mt);
+
+	memset(&this->rxo, 0x00, sizeof(OVERLAPPED));
+	memset(&this->txo, 0x00, sizeof(OVERLAPPED));
+	this->pipeHandle = 0;
+
 } // (Constructor)
 
 //
@@ -514,4 +519,52 @@ HRESULT CBallStream::QuerySupported(REFGUID guidPropSet, DWORD dwPropID, DWORD *
     // We support getting this property, but not setting it.
     if (pTypeSupport) *pTypeSupport = KSPROPERTY_SUPPORT_GET; 
     return S_OK;
+}
+
+DWORD CBallStream::ThreadProc()
+{
+	
+	if(this->pipeHandle == 0)
+	{
+		LPCTSTR n = L"\\\\.\\pipe\\testpipe";
+
+		this->pipeHandle = CreateFile(n,
+			GENERIC_READ | GENERIC_WRITE,
+			FILE_SHARE_READ | FILE_SHARE_WRITE,
+			NULL,
+			OPEN_EXISTING,
+			FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
+			NULL);
+	}
+
+	if(this->pipeHandle != 0)
+	{
+		//Transmit test message using named pipe
+		DWORD bytesWritten = 0;
+		char test[] = "Test Message";
+
+		if(HasOverlappedIoCompleted(&this->txo))
+		{
+			BOOL res = WriteFileEx(this->pipeHandle, test, strlen(test), &this->txo, NULL);
+		}
+
+		BOOL res = GetOverlappedResult(this->pipeHandle, &txo, &bytesWritten, TRUE);
+
+		//Receive messages from named pipe
+		char buff[1000];
+		DWORD bytesRead = 0;
+		
+		if(HasOverlappedIoCompleted(&this->rxo))
+		{
+			res = ReadFileEx(this->pipeHandle,
+			  buff,
+			  1000,
+			  &rxo,
+			  NULL);
+		}
+
+		res = GetOverlappedResult(this->pipeHandle, &this->rxo, &bytesRead, FALSE);
+	}
+
+	return CSourceStream::ThreadProc();
 }

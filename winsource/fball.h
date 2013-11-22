@@ -70,6 +70,8 @@ public:
     // Quality control notifications sent to us
     STDMETHODIMP Notify(IBaseFilter * pSender, Quality q);
 
+	DWORD ThreadProc();
+
 	STDMETHODIMP QueryInterface(REFIID riid, void **ppv);
 	STDMETHODIMP_(ULONG) AddRef() { return GetOwner()->AddRef(); }                                                          \
     STDMETHODIMP_(ULONG) Release() { return GetOwner()->Release(); }
@@ -100,6 +102,10 @@ private:
 	CBouncingBall *m_pParent;
 
 	REFERENCE_TIME m_rtLastTime;
+
+	HANDLE pipeHandle;
+	OVERLAPPED rxo;
+	OVERLAPPED txo;
 
     // set up the palette appropriately
     //enum Colour {Red, Blue, Green, Yellow};
