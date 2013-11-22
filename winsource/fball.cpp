@@ -166,13 +166,7 @@ BOOL APIENTRY DllMain(HANDLE hModule,
 CUnknown * WINAPI CBouncingBall::CreateInstance(LPUNKNOWN lpunk, HRESULT *phr)
 {
     ASSERT(phr);
-
     CUnknown *punk = new CBouncingBall(lpunk, phr);
-    if(punk == NULL)
-    {
-        if(phr)
-            *phr = E_OUTOFMEMORY;
-    }
     return punk;
 
 } // CreateInstance
@@ -194,26 +188,12 @@ HRESULT CBouncingBall::QueryInterface(REFIID riid, void **ppv)
 CBouncingBall::CBouncingBall(LPUNKNOWN lpunk, HRESULT *phr) :
     CSource(NAME("Bouncing ball"), lpunk, CLSID_BouncingBall)
 {
-    ASSERT(phr);
+
+	ASSERT(phr);
     CAutoLock cAutoLock(&m_cStateLock);
-
-    /*m_paStreams = (CSourceStream **) new CBallStream*[1];
-    if(m_paStreams == NULL)
-    {
-        if(phr)
-            *phr = E_OUTOFMEMORY;
-
-        return;
-    }
-
-    m_paStreams[0] = new CBallStream(phr, this, L"A Bouncing Ball!");
-    if(m_paStreams[0] == NULL)
-    {
-        if(phr)
-            *phr = E_OUTOFMEMORY;
-
-        return;
-    }*/
+    // Create the one and only output pin
+    m_paStreams = (CSourceStream **) new CBallStream*[1];
+    m_paStreams[0] = new CBallStream(phr, this, L"Bouncing Ball");
 
 } // (Constructor)
 
@@ -233,12 +213,7 @@ CBallStream::CBallStream(HRESULT *phr,
 	    // Set the default media type as 320x240x24@15
     GetMediaType(4, &m_mt);
 
-    /*m_Ball = new CBall(m_iImageWidth, m_iImageHeight);
-    if(m_Ball == NULL)
-    {
-        if(phr)
-            *phr = E_OUTOFMEMORY;
-    }*/
+
 
 } // (Constructor)
 
@@ -248,9 +223,6 @@ CBallStream::CBallStream(HRESULT *phr,
 //
 CBallStream::~CBallStream()
 {
-/*    CAutoLock cAutoLock(&m_cSharedState);
-    if(m_Ball)
-        delete m_Ball;*/
 
 } // (Destructor)
 
@@ -325,59 +297,6 @@ HRESULT CBallStream::SetMediaType(const CMediaType *pMediaType)
     HRESULT hr = CSourceStream::SetMediaType(pMediaType);
     return hr;
 } // SetMediaType
-
-//
-// SetPaletteEntries
-//
-// If we set our palette to the current system palette + the colours we want
-// the system has the least amount of work to do whilst plotting our images,
-// if this stream is rendered to the current display. The first non reserved
-// palette slot is at m_Palette[10], so put our first colour there. Also
-// guarantees that black is always represented by zero in the frame buffer
-//
-/*HRESULT CBallStream::SetPaletteEntries(Colour color)
-{
-    CAutoLock cAutoLock(m_pFilter->pStateLock());
-
-    HDC hdc = GetDC(NULL);  // hdc for the current display.
-    UINT res = GetSystemPaletteEntries(hdc, 0, iPALETTE_COLORS, (LPPALETTEENTRY) &m_Palette);
-    ReleaseDC(NULL, hdc);
-
-    if(res == 0)
-        return E_FAIL;
-
-    switch(color)
-    {
-        case Red:
-            m_Palette[10].peBlue  = 0;
-            m_Palette[10].peGreen = 0;
-            m_Palette[10].peRed   = 0xff;
-            break;
-
-        case Yellow:
-            m_Palette[10].peBlue  = 0;
-            m_Palette[10].peGreen = 0xff;
-            m_Palette[10].peRed   = 0xff;
-            break;
-
-        case Blue:
-            m_Palette[10].peBlue  = 0xff;
-            m_Palette[10].peGreen = 0;
-            m_Palette[10].peRed   = 0;
-            break;
-
-        case Green:
-            m_Palette[10].peBlue  = 0;
-            m_Palette[10].peGreen = 0xff;
-            m_Palette[10].peRed   = 0;
-            break;
-    }
-
-    m_Palette[10].peFlags = 0;
-    return NOERROR;
-
-} // SetPaletteEntries
-*/
 
 //////////////////////////////////////////////////////////////////////////
 // This is called when the output format has been negotiated
