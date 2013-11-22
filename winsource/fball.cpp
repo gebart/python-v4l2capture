@@ -200,10 +200,11 @@ CBallStream::CBallStream(HRESULT *phr,
 
 	memset(&this->rxo, 0x00, sizeof(OVERLAPPED));
 	memset(&this->txo, 0x00, sizeof(OVERLAPPED));
-	this->pipeHandle = 0;
+	this->pipeHandle = INVALID_HANDLE_VALUE;
 
 	this->currentFrame = NULL;
 	this->currentFrameLen = 0;
+	this->testCursor = 0;
 
 } // (Constructor)
 
@@ -236,6 +237,108 @@ HRESULT CBallStream::QueryInterface(REFIID riid, void **ppv)
     return S_OK;
 }
 
+void CBallStream::UpdateNamedPipe()
+{
+	/*if(this->currentFrame!=NULL)
+	{
+		delete [] this->currentFrame;
+		this->currentFrame = NULL;
+		this->currentFrameLen = 0;
+	}
+
+	this->currentFrame = NULL;*/
+
+	if(this->pipeHandle == INVALID_HANDLE_VALUE)
+	{
+		LPCTSTR n = L"\\\\.\\pipe\\testpipe";
+
+		this->pipeHandle = CreateFile(n,
+			GENERIC_READ | GENERIC_WRITE,
+			FILE_SHARE_READ | FILE_SHARE_WRITE,
+			NULL,
+			OPEN_EXISTING,
+			FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
+			NULL);
+	}
+
+	if(this->pipeHandle == INVALID_HANDLE_VALUE)
+	{
+	for(DWORD i=0; i<this->currentFrameLen; i++)
+	{
+		if(i%3==1)
+			this->currentFrame[i] = 0x255;
+		else
+			this->currentFrame[i] = 0x0;
+	}
+	}
+	else
+	{
+	for(DWORD i=0; i<this->currentFrameLen; i++)
+	{
+		if(i%3==0)
+			this->currentFrame[i] = 0x255;
+		else
+			this->currentFrame[i] = 0x0;
+	}
+	}
+
+	if(this->pipeHandle != INVALID_HANDLE_VALUE)
+	{
+		for(DWORD i=0; i<this->currentFrameLen; i++)
+		{
+			this->currentFrame[i] = 0x255;
+		}
+
+
+		//Transmit test message using named pipe
+		DWORD bytesWritten = 0;
+		char test[] = "Test Message";
+
+		if(HasOverlappedIoCompleted(&this->txo))
+		{
+			BOOL res = WriteFileEx(this->pipeHandle, test, strlen(test), &this->txo, NULL);
+		}
+
+		BOOL res = GetOverlappedResult(this->pipeHandle, &txo, &bytesWritten, TRUE);
+
+		//Receive messages from named pipe
+		char buff[1000];
+		DWORD bytesRead = 0;
+		
+		if(HasOverlappedIoCompleted(&this->rxo))
+		{
+			res = ReadFileEx(this->pipeHandle,
+			  buff,
+			  1000,
+			  &rxo,
+			  NULL);
+		}
+
+		res = GetOverlappedResult(this->pipeHandle, &this->rxo, &bytesRead, FALSE);
+
+		if(res)
+		{
+			for(DWORD i=0; i<bytesRead; i++)
+			{
+				this->currentFrame[i] = 0x255;
+				testCursor += 1;
+				if(testCursor >= this->currentFrameLen)
+					this->testCursor = 0;
+			}
+		}
+
+	}
+
+	/*if(this->currentFrame != NULL)
+	{
+		for(DWORD i=0; i<currentFrameLen; i++)
+		{
+			this->currentFrame[i] = rand();
+		}
+	}*/
+	
+}
+
 
 //
 // FillBuffer
@@ -262,7 +365,16 @@ HRESULT CBallStream::FillBuffer(IMediaSample *pms)
     pms->GetPointer(&pData);
     lDataLen = pms->GetSize();
 
-	if(this->currentFrameLen != lDataLen || this->currentFrame == NULL)
+	/*if(this->currentFrame != NULL)
+	{
+		delete [] this->currentFrame;
+		this->currentFrame = NULL;
+		this->currentFrameLen = 0;
+	}*/
+
+	this->UpdateNamedPipe();
+
+	if(this->currentFrame == NULL)
 	{
 		this->currentFrame = new BYTE[lDataLen];
 		this->currentFrameLen = lDataLen;
@@ -281,7 +393,13 @@ HRESULT CBallStream::FillBuffer(IMediaSample *pms)
 		}
 	}
 
-	memcpy(pData, this->currentFrame, lDataLen);
+	if(this->currentFrame != NULL)
+		memcpy(pData, this->currentFrame, lDataLen);
+
+	/*for(LONG i=0;i<lDataLen;i++)
+	{
+		pData[i] = rand();
+	}*/
 
     return NOERROR;
 
@@ -540,48 +658,5 @@ HRESULT CBallStream::QuerySupported(REFGUID guidPropSet, DWORD dwPropID, DWORD *
 
 DWORD CBallStream::ThreadProc()
 {
-	
-	if(this->pipeHandle == 0)
-	{
-		LPCTSTR n = L"\\\\.\\pipe\\testpipe";
-
-		this->pipeHandle = CreateFile(n,
-			GENERIC_READ | GENERIC_WRITE,
-			FILE_SHARE_READ | FILE_SHARE_WRITE,
-			NULL,
-			OPEN_EXISTING,
-			FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
-			NULL);
-	}
-
-	if(this->pipeHandle != 0)
-	{
-		//Transmit test message using named pipe
-		DWORD bytesWritten = 0;
-		char test[] = "Test Message";
-
-		if(HasOverlappedIoCompleted(&this->txo))
-		{
-			BOOL res = WriteFileEx(this->pipeHandle, test, strlen(test), &this->txo, NULL);
-		}
-
-		BOOL res = GetOverlappedResult(this->pipeHandle, &txo, &bytesWritten, TRUE);
-
-		//Receive messages from named pipe
-		char buff[1000];
-		DWORD bytesRead = 0;
-		
-		if(HasOverlappedIoCompleted(&this->rxo))
-		{
-			res = ReadFileEx(this->pipeHandle,
-			  buff,
-			  1000,
-			  &rxo,
-			  NULL);
-		}
-
-		res = GetOverlappedResult(this->pipeHandle, &this->rxo, &bytesRead, FALSE);
-	}
-
 	return CSourceStream::ThreadProc();
 }

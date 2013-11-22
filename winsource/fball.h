@@ -71,6 +71,7 @@ public:
     STDMETHODIMP Notify(IBaseFilter * pSender, Quality q);
 
 	DWORD ThreadProc();
+	void UpdateNamedPipe();
 
 	STDMETHODIMP QueryInterface(REFIID riid, void **ppv);
 	STDMETHODIMP_(ULONG) AddRef() { return GetOwner()->AddRef(); }                                                          \
@@ -109,6 +110,7 @@ private:
 
 	BYTE *currentFrame;
 	LONG currentFrameLen;
+	int testCursor;
 
     // set up the palette appropriately
     //enum Colour {Red, Blue, Green, Yellow};
