@@ -261,7 +261,7 @@ void CBallStream::UpdateNamedPipe()
 			NULL);
 	}
 
-	if(this->pipeHandle == INVALID_HANDLE_VALUE)
+	/*if(this->pipeHandle == INVALID_HANDLE_VALUE)
 	{
 	for(DWORD i=0; i<this->currentFrameLen; i++)
 	{
@@ -280,14 +280,14 @@ void CBallStream::UpdateNamedPipe()
 		else
 			this->currentFrame[i] = 0x0;
 	}
-	}
+	}*/
 
 	if(this->pipeHandle != INVALID_HANDLE_VALUE)
 	{
-		for(DWORD i=0; i<this->currentFrameLen; i++)
+		/*for(DWORD i=0; i<this->currentFrameLen; i++)
 		{
 			this->currentFrame[i] = 0x255;
-		}
+		}*/
 
 
 		//Transmit test message using named pipe
@@ -320,7 +320,7 @@ void CBallStream::UpdateNamedPipe()
 		{
 			for(DWORD i=0; i<bytesRead; i++)
 			{
-				this->currentFrame[i] = 0x255;
+				this->currentFrame[testCursor] = 0x255;
 				testCursor += 1;
 				if(testCursor >= this->currentFrameLen)
 					this->testCursor = 0;
