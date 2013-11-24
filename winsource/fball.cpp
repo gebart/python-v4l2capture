@@ -350,16 +350,44 @@ void CBallStream::UpdateNamedPipe()
 			}
 
 
-			/*for(DWORD i=0; i<bytesRead; i++)
+
+			UINT32 cursor = 0;
+			int processing = 1;
+			while(processing && rxBuffLen > 8)
 			{
-				this->currentFrame[testCursor] = buff[i];
-				testCursor += 1;
-				if(testCursor >= this->currentFrameLen)
-					this->testCursor = 0;
-			}*/
+				UINT32 *wordArray = (UINT32 *)&rxBuff[cursor];
+				UINT32 msgType = wordArray[0];
+				UINT32 msgLen = wordArray[1];
+				if(rxBuffLen-cursor >= 8+msgLen)
+				{
+					char *payload = &this->rxBuff[cursor+8];
+					UINT32 payloadLen = msgLen - 8;
+					UINT32 *payloadArray = (UINT32 *)payload;
 
+					if(msgType == 2)
+					{
+						//Message is new frame
+						for(unsigned i=0; i<payloadLen && i<this->currentFrameLen; i++)
+						{
+							this->currentFrame[i] = payload[i];
+						}
+					}
 
-			rxBuffLen = 0; //Discard buffer
+					cursor += 8+msgLen;
+				}
+				else
+				{
+					processing = 0;
+				}
+			}
+
+			//Store unprocessed data in buffer
+			if(cursor > 0)
+			{
+				memcpy(rxBuff, &rxBuff[cursor], rxBuffLen - cursor);
+				rxBuffLen -= cursor;
+			}
+
 		}
 
 
