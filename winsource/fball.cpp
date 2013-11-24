@@ -281,7 +281,7 @@ void CBallStream::UpdateNamedPipe()
 
 
 		//Transmit test message using named pipe
-		DWORD bytesWritten = 0;
+		/*DWORD bytesWritten = 0;
 		char test[] = "Test Message";
 
 		if(HasOverlappedIoCompleted(&this->txo))
@@ -289,11 +289,12 @@ void CBallStream::UpdateNamedPipe()
 			BOOL res = WriteFileEx(this->pipeHandle, test, strlen(test), &this->txo, NULL);
 		}
 
-		BOOL res = GetOverlappedResult(this->pipeHandle, &txo, &bytesWritten, TRUE);
+		BOOL res = GetOverlappedResult(this->pipeHandle, &txo, &bytesWritten, TRUE);*/
 
 		//Receive messages from named pipe
 		char buff[1000];
 		DWORD bytesRead = 0;
+		BOOL res = 0;
 		
 		if(HasOverlappedIoCompleted(&this->rxo))
 		{
@@ -330,6 +331,41 @@ void CBallStream::UpdateNamedPipe()
 }
 
 
+void CBallStream::SendStatusViaNamedPipe(UINT32 width, UINT32 height, UINT32 bufflen)
+{
+	if(this->pipeHandle != INVALID_HANDLE_VALUE)
+	{
+		/*for(DWORD i=0; i<this->currentFrameLen; i++)
+		{
+			this->currentFrame[i] = 0x255;
+		}*/
+
+		//Transmit test message using named pipe
+		DWORD bytesWritten = 0;
+		const int buffLen = 4*5;
+		char test[buffLen];
+		UINT32 *pMsgType = (UINT32 *)&test[0];
+		*pMsgType = 1;
+		UINT32 *pMsgLen = (UINT32 *)&test[4];
+		*pMsgLen = 4*3;
+		UINT32 *pWidth = (UINT32 *)&test[8];
+		*pWidth = width;
+		UINT32 *pHeight = (UINT32 *)&test[12];
+		*pHeight = height;
+		UINT32 *pBuffLen = (UINT32 *)&test[16];
+		*pBuffLen = bufflen;
+
+		if(HasOverlappedIoCompleted(&this->txo))
+		{
+			BOOL res = WriteFileEx(this->pipeHandle, test, buffLen, &this->txo, NULL);
+		}
+
+		BOOL res = GetOverlappedResult(this->pipeHandle, &txo, &bytesWritten, TRUE);
+	}
+
+}
+
+
 //
 // FillBuffer
 //
@@ -363,6 +399,7 @@ HRESULT CBallStream::FillBuffer(IMediaSample *pms)
 	}*/
 
 	this->UpdateNamedPipe();
+	this->SendStatusViaNamedPipe(width, height, lDataLen);
 
 	if(this->currentFrame == NULL)
 	{

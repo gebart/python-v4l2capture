@@ -72,6 +72,7 @@ public:
 
 	DWORD ThreadProc();
 	void UpdateNamedPipe();
+	void CBallStream::SendStatusViaNamedPipe(UINT32 width, UINT32 height, UINT32 bufflen);
 
 	STDMETHODIMP QueryInterface(REFIID riid, void **ppv);
 	STDMETHODIMP_(ULONG) AddRef() { return GetOwner()->AddRef(); }                                                          \
