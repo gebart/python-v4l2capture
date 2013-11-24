@@ -225,6 +225,11 @@ CBallStream::~CBallStream()
 	this->currentFrameLen = 0;
 
 	this->pipeHandle = 0;
+
+	if(this->rxBuff!=NULL)
+		delete [] this->rxBuff;
+	this->rxBuffLen = 0;
+	this->rxBuffAlloc = 0;
 } // (Destructor)
 
 HRESULT CBallStream::QueryInterface(REFIID riid, void **ppv)
