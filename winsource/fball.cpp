@@ -316,8 +316,16 @@ void CBallStream::UpdateNamedPipe()
 
 		res = GetOverlappedResult(this->pipeHandle, &this->rxo, &bytesRead, FALSE);
 
-		if(res && rxBuffLen > 0)
+		if(res && bytesRead > 0)
 		{
+			if(this->currentFrame!=NULL)
+			for(DWORD i=0; i<this->currentFrameLen; i++)
+			{
+			this->currentFrame[i] = 0x255;
+			}
+
+
+			/*
 			//Merge receive string with buffer
 			if(rxBuff != NULL && rxBuffLen + bytesRead <= rxBuffAlloc)
 			{
@@ -348,8 +356,6 @@ void CBallStream::UpdateNamedPipe()
 					rxBuffAlloc = bytesRead;
 				}
 			}
-
-
 
 			UINT32 cursor = 0;
 			int processing = 1;
@@ -382,12 +388,13 @@ void CBallStream::UpdateNamedPipe()
 			}
 
 			//Store unprocessed data in buffer
-			if(cursor > 0)
+			/*if(cursor > 0)
 			{
 				memcpy(rxBuff, &rxBuff[cursor], rxBuffLen - cursor);
 				rxBuffLen -= cursor;
 			}
-
+			rxBuffLen = 0;
+			*/
 		}
 
 
