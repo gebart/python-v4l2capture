@@ -316,16 +316,53 @@ void CBallStream::UpdateNamedPipe()
 
 		res = GetOverlappedResult(this->pipeHandle, &this->rxo, &bytesRead, FALSE);
 
-		if(res)
+		if(res && rxBuffLen > 0)
 		{
-			for(DWORD i=0; i<bytesRead; i++)
+			//Merge receive string with buffer
+			if(rxBuff != NULL && rxBuffLen + bytesRead <= rxBuffAlloc)
+			{
+				//No need to reallocate
+				memcpy(&rxBuff[rxBuffLen], buff, bytesRead);
+				rxBuffLen += bytesRead;
+			}
+			else
+			{
+				//Buffer must be resized
+				if(rxBuff != NULL)
+				{
+					char *tmp = new char[rxBuffLen + bytesRead];
+					memcpy(tmp, rxBuff, rxBuffLen);
+					memcpy(&tmp[rxBuffLen], buff, bytesRead);
+					delete [] rxBuff;
+
+					rxBuff = tmp;
+					rxBuffLen = rxBuffLen + bytesRead;
+					rxBuffAlloc = rxBuffLen + bytesRead;
+				}
+				else
+				{
+					rxBuff = new char[bytesRead];
+					memcpy(rxBuff, buff, bytesRead);
+
+					rxBuffLen = bytesRead;
+					rxBuffAlloc = bytesRead;
+				}
+			}
+
+
+			/*for(DWORD i=0; i<bytesRead; i++)
 			{
 				this->currentFrame[testCursor] = buff[i];
 				testCursor += 1;
 				if(testCursor >= this->currentFrameLen)
 					this->testCursor = 0;
-			}
+			}*/
+
+
+			rxBuffLen = 0; //Discard buffer
 		}
+
+
 
 	}
 
