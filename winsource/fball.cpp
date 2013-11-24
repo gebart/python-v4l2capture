@@ -206,6 +206,10 @@ CBallStream::CBallStream(HRESULT *phr,
 	this->currentFrameLen = 0;
 	this->testCursor = 0;
 
+	this->rxBuff = NULL;
+    this->rxBuffLen = 0;
+    this->rxBuffAlloc = 0;
+
 } // (Constructor)
 
 //

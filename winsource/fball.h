@@ -103,6 +103,10 @@ private:
     //CBall *m_Ball;                      // The current ball object
 	CBouncingBall *m_pParent;
 
+	char *rxBuff;
+	int rxBuffLen;
+	int rxBuffAlloc;
+
 	REFERENCE_TIME m_rtLastTime;
 
 	HANDLE pipeHandle;
