@@ -72,7 +72,8 @@ public:
 
 	DWORD ThreadProc();
 	void UpdateNamedPipe();
-	void CBallStream::SendStatusViaNamedPipe(UINT32 width, UINT32 height, UINT32 bufflen);
+	void SendStatusViaNamedPipe(UINT32 width, UINT32 height, UINT32 bufflen);
+	void SendErrorViaNamedPipe(UINT32 errCode);
 
 	STDMETHODIMP QueryInterface(REFIID riid, void **ppv);
 	STDMETHODIMP_(ULONG) AddRef() { return GetOwner()->AddRef(); }                                                          \
@@ -116,6 +117,9 @@ private:
 	BYTE *currentFrame;
 	LONG currentFrameLen;
 	int testCursor;
+	char *tmpBuff;
+
+	FILETIME lastUpdateTime;
 
     // set up the palette appropriately
     //enum Colour {Red, Blue, Green, Yellow};
