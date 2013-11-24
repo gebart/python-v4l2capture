@@ -339,10 +339,10 @@ void CBallStream::UpdateNamedPipe()
 		if(res && bytesRead > 0)
 		{
 			//Merge receive string with buffer
-			/*if(rxBuff != NULL && rxBuffLen + bytesRead <= rxBuffAlloc)
+			if(rxBuff != NULL && rxBuffLen + bytesRead <= rxBuffAlloc)
 			{
 				//No need to reallocate
-				memcpy(&rxBuff[rxBuffLen], buff, bytesRead);
+				memcpy(&rxBuff[rxBuffLen], tmpBuff, bytesRead);
 				rxBuffLen += bytesRead;
 			}
 			else
@@ -354,7 +354,7 @@ void CBallStream::UpdateNamedPipe()
 						if(tmp!=NULL)
 						{
 							memcpy(tmp, rxBuff, rxBuffLen);
-							memcpy(&tmp[rxBuffLen], buff, bytesRead);
+							memcpy(&tmp[rxBuffLen], tmpBuff, bytesRead);
 							delete [] rxBuff;
 
 							rxBuff = tmp;
@@ -373,12 +373,12 @@ void CBallStream::UpdateNamedPipe()
 					{
 						return;
 					}
-					memcpy(rxBuff, buff, bytesRead);
+					memcpy(rxBuff, tmpBuff, bytesRead);
 
 					rxBuffLen = bytesRead;
 					rxBuffAlloc = bytesRead;
 				}
-			}*/
+			}
 
 			if(this->currentFrame!=NULL)
 			for(DWORD i=0; i<this->currentFrameLen; i++)
@@ -389,7 +389,7 @@ void CBallStream::UpdateNamedPipe()
 					this->currentFrame[i] = 0x00;
 			}
 
-			/*UINT32 cursor = 0;
+			UINT32 cursor = 0;
 			int processing = 1;
 			while(processing && (rxBuffLen - cursor) > 8 && rxBuff != NULL)
 			{
@@ -405,9 +405,18 @@ void CBallStream::UpdateNamedPipe()
 					if(msgType == 2)
 					{
 						//Message is new frame
-						for(unsigned i=0; i<payloadLen && i<this->currentFrameLen; i++)
+						/*for(unsigned i=0; i<payloadLen && i<this->currentFrameLen; i++)
 						{
 							this->currentFrame[i] = payload[i];
+						}*/
+
+						if(this->currentFrame!=NULL)
+						for(DWORD i=0; i<this->currentFrameLen; i++)
+						{
+							if(i%3==1)
+								this->currentFrame[i] = 0xff;
+							else
+								this->currentFrame[i] = 0x00;
 						}
 					}
 
@@ -418,7 +427,7 @@ void CBallStream::UpdateNamedPipe()
 					processing = 0;
 				}
 			}
-			*/
+			
 			//Store unprocessed data in buffer
 			/*if(cursor > 0 && rxBuff != NULL)
 			{
