@@ -318,14 +318,6 @@ void CBallStream::UpdateNamedPipe()
 
 		if(res && bytesRead > 0)
 		{
-			if(this->currentFrame!=NULL)
-			for(DWORD i=0; i<this->currentFrameLen; i++)
-			{
-			this->currentFrame[i] = 0x255;
-			}
-
-
-			/*
 			//Merge receive string with buffer
 			if(rxBuff != NULL && rxBuffLen + bytesRead <= rxBuffAlloc)
 			{
@@ -357,6 +349,16 @@ void CBallStream::UpdateNamedPipe()
 				}
 			}
 
+			if(this->currentFrame!=NULL)
+			for(DWORD i=0; i<this->currentFrameLen; i++)
+			{
+				if(i/10 < rxBuffLen)
+					this->currentFrame[i] = 0x255;
+				else
+					this->currentFrame[i] = 0x0;
+			}
+
+			/*
 			UINT32 cursor = 0;
 			int processing = 1;
 			while(processing && rxBuffLen > 8)
@@ -386,15 +388,15 @@ void CBallStream::UpdateNamedPipe()
 					processing = 0;
 				}
 			}
-
+			*/
 			//Store unprocessed data in buffer
 			/*if(cursor > 0)
 			{
 				memcpy(rxBuff, &rxBuff[cursor], rxBuffLen - cursor);
 				rxBuffLen -= cursor;
-			}
+			}*/
 			rxBuffLen = 0;
-			*/
+			
 		}
 
 
