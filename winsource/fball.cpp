@@ -256,7 +256,7 @@ HRESULT CBallStream::QueryInterface(REFIID riid, void **ppv)
     return S_OK;
 }
 
-void CBallStream::UpdateNamedPipe()
+int CBallStream::UpdateNamedPipe()
 {
 	/*if(this->currentFrame!=NULL)
 	{
@@ -266,6 +266,8 @@ void CBallStream::UpdateNamedPipe()
 	}
 
 	this->currentFrame = NULL;*/
+
+	int frameChanged = 0;
 
 	if(this->pipeHandle == INVALID_HANDLE_VALUE)
 	{
@@ -364,7 +366,7 @@ void CBallStream::UpdateNamedPipe()
 						}
 						else
 						{
-							return;
+							return -1;
 						}
 				}
 				else
@@ -372,7 +374,7 @@ void CBallStream::UpdateNamedPipe()
 					rxBuff = new (std::nothrow) char[bytesRead];
 					if(rxBuff == NULL)
 					{
-						return;
+						return - 1;
 					}
 					memcpy(rxBuff, tmpBuff, bytesRead);
 
@@ -405,14 +407,14 @@ void CBallStream::UpdateNamedPipe()
 
 					if(msgType == 2)
 					{
-						if(this->currentFrame!=NULL)
+						/*if(this->currentFrame!=NULL)
 						for(DWORD i=0; i<this->currentFrameLen; i++)
 						{
 							if(i%3==1)
 								this->currentFrame[i] = 0xff;
 							else
 								this->currentFrame[i] = 0x00;
-						}
+						}*/
 
 						//Message is new frame
 						if(this->currentFrame!=NULL)
@@ -421,6 +423,7 @@ void CBallStream::UpdateNamedPipe()
 							this->currentFrame[i] = payload[i];
 						}
 
+						frameChanged = 1;
 
 					}
 
@@ -433,13 +436,13 @@ void CBallStream::UpdateNamedPipe()
 			}
 			
 			//Store unprocessed data in buffer
-			/*if(cursor > 0 && rxBuff != NULL)
+			if(cursor > 0 && rxBuff != NULL)
 			{
 				char *tmp = new (std::nothrow) char[rxBuffLen - cursor];
 				if(tmp==NULL)
 				{
 					rxBuffLen = 0;
-					return;
+					return -1;
 				}
 				memcpy(tmp, &rxBuff[cursor], rxBuffLen - cursor);
 				delete [] rxBuff;
@@ -447,8 +450,8 @@ void CBallStream::UpdateNamedPipe()
 
 				rxBuffAlloc = rxBuffLen - cursor;
 				rxBuffLen = rxBuffLen - cursor;
-			}*/
-			rxBuffLen = 0;
+			}
+			//rxBuffLen = 0;
 			
 		}
 	}
@@ -460,7 +463,7 @@ void CBallStream::UpdateNamedPipe()
 			this->currentFrame[i] = rand();
 		}
 	}*/
-	
+	return frameChanged;
 	
 }
 

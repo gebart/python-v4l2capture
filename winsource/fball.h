@@ -71,7 +71,7 @@ public:
     STDMETHODIMP Notify(IBaseFilter * pSender, Quality q);
 
 	DWORD ThreadProc();
-	void UpdateNamedPipe();
+	int UpdateNamedPipe();
 	void SendStatusViaNamedPipe(UINT32 width, UINT32 height, UINT32 bufflen);
 	void SendErrorViaNamedPipe(UINT32 errCode);
 
