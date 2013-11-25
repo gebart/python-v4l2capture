@@ -404,7 +404,7 @@ int CBallStream::ReceiveDataViaNamedPipe()
 			//Split receive buffer into separate messages
 			UINT32 cursor = 0;
 			int processing = 1;
-			/*while(processing && (rxBuffLen - cursor) > 8 && rxBuff != NULL)
+			while(processing && (rxBuffLen - cursor) > 8 && rxBuff != NULL)
 			{
 				UINT32 *wordArray = (UINT32 *)&rxBuff[cursor];
 				UINT32 msgType = wordArray[0];
@@ -443,8 +443,7 @@ int CBallStream::ReceiveDataViaNamedPipe()
 				{
 					processing = 0;
 				}
-			}*/
-			cursor = rxBuffLen;
+			}
 			
 			//Store unprocessed data in buffer
 			if(cursor > 0 && rxBuff != NULL)
@@ -546,19 +545,11 @@ void CBallStream::SendErrorViaNamedPipe(UINT32 errCode)
 HRESULT CBallStream::FillBuffer(IMediaSample *pms)
 {
 	this->fillBufferCount ++;
-    REFERENCE_TIME rtNow;
-    
-	VIDEOINFOHEADER *pvi = (VIDEOINFOHEADER *)(m_mt.Format());
-    REFERENCE_TIME avgFrameTime = ((VIDEOINFOHEADER*)m_mt.pbFormat)->AvgTimePerFrame;
 
+	VIDEOINFOHEADER *pvi = (VIDEOINFOHEADER *)(m_mt.Format());
 	LONG width = pvi->bmiHeader.biWidth;
 	LONG height = pvi->bmiHeader.biHeight;
-
-    rtNow = m_rtLastTime;
-    m_rtLastTime += avgFrameTime;
-    pms->SetTime(&rtNow, &m_rtLastTime);
-    pms->SetSyncPoint(TRUE);
-
+	
     BYTE *pData;
     long lDataLen;
     pms->GetPointer(&pData);
@@ -596,6 +587,7 @@ HRESULT CBallStream::FillBuffer(IMediaSample *pms)
 	float elapseTxMs = elapseTx.LowPart / 10000.f;
 
 	int frameChanged = 0;
+	//Initialise test frame
 	if(this->currentFrame == NULL)
 	{
 		this->currentFrame = new BYTE[lDataLen];
@@ -621,14 +613,21 @@ HRESULT CBallStream::FillBuffer(IMediaSample *pms)
 		int ret = this->ReceiveDataViaNamedPipe();
 		if(ret) frameChanged = ret;
 
-		//if(this->currentFrame != NULL && frameChanged)
-		//	memcpy(pData, this->currentFrame, lDataLen);
-
 		this->lastRxUpdateTime=fiTime;
 	}
 
-	if(this->currentFrame != NULL)
+	if(this->currentFrame != NULL && frameChanged)
+	{
+	    REFERENCE_TIME rtNow;
+		REFERENCE_TIME avgFrameTime = ((VIDEOINFOHEADER*)m_mt.pbFormat)->AvgTimePerFrame;
+
+		rtNow = m_rtLastTime;
+		m_rtLastTime += avgFrameTime;
+		pms->SetTime(&rtNow, &m_rtLastTime);
+		pms->SetSyncPoint(TRUE);
+
 		memcpy(pData, this->currentFrame, lDataLen);
+	}
 
 	if(elapseTxMs > 10.)
 	{
