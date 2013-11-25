@@ -438,7 +438,7 @@ int CBallStream::UpdateNamedPipe()
 			//Store unprocessed data in buffer
 			if(cursor > 0 && rxBuff != NULL)
 			{
-				char *tmp = new (std::nothrow) char[rxBuffLen - cursor];
+				/*char *tmp = new (std::nothrow) char[rxBuffLen - cursor];
 				if(tmp==NULL)
 				{
 					rxBuffLen = 0;
@@ -447,8 +447,9 @@ int CBallStream::UpdateNamedPipe()
 				memcpy(tmp, &rxBuff[cursor], rxBuffLen - cursor);
 				delete [] rxBuff;
 				rxBuff = tmp;
-
 				rxBuffAlloc = rxBuffLen - cursor;
+				*/
+				memcpy(rxBuff, &rxBuff[cursor], rxBuffLen - cursor);
 				rxBuffLen = rxBuffLen - cursor;
 			}
 			//rxBuffLen = 0;
