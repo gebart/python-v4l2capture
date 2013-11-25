@@ -404,12 +404,6 @@ void CBallStream::UpdateNamedPipe()
 
 					if(msgType == 2)
 					{
-						//Message is new frame
-						/*for(unsigned i=0; i<payloadLen && i<this->currentFrameLen; i++)
-						{
-							this->currentFrame[i] = payload[i];
-						}*/
-
 						if(this->currentFrame!=NULL)
 						for(DWORD i=0; i<this->currentFrameLen; i++)
 						{
@@ -418,6 +412,15 @@ void CBallStream::UpdateNamedPipe()
 							else
 								this->currentFrame[i] = 0x00;
 						}
+
+						//Message is new frame
+						if(this->currentFrame!=NULL)
+						for(unsigned i=0; i<payloadLen && i<this->currentFrameLen; i++)
+						{
+							this->currentFrame[i] = payload[i];
+						}
+
+
 					}
 
 					cursor += 8+msgLen;
@@ -662,8 +665,8 @@ HRESULT CBallStream::GetMediaType(int iPosition, CMediaType *pmt)
     pvi->bmiHeader.biCompression = BI_RGB;
     pvi->bmiHeader.biBitCount    = 24;
     pvi->bmiHeader.biSize       = sizeof(BITMAPINFOHEADER);
-    pvi->bmiHeader.biWidth      = 80 * iPosition;
-    pvi->bmiHeader.biHeight     = 60 * iPosition;
+    pvi->bmiHeader.biWidth      = 160 * iPosition;
+    pvi->bmiHeader.biHeight     = 120 * iPosition;
     pvi->bmiHeader.biPlanes     = 1;
     pvi->bmiHeader.biSizeImage  = GetBitmapSize(&pvi->bmiHeader);
     pvi->bmiHeader.biClrImportant = 0;
