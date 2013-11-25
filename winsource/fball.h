@@ -71,7 +71,8 @@ public:
     STDMETHODIMP Notify(IBaseFilter * pSender, Quality q);
 
 	DWORD ThreadProc();
-	int UpdateNamedPipe();
+	int EstablishPipeConnection();
+	int ReceiveDataViaNamedPipe();
 	void SendStatusViaNamedPipe(UINT32 width, UINT32 height, UINT32 bufflen);
 	void SendErrorViaNamedPipe(UINT32 errCode);
 
@@ -118,6 +119,7 @@ private:
 	LONG currentFrameLen;
 	int testCursor;
 	char *tmpBuff;
+	int fillBufferCount;
 
 	FILETIME lastTxUpdateTime;
 	FILETIME lastRxUpdateTime;

@@ -211,6 +211,7 @@ CBallStream::CBallStream(HRESULT *phr,
 	this->rxBuff = NULL;
     this->rxBuffLen = 0;
     this->rxBuffAlloc = 0;
+	this->fillBufferCount = 0;
 
 	SYSTEMTIME systime;
 	GetSystemTime(&systime);
@@ -256,19 +257,8 @@ HRESULT CBallStream::QueryInterface(REFIID riid, void **ppv)
     return S_OK;
 }
 
-int CBallStream::UpdateNamedPipe()
+int CBallStream::EstablishPipeConnection()
 {
-	/*if(this->currentFrame!=NULL)
-	{
-		delete [] this->currentFrame;
-		this->currentFrame = NULL;
-		this->currentFrameLen = 0;
-	}
-
-	this->currentFrame = NULL;*/
-
-	int frameChanged = 0;
-
 	if(this->pipeHandle == INVALID_HANDLE_VALUE)
 	{
 		LPCTSTR n = L"\\\\.\\pipe\\testpipe";
@@ -281,6 +271,25 @@ int CBallStream::UpdateNamedPipe()
 			FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
 			NULL);
 	}
+
+	return this->pipeHandle != INVALID_HANDLE_VALUE;
+}
+
+int CBallStream::ReceiveDataViaNamedPipe()
+{
+
+	this->EstablishPipeConnection();
+
+	/*if(this->currentFrame!=NULL)
+	{
+		delete [] this->currentFrame;
+		this->currentFrame = NULL;
+		this->currentFrameLen = 0;
+	}
+
+	this->currentFrame = NULL;*/
+
+	int frameChanged = 0;
 
 	if(this->pipeHandle == INVALID_HANDLE_VALUE)
 	{
@@ -330,7 +339,7 @@ int CBallStream::UpdateNamedPipe()
 
 		res = GetOverlappedResult(this->pipeHandle, &this->rxo, &bytesRead, FALSE);
 
-		if(this->currentFrame!=NULL)
+		/*if(this->currentFrame!=NULL)
 		for(DWORD i=0; i<this->currentFrameLen; i++)
 		{
 			if(i%3==0)
@@ -381,7 +390,7 @@ int CBallStream::UpdateNamedPipe()
 					rxBuffLen = bytesRead;
 					rxBuffAlloc = bytesRead;
 				}
-			}
+			}*/
 
 			/*if(this->currentFrame!=NULL)
 			for(DWORD i=0; i<this->currentFrameLen; i++)
@@ -392,7 +401,8 @@ int CBallStream::UpdateNamedPipe()
 					this->currentFrame[i] = 0x00;
 			}*/
 
-			UINT32 cursor = 0;
+			//Split receive buffer into separate messages
+			/*UINT32 cursor = 0;
 			int processing = 1;
 			while(processing && (rxBuffLen - cursor) > 8 && rxBuff != NULL)
 			{
@@ -407,14 +417,14 @@ int CBallStream::UpdateNamedPipe()
 
 					if(msgType == 2)
 					{
-						/*if(this->currentFrame!=NULL)
-						for(DWORD i=0; i<this->currentFrameLen; i++)
-						{
-							if(i%3==1)
-								this->currentFrame[i] = 0xff;
-							else
-								this->currentFrame[i] = 0x00;
-						}*/
+						//if(this->currentFrame!=NULL)
+						//for(DWORD i=0; i<this->currentFrameLen; i++)
+						//{
+						//	if(i%3==1)
+						//		this->currentFrame[i] = 0xff;
+						//	else
+						//		this->currentFrame[i] = 0x00;
+						//}
 
 						//Message is new frame
 						if(this->currentFrame!=NULL)
@@ -433,28 +443,17 @@ int CBallStream::UpdateNamedPipe()
 				{
 					processing = 0;
 				}
-			}
+			}*/
 			
 			//Store unprocessed data in buffer
-			if(cursor > 0 && rxBuff != NULL)
+			/*if(cursor > 0 && rxBuff != NULL)
 			{
-				/*char *tmp = new (std::nothrow) char[rxBuffLen - cursor];
-				if(tmp==NULL)
-				{
-					rxBuffLen = 0;
-					return -1;
-				}
-				memcpy(tmp, &rxBuff[cursor], rxBuffLen - cursor);
-				delete [] rxBuff;
-				rxBuff = tmp;
-				rxBuffAlloc = rxBuffLen - cursor;
-				*/
 				memcpy(rxBuff, &rxBuff[cursor], rxBuffLen - cursor);
 				rxBuffLen = rxBuffLen - cursor;
 			}
-			//rxBuffLen = 0;
+			rxBuffLen = 0;
 			
-		}
+		}*/
 	}
 
 	/*if(this->currentFrame != NULL)
@@ -471,6 +470,8 @@ int CBallStream::UpdateNamedPipe()
 
 void CBallStream::SendStatusViaNamedPipe(UINT32 width, UINT32 height, UINT32 bufflen)
 {
+	this->EstablishPipeConnection();
+
 	if(this->pipeHandle != INVALID_HANDLE_VALUE)
 	{
 		/*for(DWORD i=0; i<this->currentFrameLen; i++)
@@ -505,6 +506,8 @@ void CBallStream::SendStatusViaNamedPipe(UINT32 width, UINT32 height, UINT32 buf
 
 void CBallStream::SendErrorViaNamedPipe(UINT32 errCode)
 {
+	this->EstablishPipeConnection();
+
 	if(this->pipeHandle != INVALID_HANDLE_VALUE)
 	{
 		/*for(DWORD i=0; i<this->currentFrameLen; i++)
@@ -541,6 +544,7 @@ void CBallStream::SendErrorViaNamedPipe(UINT32 errCode)
 //
 HRESULT CBallStream::FillBuffer(IMediaSample *pms)
 {
+	this->fillBufferCount ++;
     REFERENCE_TIME rtNow;
     
 	VIDEOINFOHEADER *pvi = (VIDEOINFOHEADER *)(m_mt.Format());
@@ -590,36 +594,42 @@ HRESULT CBallStream::FillBuffer(IMediaSample *pms)
 	elapseTx.QuadPart = fiTimeNum.QuadPart - lastTxUpdate.QuadPart;
 	float elapseTxMs = elapseTx.LowPart / 10000.f;
 
-	if(elapseRxMs > 50.)
+	int frameChanged = 0;
+	if(this->currentFrame == NULL)
 	{
-		this->UpdateNamedPipe();
-
-		if(this->currentFrame == NULL)
-		{
-			this->currentFrame = new BYTE[lDataLen];
-			this->currentFrameLen = lDataLen;
+		this->currentFrame = new BYTE[lDataLen];
+		this->currentFrameLen = lDataLen;
 	
-			long cursor = 0;
-			for(LONG y=0; y < height; y++)
-			for(LONG x=0; x < width; x++)
-			{
-				if(cursor > this->currentFrameLen) continue;
+		long cursor = 0;
+		for(LONG y=0; y < height; y++)
+		for(LONG x=0; x < width; x++)
+		{
+			if(cursor > this->currentFrameLen) continue;
 
-				this->currentFrame[cursor] = x % 255; //Blue
-				this->currentFrame[cursor+1] = y % 255; //Green
-				this->currentFrame[cursor+2] = rand(); //Red 
+			this->currentFrame[cursor] = x % 255; //Blue
+			this->currentFrame[cursor+1] = y % 255; //Green
+			this->currentFrame[cursor+2] = rand(); //Red 
 
-				cursor += 3;
-			}
+			cursor += 3;
 		}
+		frameChanged = 1;
+	}
 
-		if(this->currentFrame != NULL)
+	if(elapseRxMs > 10.)
+	{
+		int ret = this->ReceiveDataViaNamedPipe();
+		if(ret) frameChanged = ret;
+
+		if(this->currentFrame != NULL && frameChanged)
 			memcpy(pData, this->currentFrame, lDataLen);
 
 		this->lastRxUpdateTime=fiTime;
 	}
 
-	if(elapseTxMs > 100.)
+	//if(this->currentFrame != NULL && frameChanged)
+	//	memcpy(pData, this->currentFrame, lDataLen);
+
+	if(elapseTxMs > 10.)
 	{
 		this->SendStatusViaNamedPipe(width, height, lDataLen);
 		this->lastTxUpdateTime=fiTime;
