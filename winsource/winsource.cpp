@@ -283,49 +283,12 @@ int CCameraStream::EstablishPipeConnection()
 
 int CCameraStream::ReceiveDataViaNamedPipe()
 {
-
 	this->EstablishPipeConnection();
-
-	/*if(this->currentFrame!=NULL)
-	{
-		delete [] this->currentFrame;
-		this->currentFrame = NULL;
-		this->currentFrameLen = 0;
-	}
-
-	this->currentFrame = NULL;*/
 
 	int frameChanged = 0;
 
-	/*if(this->pipeHandle == INVALID_HANDLE_VALUE)
-	{
-	for(DWORD i=0; i<this->currentFrameLen; i++)
-	{
-		if(i%3==1)
-			this->currentFrame[i] = 0x255;
-		else
-			this->currentFrame[i] = 0x0;
-	}
-	}*/
-
 	if(this->pipeHandle != INVALID_HANDLE_VALUE)
 	{
-		/*for(DWORD i=0; i<this->currentFrameLen; i++)
-		{
-			this->currentFrame[i] = 0x255;
-		}*/
-
-
-		//Transmit test message using named pipe
-		/*DWORD bytesWritten = 0;
-		char test[] = "Test Message";
-
-		if(HasOverlappedIoCompleted(&this->txo))
-		{
-			BOOL res = WriteFileEx(this->pipeHandle, test, strlen(test), &this->txo, NULL);
-		}
-
-		BOOL res = GetOverlappedResult(this->pipeHandle, &txo, &bytesWritten, TRUE);*/
 
 		//Receive messages from named pipe
 		const int tmpBuffLen = 1024*1024;
@@ -358,15 +321,6 @@ int CCameraStream::ReceiveDataViaNamedPipe()
 			this->pipeHandle = INVALID_HANDLE_VALUE;
 			return 0;
 		}
-
-		/*if(this->currentFrame!=NULL)
-		for(DWORD i=0; i<this->currentFrameLen; i++)
-		{
-			if(i%3==0)
-				this->currentFrame[i] = 0xff;
-			else
-				this->currentFrame[i] = 0x0;
-		}*/
 
 		if(res && bytesRead > 0)
 		{
@@ -412,15 +366,6 @@ int CCameraStream::ReceiveDataViaNamedPipe()
 				}
 			}
 
-			/*if(this->currentFrame!=NULL)
-			for(DWORD i=0; i<this->currentFrameLen; i++)
-			{
-				if(i%3==2)
-					this->currentFrame[i] = 0xff;
-				else
-					this->currentFrame[i] = 0x00;
-			}*/
-
 			//Split receive buffer into separate messages
 			UINT32 cursor = 0;
 			int processing = 1;
@@ -437,15 +382,6 @@ int CCameraStream::ReceiveDataViaNamedPipe()
 
 					if(msgType == 2)
 					{
-						//if(this->currentFrame!=NULL)
-						//for(DWORD i=0; i<this->currentFrameLen; i++)
-						//{
-						//	if(i%3==1)
-						//		this->currentFrame[i] = 0xff;
-						//	else
-						//		this->currentFrame[i] = 0x00;
-						//}
-
 						//Message is new frame
 						if(this->currentFrame!=NULL)
 						for(unsigned i=0; i<payloadLen && i<this->currentFrameLen; i++)
@@ -476,13 +412,6 @@ int CCameraStream::ReceiveDataViaNamedPipe()
 		}
 	}
 
-	/*if(this->currentFrame != NULL)
-	{
-		for(DWORD i=0; i<currentFrameLen; i++)
-		{
-			this->currentFrame[i] = rand();
-		}
-	}*/
 	return frameChanged;
 	
 }
@@ -543,10 +472,6 @@ void CCameraStream::SendErrorViaNamedPipe(UINT32 errCode)
 
 	if(this->pipeHandle != INVALID_HANDLE_VALUE)
 	{
-		/*for(DWORD i=0; i<this->currentFrameLen; i++)
-		{
-			this->currentFrame[i] = 0x255;
-		}*/
 
 		//Transmit test message using named pipe
 		DWORD bytesWritten = 0;
@@ -599,13 +524,6 @@ HRESULT CCameraStream::FillBuffer(IMediaSample *pms)
     long lDataLen;
     pms->GetPointer(&pData);
     lDataLen = pms->GetSize();
-
-	/*if(this->currentFrame != NULL)
-	{
-		delete [] this->currentFrame;
-		this->currentFrame = NULL;
-		this->currentFrameLen = 0;
-	}*/
 
 	//Calculate time since last frame update
 	SYSTEMTIME systime;
