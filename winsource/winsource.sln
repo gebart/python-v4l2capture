@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Ball", "Ball.vcxproj", "{9D3C9114-5067-45E6-B83D-12D31EF86297}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "winsource", "winsource.vcxproj", "{9D3C9114-5067-45E6-B83D-12D31EF86297}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

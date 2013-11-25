@@ -3,7 +3,7 @@
 #include <olectl.h>
 #include <initguid.h>
 #include <new>
-#include "fball.h"
+#include "winsource.h"
 
 #pragma warning(disable:4710)  // 'function': function not inlined (optimzation)
 
