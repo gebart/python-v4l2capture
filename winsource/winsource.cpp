@@ -676,7 +676,7 @@ HRESULT CCameraStream::FillBuffer(IMediaSample *pms)
 		memcpy(pData, this->currentFrame, lDataLen);
 	}
 
-	if(elapseTxMs > 10.)
+	if(elapseTxMs > 40.)
 	{
 		this->SendStatusViaNamedPipe(width, height, lDataLen);
 		this->lastTxUpdateTime=fiTime;
