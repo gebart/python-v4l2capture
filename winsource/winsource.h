@@ -1,5 +1,5 @@
 // {3A24BD2F-B9B1-4B32-9A1E-17791624B6AB}
-DEFINE_GUID(CLSID_BouncingBall,
+DEFINE_GUID(CLSID_Kinatomic_Camera,
 0x3a24bd2f, 0xb9b1, 0x4b32, 0x9a, 0x1e, 0x17, 0x79, 0x16, 0x24, 0xb6, 0xab);
 
 #define DECLARE_PTR(type, ptr, expr) type* ptr = (type*)(expr);
@@ -8,16 +8,16 @@ DEFINE_GUID(CLSID_BouncingBall,
 // Forward Declarations
 //------------------------------------------------------------------------------
 // The class managing the output pin
-class CBallStream;
+class CCameraStream;
 
 
 //------------------------------------------------------------------------------
-// Class CBouncingBall
+// Class CCameraOutput
 //
-// This is the main class for the bouncing ball filter. It inherits from
+// This is the main class for the camera output. It inherits from
 // CSource, the DirectShow base class for source filters.
 //------------------------------------------------------------------------------
-class CBouncingBall : public CSource
+class CCameraOutput : public CSource
 {
 public:
 
@@ -29,38 +29,36 @@ public:
 private:
 
     // It is only allowed to to create these objects with CreateInstance
-    CBouncingBall(LPUNKNOWN lpunk, HRESULT *phr);
+    CCameraOutput(LPUNKNOWN lpunk, HRESULT *phr);
 
 }; // CBouncingBall
 
 
 //------------------------------------------------------------------------------
-// Class CBallStream
+// Class CCameraStream
 //
 // This class implements the stream which is used to output the bouncing ball
 // data from the source filter. It inherits from DirectShows's base
 // CSourceStream class.
 //------------------------------------------------------------------------------
-class CBallStream : public CSourceStream, public IAMStreamConfig, public IKsPropertySet
+class CCameraStream : public CSourceStream, public IAMStreamConfig, public IKsPropertySet
 {
 
 public:
 
-    CBallStream(HRESULT *phr, CBouncingBall *pParent, LPCWSTR pPinName);
-    ~CBallStream();
+    CCameraStream(HRESULT *phr, CCameraOutput *pParent, LPCWSTR pPinName);
+    ~CCameraStream();
 
-    // plots a ball into the supplied video frame
+    // Update image buffer
     HRESULT FillBuffer(IMediaSample *pms);
 
     // Ask for buffers of the size appropriate to the agreed media type
     HRESULT DecideBufferSize(IMemAllocator *pIMemAlloc,
                              ALLOCATOR_PROPERTIES *pProperties);
 
-    // Set the agreed media type, and set up the necessary ball parameters
+    // Set the agreed media type
     HRESULT SetMediaType(const CMediaType *pMediaType);
 
-    // Because we calculate the ball there is no reason why we
-    // can't calculate it in any one of a set of formats...
     HRESULT CheckMediaType(const CMediaType *pMediaType);
     HRESULT GetMediaType(int iPosition, CMediaType *pmt);
 
@@ -103,7 +101,7 @@ private:
     CCritSec m_cSharedState;            // Lock on m_rtSampleTime and m_Ball
     CRefTime m_rtSampleTime;            // The time stamp for each sample
     //CBall *m_Ball;                      // The current ball object
-	CBouncingBall *m_pParent;
+	CCameraOutput *m_pParent;
 
 	char *rxBuff;
 	int rxBuffLen;
@@ -128,6 +126,6 @@ private:
     //enum Colour {Red, Blue, Green, Yellow};
     //HRESULT SetPaletteEntries(Colour colour);
 
-}; // CBallStream
+}; // CCameraStream
     
 

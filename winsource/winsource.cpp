@@ -33,7 +33,7 @@ const AMOVIESETUP_PIN sudOpPin =
 
 const AMOVIESETUP_FILTER sudBallax =
 {
-    &CLSID_BouncingBall,    // Filter CLSID
+    &CLSID_Kinatomic_Camera,    // Filter CLSID
     L"Kinatomic Virtual Camera",       // String name
     MERIT_DO_NOT_USE,       // Filter merit
     1,                      // Number pins
@@ -45,8 +45,8 @@ const AMOVIESETUP_FILTER sudBallax =
 
 CFactoryTemplate g_Templates[] = {
   { L"Kinatomic Virtual Camera"
-  , &CLSID_BouncingBall
-  , CBouncingBall::CreateInstance
+  , &CLSID_Kinatomic_Camera
+  , CCameraOutput::CreateInstance
   , NULL
   , &sudBallax }
 };
@@ -76,7 +76,7 @@ STDAPI RegisterFilters( BOOL bRegister )
     hr = CoInitialize(0);
     if(bRegister)
     {
-        hr = AMovieSetupRegisterServer(CLSID_BouncingBall, L"Kinatomic Virtual Camera", achFileName, L"Both", L"InprocServer32");
+        hr = AMovieSetupRegisterServer(CLSID_Kinatomic_Camera, L"Kinatomic Virtual Camera", achFileName, L"Both", L"InprocServer32");
     }
 
     if( SUCCEEDED(hr) )
@@ -93,11 +93,11 @@ STDAPI RegisterFilters( BOOL bRegister )
                 rf2.dwMerit = MERIT_DO_NOT_USE;
                 rf2.cPins = 1;
                 rf2.rgPins = &sudOpPin;
-                hr = fm->RegisterFilter(CLSID_BouncingBall, L"Kinatomic Virtual Camera", &pMoniker, &CLSID_VideoInputDeviceCategory, NULL, &rf2);
+                hr = fm->RegisterFilter(CLSID_Kinatomic_Camera, L"Kinatomic Virtual Camera", &pMoniker, &CLSID_VideoInputDeviceCategory, NULL, &rf2);
             }
             else
             {
-                hr = fm->UnregisterFilter(&CLSID_VideoInputDeviceCategory, 0, CLSID_BouncingBall);
+                hr = fm->UnregisterFilter(&CLSID_VideoInputDeviceCategory, 0, CLSID_Kinatomic_Camera);
             }
         }
 
@@ -108,7 +108,7 @@ STDAPI RegisterFilters( BOOL bRegister )
     }
 
     if( SUCCEEDED(hr) && !bRegister )
-        hr = AMovieSetupUnregisterServer( CLSID_BouncingBall );
+        hr = AMovieSetupUnregisterServer( CLSID_Kinatomic_Camera );
 
     CoFreeUnusedLibraries();
     CoUninitialize();
@@ -154,15 +154,15 @@ BOOL APIENTRY DllMain(HANDLE hModule,
 //
 // The only allowed way to create instances of stream!
 //
-CUnknown * WINAPI CBouncingBall::CreateInstance(LPUNKNOWN lpunk, HRESULT *phr)
+CUnknown * WINAPI CCameraOutput::CreateInstance(LPUNKNOWN lpunk, HRESULT *phr)
 {
     ASSERT(phr);
-    CUnknown *punk = new CBouncingBall(lpunk, phr);
+    CUnknown *punk = new CCameraOutput(lpunk, phr);
     return punk;
 
 } // CreateInstance
 
-HRESULT CBouncingBall::QueryInterface(REFIID riid, void **ppv)
+HRESULT CCameraOutput::QueryInterface(REFIID riid, void **ppv)
 {
     //Forward request for IAMStreamConfig & IKsPropertySet to the pin
     if(riid == _uuidof(IAMStreamConfig) || riid == _uuidof(IKsPropertySet))
@@ -174,25 +174,25 @@ HRESULT CBouncingBall::QueryInterface(REFIID riid, void **ppv)
 //
 // Constructor
 //
-// Initialise a CBallStream object so that we have a pin.
+// Initialise a CCameraStream object so that we have a pin.
 //
-CBouncingBall::CBouncingBall(LPUNKNOWN lpunk, HRESULT *phr) :
-    CSource(NAME("Kinatomic Virtual Camera"), lpunk, CLSID_BouncingBall)
+CCameraOutput::CCameraOutput(LPUNKNOWN lpunk, HRESULT *phr) :
+    CSource(NAME("Kinatomic Virtual Camera"), lpunk, CLSID_Kinatomic_Camera)
 {
 
 	ASSERT(phr);
     CAutoLock cAutoLock(&m_cStateLock);
     // Create the one and only output pin
-    m_paStreams = (CSourceStream **) new CBallStream*[1];
-    m_paStreams[0] = new CBallStream(phr, this, L"Kinatomic Virtual Camera");
+    m_paStreams = (CSourceStream **) new CCameraStream*[1];
+    m_paStreams[0] = new CCameraStream(phr, this, L"Kinatomic Virtual Camera");
 
 } // (Constructor)
 
 //
 // Constructor
 //
-CBallStream::CBallStream(HRESULT *phr,
-                         CBouncingBall *pParent,
+CCameraStream::CCameraStream(HRESULT *phr,
+                         CCameraOutput *pParent,
                          LPCWSTR pPinName) :
     CSourceStream(NAME("Kinatomic Virtual Camera"),phr, pParent, pPinName), 
 		m_pParent(pParent)
@@ -223,7 +223,7 @@ CBallStream::CBallStream(HRESULT *phr,
 //
 // Destructor
 //
-CBallStream::~CBallStream()
+CCameraStream::~CCameraStream()
 {
 	if(this->pipeHandle != 0)
 		CloseHandle(this->pipeHandle);
@@ -243,7 +243,7 @@ CBallStream::~CBallStream()
 
 } // (Destructor)
 
-HRESULT CBallStream::QueryInterface(REFIID riid, void **ppv)
+HRESULT CCameraStream::QueryInterface(REFIID riid, void **ppv)
 {   
     // Standard OLE stuff
     if(riid == _uuidof(IAMStreamConfig))
@@ -257,7 +257,7 @@ HRESULT CBallStream::QueryInterface(REFIID riid, void **ppv)
     return S_OK;
 }
 
-int CBallStream::EstablishPipeConnection()
+int CCameraStream::EstablishPipeConnection()
 {
 	if(this->pipeHandle == INVALID_HANDLE_VALUE)
 	{
@@ -281,7 +281,7 @@ int CBallStream::EstablishPipeConnection()
 	return this->pipeHandle != INVALID_HANDLE_VALUE;
 }
 
-int CBallStream::ReceiveDataViaNamedPipe()
+int CCameraStream::ReceiveDataViaNamedPipe()
 {
 
 	this->EstablishPipeConnection();
@@ -488,7 +488,7 @@ int CBallStream::ReceiveDataViaNamedPipe()
 }
 
 
-void CBallStream::SendStatusViaNamedPipe(UINT32 width, UINT32 height, UINT32 bufflen)
+void CCameraStream::SendStatusViaNamedPipe(UINT32 width, UINT32 height, UINT32 bufflen)
 {
 	this->EstablishPipeConnection();
 
@@ -537,7 +537,7 @@ void CBallStream::SendStatusViaNamedPipe(UINT32 width, UINT32 height, UINT32 buf
 	}
 }
 
-void CBallStream::SendErrorViaNamedPipe(UINT32 errCode)
+void CCameraStream::SendErrorViaNamedPipe(UINT32 errCode)
 {
 	this->EstablishPipeConnection();
 
@@ -587,9 +587,7 @@ void CBallStream::SendErrorViaNamedPipe(UINT32 errCode)
 //
 // FillBuffer
 //
-// Plots a ball into the supplied video buffer
-//
-HRESULT CBallStream::FillBuffer(IMediaSample *pms)
+HRESULT CCameraStream::FillBuffer(IMediaSample *pms)
 {
 	this->fillBufferCount ++;
 
@@ -701,7 +699,7 @@ HRESULT CBallStream::FillBuffer(IMediaSample *pms)
 // the downstream filter (often the renderer).  Wind it up or down according
 // to the flooding level - also skip forward if we are notified of Late-ness
 //
-STDMETHODIMP CBallStream::Notify(IBaseFilter * pSender, Quality q)
+STDMETHODIMP CCameraStream::Notify(IBaseFilter * pSender, Quality q)
 {
     return E_NOTIMPL;
 
@@ -713,7 +711,7 @@ STDMETHODIMP CBallStream::Notify(IBaseFilter * pSender, Quality q)
 //
 // Called when a media type is agreed between filters
 //
-HRESULT CBallStream::SetMediaType(const CMediaType *pMediaType)
+HRESULT CCameraStream::SetMediaType(const CMediaType *pMediaType)
 {
     DECLARE_PTR(VIDEOINFOHEADER, pvi, pMediaType->Format());
     HRESULT hr = CSourceStream::SetMediaType(pMediaType);
@@ -725,7 +723,7 @@ HRESULT CBallStream::SetMediaType(const CMediaType *pMediaType)
 //////////////////////////////////////////////////////////////////////////
 
 // See Directshow help topic for IAMStreamConfig for details on this method
-HRESULT CBallStream::GetMediaType(int iPosition, CMediaType *pmt)
+HRESULT CCameraStream::GetMediaType(int iPosition, CMediaType *pmt)
 {
     if(iPosition < 0) return E_INVALIDARG;
     if(iPosition > 8) return VFW_S_NO_MORE_ITEMS;
@@ -767,7 +765,7 @@ HRESULT CBallStream::GetMediaType(int iPosition, CMediaType *pmt)
 } // GetMediaType
 
 // This method is called to see if a given output format is supported
-HRESULT CBallStream::CheckMediaType(const CMediaType *pMediaType)
+HRESULT CCameraStream::CheckMediaType(const CMediaType *pMediaType)
 {
     VIDEOINFOHEADER *pvi = (VIDEOINFOHEADER *)(pMediaType->Format());
     if(*pMediaType != m_mt) 
@@ -776,7 +774,7 @@ HRESULT CBallStream::CheckMediaType(const CMediaType *pMediaType)
 } // CheckMediaType
 
 // This method is called after the pins are connected to allocate buffers to stream data
-HRESULT CBallStream::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties)
+HRESULT CCameraStream::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pProperties)
 {
     CAutoLock cAutoLock(m_pFilter->pStateLock());
     HRESULT hr = NOERROR;
@@ -795,7 +793,7 @@ HRESULT CBallStream::DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIE
 } // DecideBufferSize
 
 // Called when graph is run
-HRESULT CBallStream::OnThreadCreate()
+HRESULT CCameraStream::OnThreadCreate()
 {
 	//m_iRepeatTime = m_iDefaultRepeatTime;
     m_rtLastTime = 0;
@@ -807,7 +805,7 @@ HRESULT CBallStream::OnThreadCreate()
 //  IAMStreamConfig
 //////////////////////////////////////////////////////////////////////////
 
-HRESULT STDMETHODCALLTYPE CBallStream::SetFormat(AM_MEDIA_TYPE *pmt)
+HRESULT STDMETHODCALLTYPE CCameraStream::SetFormat(AM_MEDIA_TYPE *pmt)
 {
     DECLARE_PTR(VIDEOINFOHEADER, pvi, m_mt.pbFormat);
     m_mt = *pmt;
@@ -821,20 +819,20 @@ HRESULT STDMETHODCALLTYPE CBallStream::SetFormat(AM_MEDIA_TYPE *pmt)
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE CBallStream::GetFormat(AM_MEDIA_TYPE **ppmt)
+HRESULT STDMETHODCALLTYPE CCameraStream::GetFormat(AM_MEDIA_TYPE **ppmt)
 {
     *ppmt = CreateMediaType(&m_mt);
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE CBallStream::GetNumberOfCapabilities(int *piCount, int *piSize)
+HRESULT STDMETHODCALLTYPE CCameraStream::GetNumberOfCapabilities(int *piCount, int *piSize)
 {
     *piCount = 8;
     *piSize = sizeof(VIDEO_STREAM_CONFIG_CAPS);
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE CBallStream::GetStreamCaps(int iIndex, AM_MEDIA_TYPE **pmt, BYTE *pSCC)
+HRESULT STDMETHODCALLTYPE CCameraStream::GetStreamCaps(int iIndex, AM_MEDIA_TYPE **pmt, BYTE *pSCC)
 {
     *pmt = CreateMediaType(&m_mt);
     DECLARE_PTR(VIDEOINFOHEADER, pvi, (*pmt)->pbFormat);
@@ -899,14 +897,14 @@ HRESULT STDMETHODCALLTYPE CBallStream::GetStreamCaps(int iIndex, AM_MEDIA_TYPE *
 //////////////////////////////////////////////////////////////////////////
 
 
-HRESULT CBallStream::Set(REFGUID guidPropSet, DWORD dwID, void *pInstanceData, 
+HRESULT CCameraStream::Set(REFGUID guidPropSet, DWORD dwID, void *pInstanceData, 
                         DWORD cbInstanceData, void *pPropData, DWORD cbPropData)
 {// Set: Cannot set any properties.
     return E_NOTIMPL;
 }
 
 // Get: Return the pin category (our only property). 
-HRESULT CBallStream::Get(
+HRESULT CCameraStream::Get(
     REFGUID guidPropSet,   // Which property set.
     DWORD dwPropID,        // Which property in that set.
     void *pInstanceData,   // Instance data (ignore).
@@ -935,7 +933,7 @@ HRESULT CBallStream::Get(
 }
 
 // QuerySupported: Query whether the pin supports the specified property.
-HRESULT CBallStream::QuerySupported(REFGUID guidPropSet, DWORD dwPropID, DWORD *pTypeSupport)
+HRESULT CCameraStream::QuerySupported(REFGUID guidPropSet, DWORD dwPropID, DWORD *pTypeSupport)
 {
     if (guidPropSet != AMPROPSETID_Pin) return E_PROP_SET_UNSUPPORTED;
     if (dwPropID != AMPROPERTY_PIN_CATEGORY) return E_PROP_ID_UNSUPPORTED;
@@ -944,7 +942,7 @@ HRESULT CBallStream::QuerySupported(REFGUID guidPropSet, DWORD dwPropID, DWORD *
     return S_OK;
 }
 
-DWORD CBallStream::ThreadProc()
+DWORD CCameraStream::ThreadProc()
 {
 	return CSourceStream::ThreadProc();
 }
