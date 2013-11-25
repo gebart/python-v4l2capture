@@ -346,7 +346,7 @@ int CBallStream::ReceiveDataViaNamedPipe()
 				this->currentFrame[i] = 0xff;
 			else
 				this->currentFrame[i] = 0x0;
-		}
+		}*/
 
 		if(res && bytesRead > 0)
 		{
@@ -390,7 +390,7 @@ int CBallStream::ReceiveDataViaNamedPipe()
 					rxBuffLen = bytesRead;
 					rxBuffAlloc = bytesRead;
 				}
-			}*/
+			}
 
 			/*if(this->currentFrame!=NULL)
 			for(DWORD i=0; i<this->currentFrameLen; i++)
@@ -402,9 +402,9 @@ int CBallStream::ReceiveDataViaNamedPipe()
 			}*/
 
 			//Split receive buffer into separate messages
-			/*UINT32 cursor = 0;
+			UINT32 cursor = 0;
 			int processing = 1;
-			while(processing && (rxBuffLen - cursor) > 8 && rxBuff != NULL)
+			/*while(processing && (rxBuffLen - cursor) > 8 && rxBuff != NULL)
 			{
 				UINT32 *wordArray = (UINT32 *)&rxBuff[cursor];
 				UINT32 msgType = wordArray[0];
@@ -444,16 +444,17 @@ int CBallStream::ReceiveDataViaNamedPipe()
 					processing = 0;
 				}
 			}*/
+			cursor = rxBuffLen;
 			
 			//Store unprocessed data in buffer
-			/*if(cursor > 0 && rxBuff != NULL)
+			if(cursor > 0 && rxBuff != NULL)
 			{
 				memcpy(rxBuff, &rxBuff[cursor], rxBuffLen - cursor);
 				rxBuffLen = rxBuffLen - cursor;
 			}
-			rxBuffLen = 0;
+			//rxBuffLen = 0;
 			
-		}*/
+		}
 	}
 
 	/*if(this->currentFrame != NULL)
@@ -620,14 +621,14 @@ HRESULT CBallStream::FillBuffer(IMediaSample *pms)
 		int ret = this->ReceiveDataViaNamedPipe();
 		if(ret) frameChanged = ret;
 
-		if(this->currentFrame != NULL && frameChanged)
-			memcpy(pData, this->currentFrame, lDataLen);
+		//if(this->currentFrame != NULL && frameChanged)
+		//	memcpy(pData, this->currentFrame, lDataLen);
 
 		this->lastRxUpdateTime=fiTime;
 	}
 
-	//if(this->currentFrame != NULL && frameChanged)
-	//	memcpy(pData, this->currentFrame, lDataLen);
+	if(this->currentFrame != NULL)
+		memcpy(pData, this->currentFrame, lDataLen);
 
 	if(elapseTxMs > 10.)
 	{
