@@ -214,7 +214,8 @@ CBallStream::CBallStream(HRESULT *phr,
 
 	SYSTEMTIME systime;
 	GetSystemTime(&systime);
-	SystemTimeToFileTime(&systime, &this->lastUpdateTime);
+	SystemTimeToFileTime(&systime, &this->lastRxUpdateTime);
+	SystemTimeToFileTime(&systime, &this->lastTxUpdateTime);
 
 } // (Constructor)
 
@@ -380,14 +381,14 @@ void CBallStream::UpdateNamedPipe()
 				}
 			}
 
-			if(this->currentFrame!=NULL)
+			/*if(this->currentFrame!=NULL)
 			for(DWORD i=0; i<this->currentFrameLen; i++)
 			{
 				if(i%3==2)
 					this->currentFrame[i] = 0xff;
 				else
 					this->currentFrame[i] = 0x00;
-			}
+			}*/
 
 			UINT32 cursor = 0;
 			int processing = 1;
@@ -569,18 +570,25 @@ HRESULT CBallStream::FillBuffer(IMediaSample *pms)
 	LARGE_INTEGER fiTimeNum;
 	fiTimeNum.HighPart = fiTime.dwHighDateTime;
 	fiTimeNum.LowPart = fiTime.dwLowDateTime;
-	LARGE_INTEGER lastUpdate;
-	lastUpdate.HighPart = lastUpdateTime.dwHighDateTime;
-	lastUpdate.LowPart = lastUpdateTime.dwLowDateTime;
 
-	LARGE_INTEGER elapse;
-	elapse.QuadPart = fiTimeNum.QuadPart - lastUpdate.QuadPart;
-	float elapseMs = elapse.LowPart / 10000.f;
+	LARGE_INTEGER lastRxUpdate;
+	lastRxUpdate.HighPart = this->lastRxUpdateTime.dwHighDateTime;
+	lastRxUpdate.LowPart = this->lastRxUpdateTime.dwLowDateTime;
+	LARGE_INTEGER lastTxUpdate;
+	lastTxUpdate.HighPart = this->lastTxUpdateTime.dwHighDateTime;
+	lastTxUpdate.LowPart = this->lastTxUpdateTime.dwLowDateTime;
 
-	if(elapseMs > 100.)
+	LARGE_INTEGER elapseRx;
+	elapseRx.QuadPart = fiTimeNum.QuadPart - lastRxUpdate.QuadPart;
+	float elapseRxMs = elapseRx.LowPart / 10000.f;
+
+	LARGE_INTEGER elapseTx;
+	elapseTx.QuadPart = fiTimeNum.QuadPart - lastTxUpdate.QuadPart;
+	float elapseTxMs = elapseTx.LowPart / 10000.f;
+
+	if(elapseRxMs > 50.)
 	{
 		this->UpdateNamedPipe();
-		this->SendStatusViaNamedPipe(width, height, lDataLen);
 
 		if(this->currentFrame == NULL)
 		{
@@ -604,7 +612,13 @@ HRESULT CBallStream::FillBuffer(IMediaSample *pms)
 		if(this->currentFrame != NULL)
 			memcpy(pData, this->currentFrame, lDataLen);
 
-		lastUpdateTime=fiTime;
+		this->lastRxUpdateTime=fiTime;
+	}
+
+	if(elapseTxMs > 100.)
+	{
+		this->SendStatusViaNamedPipe(width, height, lDataLen);
+		this->lastTxUpdateTime=fiTime;
 	}
 
 	/*for(LONG i=0;i<lDataLen;i++)

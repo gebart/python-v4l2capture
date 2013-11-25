@@ -119,7 +119,8 @@ private:
 	int testCursor;
 	char *tmpBuff;
 
-	FILETIME lastUpdateTime;
+	FILETIME lastTxUpdateTime;
+	FILETIME lastRxUpdateTime;
 
     // set up the palette appropriately
     //enum Colour {Red, Blue, Green, Yellow};
@@ -127,3 +128,4 @@ private:
 
 }; // CBallStream
     
+
