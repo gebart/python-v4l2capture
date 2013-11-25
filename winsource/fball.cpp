@@ -618,13 +618,15 @@ HRESULT CBallStream::FillBuffer(IMediaSample *pms)
 
 	if(this->currentFrame != NULL && frameChanged)
 	{
-	    REFERENCE_TIME rtNow;
+	   /* REFERENCE_TIME rtNow;
 		REFERENCE_TIME avgFrameTime = ((VIDEOINFOHEADER*)m_mt.pbFormat)->AvgTimePerFrame;
 
+		//This is the slow code!?
 		rtNow = m_rtLastTime;
 		m_rtLastTime += avgFrameTime;
 		pms->SetTime(&rtNow, &m_rtLastTime);
 		pms->SetSyncPoint(TRUE);
+		//End of slow?*/
 
 		memcpy(pData, this->currentFrame, lDataLen);
 	}
