@@ -270,6 +270,12 @@ int CBallStream::EstablishPipeConnection()
 			OPEN_EXISTING,
 			FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
 			NULL);
+
+		if(this->pipeHandle != INVALID_HANDLE_VALUE)
+		{
+			memset(&this->rxo, 0x00, sizeof(OVERLAPPED));
+			memset(&this->txo, 0x00, sizeof(OVERLAPPED));
+		}
 	}
 
 	return this->pipeHandle != INVALID_HANDLE_VALUE;
@@ -337,7 +343,21 @@ int CBallStream::ReceiveDataViaNamedPipe()
 			  NULL);
 		}
 
+		if(res==0 && GetLastError() == ERROR_BROKEN_PIPE)
+		{
+			CloseHandle(this->pipeHandle);
+			this->pipeHandle = INVALID_HANDLE_VALUE;
+			return 0;
+		}
+
 		res = GetOverlappedResult(this->pipeHandle, &this->rxo, &bytesRead, FALSE);
+
+		if(res==0 && GetLastError() == ERROR_BROKEN_PIPE)
+		{
+			CloseHandle(this->pipeHandle);
+			this->pipeHandle = INVALID_HANDLE_VALUE;
+			return 0;
+		}
 
 		/*if(this->currentFrame!=NULL)
 		for(DWORD i=0; i<this->currentFrameLen; i++)
@@ -497,11 +517,24 @@ void CBallStream::SendStatusViaNamedPipe(UINT32 width, UINT32 height, UINT32 buf
 		if(HasOverlappedIoCompleted(&this->txo))
 		{
 			BOOL res = WriteFileEx(this->pipeHandle, test, buffLen, &this->txo, NULL);
+
+			if(res==0 && GetLastError() == ERROR_BROKEN_PIPE)
+			{
+				CloseHandle(this->pipeHandle);
+				this->pipeHandle = INVALID_HANDLE_VALUE;
+				return;
+			}
 		}
 
 		BOOL res = GetOverlappedResult(this->pipeHandle, &txo, &bytesWritten, TRUE);
-	}
 
+		if(res==0 && GetLastError() == ERROR_BROKEN_PIPE)
+		{
+			CloseHandle(this->pipeHandle);
+			this->pipeHandle = INVALID_HANDLE_VALUE;
+			return;
+		}
+	}
 }
 
 void CBallStream::SendErrorViaNamedPipe(UINT32 errCode)
@@ -529,9 +562,23 @@ void CBallStream::SendErrorViaNamedPipe(UINT32 errCode)
 		if(HasOverlappedIoCompleted(&this->txo))
 		{
 			BOOL res = WriteFileEx(this->pipeHandle, test, buffLen, &this->txo, NULL);
+
+			if(res==0 && GetLastError() == ERROR_BROKEN_PIPE)
+			{
+				CloseHandle(this->pipeHandle);
+				this->pipeHandle = INVALID_HANDLE_VALUE;
+				return;
+			}
 		}
 
 		BOOL res = GetOverlappedResult(this->pipeHandle, &txo, &bytesWritten, TRUE);
+
+		if(res==0 && GetLastError() == ERROR_BROKEN_PIPE)
+		{
+			CloseHandle(this->pipeHandle);
+			this->pipeHandle = INVALID_HANDLE_VALUE;
+			return;
+		}
 	}
 
 }
