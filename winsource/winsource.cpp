@@ -34,7 +34,7 @@ const AMOVIESETUP_PIN sudOpPin =
 const AMOVIESETUP_FILTER sudBallax =
 {
     &CLSID_BouncingBall,    // Filter CLSID
-    L"Bouncing Ball",       // String name
+    L"Kinatomic Virtual Camera",       // String name
     MERIT_DO_NOT_USE,       // Filter merit
     1,                      // Number pins
     &sudOpPin               // Pin details
@@ -44,7 +44,7 @@ const AMOVIESETUP_FILTER sudBallax =
 // COM global table of objects in this dll
 
 CFactoryTemplate g_Templates[] = {
-  { L"Bouncing Ball"
+  { L"Kinatomic Virtual Camera"
   , &CLSID_BouncingBall
   , CBouncingBall::CreateInstance
   , NULL
@@ -76,7 +76,7 @@ STDAPI RegisterFilters( BOOL bRegister )
     hr = CoInitialize(0);
     if(bRegister)
     {
-        hr = AMovieSetupRegisterServer(CLSID_BouncingBall, L"Bouncing Ball", achFileName, L"Both", L"InprocServer32");
+        hr = AMovieSetupRegisterServer(CLSID_BouncingBall, L"Kinatomic Virtual Camera", achFileName, L"Both", L"InprocServer32");
     }
 
     if( SUCCEEDED(hr) )
@@ -93,7 +93,7 @@ STDAPI RegisterFilters( BOOL bRegister )
                 rf2.dwMerit = MERIT_DO_NOT_USE;
                 rf2.cPins = 1;
                 rf2.rgPins = &sudOpPin;
-                hr = fm->RegisterFilter(CLSID_BouncingBall, L"Bouncing Ball", &pMoniker, &CLSID_VideoInputDeviceCategory, NULL, &rf2);
+                hr = fm->RegisterFilter(CLSID_BouncingBall, L"Kinatomic Virtual Camera", &pMoniker, &CLSID_VideoInputDeviceCategory, NULL, &rf2);
             }
             else
             {
@@ -152,7 +152,7 @@ BOOL APIENTRY DllMain(HANDLE hModule,
 //
 // CreateInstance
 //
-// The only allowed way to create Bouncing balls!
+// The only allowed way to create instances of stream!
 //
 CUnknown * WINAPI CBouncingBall::CreateInstance(LPUNKNOWN lpunk, HRESULT *phr)
 {
@@ -177,14 +177,14 @@ HRESULT CBouncingBall::QueryInterface(REFIID riid, void **ppv)
 // Initialise a CBallStream object so that we have a pin.
 //
 CBouncingBall::CBouncingBall(LPUNKNOWN lpunk, HRESULT *phr) :
-    CSource(NAME("Bouncing ball"), lpunk, CLSID_BouncingBall)
+    CSource(NAME("Kinatomic Virtual Camera"), lpunk, CLSID_BouncingBall)
 {
 
 	ASSERT(phr);
     CAutoLock cAutoLock(&m_cStateLock);
     // Create the one and only output pin
     m_paStreams = (CSourceStream **) new CBallStream*[1];
-    m_paStreams[0] = new CBallStream(phr, this, L"Bouncing Ball");
+    m_paStreams[0] = new CBallStream(phr, this, L"Kinatomic Virtual Camera");
 
 } // (Constructor)
 
@@ -194,7 +194,7 @@ CBouncingBall::CBouncingBall(LPUNKNOWN lpunk, HRESULT *phr) :
 CBallStream::CBallStream(HRESULT *phr,
                          CBouncingBall *pParent,
                          LPCWSTR pPinName) :
-    CSourceStream(NAME("Bouncing Ball"),phr, pParent, pPinName), 
+    CSourceStream(NAME("Kinatomic Virtual Camera"),phr, pParent, pPinName), 
 		m_pParent(pParent)
 {
     GetMediaType(4, &m_mt);

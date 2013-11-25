@@ -1,8 +1,5 @@
-;===========================================================================
-;  Copyright (c) 1992-2002  Microsoft Corporation.  All Rights Reserved.
-;===========================================================================
 
-LIBRARY     Ball.dll
+LIBRARY     winsource.dll
 
 EXPORTS
             DllMain                 PRIVATE
