@@ -297,7 +297,7 @@ int CCameraStream::ReceiveDataViaNamedPipe()
 
 	int frameChanged = 0;
 
-	if(this->pipeHandle == INVALID_HANDLE_VALUE)
+	/*if(this->pipeHandle == INVALID_HANDLE_VALUE)
 	{
 	for(DWORD i=0; i<this->currentFrameLen; i++)
 	{
@@ -306,7 +306,7 @@ int CCameraStream::ReceiveDataViaNamedPipe()
 		else
 			this->currentFrame[i] = 0x0;
 	}
-	}
+	}*/
 
 	if(this->pipeHandle != INVALID_HANDLE_VALUE)
 	{
