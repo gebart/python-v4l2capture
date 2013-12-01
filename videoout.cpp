@@ -1,6 +1,7 @@
 
 #include <vector>
 #include <pthread.h>
+#include <iostream>
 #include "videoout.h"
 #ifdef _NT
 #include "namedpipeout.h"
@@ -33,6 +34,8 @@ void Video_out_manager_dealloc(Video_out_manager *self)
 
 PyObject *Video_out_manager_open(Video_out_manager *self, PyObject *args)
 {
+	std::cout << "Video_out_manager_open" << std::endl;
+
 	//Process arguments
 	const char *devarg = NULL;
 	const char *pxFmtIn = NULL;
@@ -41,6 +44,7 @@ PyObject *Video_out_manager_open(Video_out_manager *self, PyObject *args)
 
 	if(!PyArg_ParseTuple(args, "ssii", &devarg, &pxFmtIn, &widthIn, &heightIn))
 	{
+		std::cout << "err" << std::endl;
 		PyErr_Format(PyExc_RuntimeError, "Incorrect arguments to function.");
 		Py_RETURN_NONE;
 	}

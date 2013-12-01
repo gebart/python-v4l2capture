@@ -288,7 +288,7 @@ NamedPipeOut::~NamedPipeOut()
 
 void NamedPipeOut::SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height)
 {
-
+	cout << "NamedPipeOut::SendFrame" << endl;
 }
 
 void NamedPipeOut::Stop()
@@ -391,5 +391,6 @@ void *NamedPipeOut_Worker_thread(void *arg)
 std::vector<std::string> List_out_devices()
 {
 	std::vector<std::string> out;
+	out.push_back("VirtualCamera");
 	return out;
 }
