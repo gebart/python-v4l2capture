@@ -27,6 +27,18 @@ public:
 	}
 };
 
+class ConnectionThreadInfo
+{
+public:
+	HANDLE hPipe;
+	class NamedPipeOut *parent;
+
+	ConnectionThreadInfo()
+	{
+		hPipe = INVALID_HANDLE_VALUE;
+		parent = NULL;
+	}
+};
 
 DWORD WINAPI InstanceThread(LPVOID lpvParam)
 // This routine is a thread processing function to read from and reply to a client
@@ -75,12 +87,14 @@ DWORD WINAPI InstanceThread(LPVOID lpvParam)
        return (DWORD)-1;
    }
 
-   // Print verbose messages. In production code, this should be for debugging only.
-   printf("InstanceThread created, receiving and processing messages.\n");
+	// Print verbose messages. In production code, this should be for debugging only.
+	printf("InstanceThread created, receiving and processing messages.\n");
 
-// The thread's parameter is a handle to a pipe object instance. 
+	// The thread's parameter is a handle to a pipe object instance. 
  
-   hPipe = (HANDLE) lpvParam; 
+	class ConnectionThreadInfo *info = (class ConnectionThreadInfo *)lpvParam;
+	hPipe = info->hPipe;
+	delete info;
 
 	//Initialise timer
 	SYSTEMTIME systime;
@@ -178,16 +192,7 @@ DWORD WINAPI InstanceThread(LPVOID lpvParam)
 }
 
 VOID GetAnswerToRequest(char *pReply, LPDWORD pchBytes, class InstanceConfig &instanceConfig, int frameCount)
-// This routine is a simple function to print the client request to the console
-// and populate the reply buffer with a default data string. This is where you
-// would put the actual client request processing code that runs in the context
-// of an instance thread. Keep in mind the main thread will continue to wait for
-// and receive other client connections while the instance thread is working.
 {
-	//char str[] = "default answer from server";
-	//strncpy_s(pReply, strlen(str)+1, str, BUFSIZE);
-    //*pchBytes = (strlen(str)+1);
-
 	if(instanceConfig.frameLen  + 8 < BUFSIZE)
 	{
 		//Return frame
@@ -254,23 +259,12 @@ int ProcessClientMessage(class InstanceConfig &instanceConfig)
 
 	printf("rx msg count %d\n", count);
 	printf("w%d h%d buff%d\n",instanceConfig.width, instanceConfig.height, instanceConfig.frameLen);
-	//printf("Remain %d\n", rxBuff.size());
-
-	/*int numUints32s = len / 4;
-	UINT32 *uint32Arr = (UINT32 *)pchRequest;
-	for(int i=0;i<numUints32s;i++)
-	{
-		printf("%d ", uint32Arr[i]);
-	}
-	printf("\n");*/
 	
 	return 1;
 }
 
 
 //*******************************************************************************************
-
-
 
 NamedPipeOut::NamedPipeOut(const char *devName) : Base_Video_Out()
 {
@@ -363,15 +357,19 @@ void NamedPipeOut::Run()
       if (fConnected) 
       { 
          printf("Client connected, creating a processing thread.\n"); 
+
+		 class ConnectionThreadInfo *info = new class ConnectionThreadInfo();
+		 info->parent = this;
+		 info->hPipe = hPipe;
       
          // Create a thread for this client. 
          hThread = CreateThread( 
             NULL,              // no security attribute 
             0,                 // default stack size 
             InstanceThread,    // thread proc
-            (LPVOID) hPipe,    // thread parameter 
+            (LPVOID) info,    // thread parameter 
             0,                 // not suspended 
-            &dwThreadId);      // returns thread ID 
+            &dwThreadId);      // returns thread ID
 
          if (hThread == NULL) 
          {
