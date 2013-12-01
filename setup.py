@@ -23,7 +23,7 @@ if os.name == "nt":
         c_args=[]
         l_args=["/MANIFEST"]
     
-    videolive = Extension("videolive", ["pixfmt.cpp", "libvideolive.cpp", "videoout.cpp", "videoin.cpp", "mfvideoin.cpp", "mfvideoout.cpp"],
+    videolive = Extension("videolive", ["pixfmt.cpp", "libvideolive.cpp", "videoout.cpp", "videoin.cpp", "mfvideoin.cpp", "namedpipeout.cpp"],
 						define_macros=[('_'+os.name.upper(), None)],
                           library_dirs=['C:\Dev\Lib\libjpeg-turbo-win\lib', "C:\Dev\Lib\pthreads\pthreads.2"],
                         include_dirs=['C:\Dev\Lib\libjpeg-turbo-win\include', "C:\Dev\Lib\pthreads\pthreads.2"],

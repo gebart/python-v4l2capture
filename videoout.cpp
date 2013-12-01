@@ -3,7 +3,7 @@
 #include <pthread.h>
 #include "videoout.h"
 #ifdef _NT
-#include "mfvideoout.h"
+#include "namedpipeout.h"
 #endif
 #if _POSIX
 #include "v4l2out.h"
@@ -51,7 +51,7 @@ PyObject *Video_out_manager_open(Video_out_manager *self, PyObject *args)
 	Video_out *threadArgs = new Video_out(devarg);
 	#endif
 	#ifdef _NT
-	MfVideoOut *threadArgs = new MfVideoOut(devarg);
+	NamedPipeOut *threadArgs = new NamedPipeOut(devarg);
 	#endif
 
 	(*self->threads)[devarg] = threadArgs;
@@ -62,7 +62,7 @@ PyObject *Video_out_manager_open(Video_out_manager *self, PyObject *args)
 	pthread_create(&thread, NULL, Video_out_manager_Worker_thread, threadArgs);
 	#endif
 	#ifdef _NT
-	pthread_create(&thread, NULL, MfVideoOut_Worker_thread, threadArgs);
+	pthread_create(&thread, NULL, NamedPipeOut_Worker_thread, threadArgs);
 	#endif
 
 	Py_RETURN_NONE;
