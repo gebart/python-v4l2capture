@@ -2,6 +2,7 @@
 #ifndef MFVIDEOOUT_H
 #define MFVIDEOOUT_H
 
+#include <Windows.h>
 #include <vector>
 #include <string>
 #include "base.h"
@@ -21,6 +22,9 @@ public:
 
 	void Run();
 
+protected:
+	int running;
+	CRITICAL_SECTION lock;
 };
 
 void *NamedPipeOut_Worker_thread(void *arg);

@@ -1,7 +1,6 @@
 
 #include "namedpipeout.h"
 
-#include <Windows.h>
 #include <iostream>
 #include <string>
 using namespace std;
@@ -279,6 +278,8 @@ NamedPipeOut::NamedPipeOut(const char *devName) : Base_Video_Out()
 	if(hr == RPC_E_CHANGED_MODE)
 		throw std::runtime_error("CoInitializeEx failed");
 
+	running = 0;
+	InitializeCriticalSection(&lock);
 }
 
 NamedPipeOut::~NamedPipeOut()
@@ -293,7 +294,9 @@ void NamedPipeOut::SendFrame(const char *imgIn, unsigned imgLen, const char *pxF
 
 void NamedPipeOut::Stop()
 {
-
+	EnterCriticalSection(&lock);
+	this->running = 0;
+	LeaveCriticalSection(&lock);
 }
 
 int NamedPipeOut::WaitForStop()
@@ -313,10 +316,15 @@ void NamedPipeOut::SetOutputPxFmt(const char *fmt)
 
 void NamedPipeOut::Run()
 {
-	   BOOL   fConnected = FALSE; 
-   DWORD  dwThreadId = 0; 
-   HANDLE hPipe = INVALID_HANDLE_VALUE, hThread = NULL; 
-   LPTSTR lpszPipename = TEXT("\\\\.\\pipe\\testpipe"); 
+	EnterCriticalSection(&lock);
+	this->running = 1;
+	int tmpRunning = this->running;
+	LeaveCriticalSection(&lock);
+
+	BOOL   fConnected = FALSE; 
+	DWORD  dwThreadId = 0; 
+	HANDLE hPipe = INVALID_HANDLE_VALUE, hThread = NULL; 
+	LPTSTR lpszPipename = TEXT("\\\\.\\pipe\\testpipe"); 
  
 // Creates an instance of the named pipe and 
 // then waits for a client to connect to it. When the client 
@@ -324,7 +332,7 @@ void NamedPipeOut::Run()
 // with that client, and this loop is free to wait for the
 // next client connect request. It is an infinite loop.
 
-   for (;;) 
+   while (tmpRunning) 
    { 
       _tprintf( TEXT("\nPipe Server: Main thread awaiting client connection on %s\n"), lpszPipename);
       hPipe = CreateNamedPipe( 
@@ -375,6 +383,10 @@ void NamedPipeOut::Run()
       else 
         // The client could not connect, so close the pipe. 
          CloseHandle(hPipe); 
+
+	  EnterCriticalSection(&lock);
+	  tmpRunning = this->running;
+	  LeaveCriticalSection(&lock);
    }
 }
 
