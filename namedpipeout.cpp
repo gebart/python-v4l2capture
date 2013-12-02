@@ -11,7 +11,7 @@ using namespace std;
 #define BUFSIZE 1024*1024*10
 
 int ProcessClientMessage(class InstanceConfig &instanceConfig);
-VOID GetAnswerToRequest(char *pReply, LPDWORD pchBytes, class InstanceConfig &instanceConfig, int frameCount);
+VOID GetAnswerToRequest(char *pReply, LPDWORD pchBytes, class InstanceConfig &instanceConfig, class NamedPipeOut *, int frameCount);
 
 class InstanceConfig
 {
@@ -93,6 +93,7 @@ DWORD WINAPI InstanceThread(LPVOID lpvParam)
 	// The thread's parameter is a handle to a pipe object instance. 
  
 	class ConnectionThreadInfo *info = (class ConnectionThreadInfo *)lpvParam;
+	class NamedPipeOut *parent = info->parent;
 	hPipe = info->hPipe;
 	delete info;
 
@@ -152,7 +153,7 @@ DWORD WINAPI InstanceThread(LPVOID lpvParam)
 
 		printf("elapse %f\n", elapseMs);
 		// Get response string
-		GetAnswerToRequest(pReply, &cbReplyBytes, instanceConfig, frameCount); 
+		GetAnswerToRequest(pReply, &cbReplyBytes, instanceConfig, parent, frameCount); 
 		frameCount++;
  
 		// Write the reply to the pipe. 
@@ -191,7 +192,8 @@ DWORD WINAPI InstanceThread(LPVOID lpvParam)
    return 1;
 }
 
-VOID GetAnswerToRequest(char *pReply, LPDWORD pchBytes, class InstanceConfig &instanceConfig, int frameCount)
+VOID GetAnswerToRequest(char *pReply, LPDWORD pchBytes, class InstanceConfig &instanceConfig, 
+		class NamedPipeOut *parent, int frameCount)
 {
 	if(instanceConfig.frameLen  + 8 < BUFSIZE)
 	{
@@ -199,16 +201,18 @@ VOID GetAnswerToRequest(char *pReply, LPDWORD pchBytes, class InstanceConfig &in
 		UINT32 *numArr = (UINT32 *)pReply;
 		numArr[0] = 2;
 		numArr[1] = instanceConfig.frameLen;
-		memset(&pReply[8], 0x00, instanceConfig.frameLen);
-		for(unsigned i=0;i<instanceConfig.frameLen;i++)
-		{
-			if(frameCount%2==0)
-				pReply[8+i] = i%256;
-			else
-				pReply[8+i] = (i/2)%256;
-		}
+		unsigned char *imgPix = (unsigned char *)&pReply[8];
 
-		*pchBytes = 8 + instanceConfig.frameLen;
+		parent->Lock();
+		unsigned bytesToCopy = instanceConfig.frameLen;
+		cout << bytesToCopy << "\t" << parent->currentFrameLen << endl;
+		//if(bytesToCopy > parent->currentFrameLen)
+		//	bytesToCopy = parent->currentFrameLen;
+
+		memcpy(imgPix, parent->currentFrame, bytesToCopy);
+		parent->UnLock();
+
+		*pchBytes = 8 + bytesToCopy;
 	}
 	else
 	{
@@ -273,6 +277,9 @@ NamedPipeOut::NamedPipeOut(const char *devName) : Base_Video_Out()
 		throw std::runtime_error("CoInitializeEx failed");
 
 	running = 0;
+	currentFrameAlloc = 0;
+	currentFrameLen = 0;
+	currentFrame = NULL;
 	InitializeCriticalSection(&lock);
 }
 
@@ -284,6 +291,18 @@ NamedPipeOut::~NamedPipeOut()
 void NamedPipeOut::SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height)
 {
 	cout << "NamedPipeOut::SendFrame" << endl;
+
+	this->Lock();
+	if(imgLen > this->currentFrameAlloc || this->currentFrame == NULL)
+	{
+		delete [] this->currentFrame;
+		this->currentFrame = new unsigned char [imgLen];
+		this->currentFrameAlloc = imgLen;
+	}
+
+	memcpy(this->currentFrame, imgIn, imgLen);
+	this->currentFrameLen = imgLen;
+	this->UnLock();
 }
 
 void NamedPipeOut::Stop()
@@ -387,6 +406,17 @@ void NamedPipeOut::Run()
 	  LeaveCriticalSection(&lock);
    }
 }
+
+void NamedPipeOut::Lock()
+{
+	EnterCriticalSection(&lock);
+}
+
+void NamedPipeOut::UnLock()
+{
+	LeaveCriticalSection(&lock);
+}
+
 
 //*******************************************************************************
 

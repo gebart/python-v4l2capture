@@ -22,6 +22,13 @@ public:
 
 	void Run();
 
+	unsigned char *currentFrame;
+	unsigned currentFrameAlloc;
+	unsigned currentFrameLen;
+
+	void Lock();
+	void UnLock();
+
 protected:
 	int running;
 	CRITICAL_SECTION lock;

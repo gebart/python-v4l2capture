@@ -15,10 +15,17 @@ if __name__=="__main__":
 
 	outManager.open(devs[0], "RGB24", 640, 480)
 
-        img = np.zeros(shape=(640 * 480 * 3,), dtype=np.uint8)
-	
-        for i in range(100):
-                outManager.send_frame(devs[0], str(img.tostring()), "RGB24", 640, 480)
+	imgLen = 640 * 480 * 3
+	img = np.zeros(shape=(imgLen,), dtype=np.uint8)
 
-                time.sleep(0.1)
+	for i in range(imgLen):
+		if (i % 500) > 250:
+			img[i] = np.random.randint(0, 255)
+		else:
+			img[i] = 128
+	
+	while(1):
+		outManager.send_frame(devs[0], str(img.tostring()), "RGB24", 640, 480)
+
+		time.sleep(0.1)
                 
