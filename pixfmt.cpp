@@ -596,9 +596,27 @@ int ResizeRgb24Image(const unsigned char *data, unsigned dataLen,
 	unsigned buffOutLen,
 	int widthOut, int heightOut, int invertVertical)
 {
-	unsigned bytesToCopy = dataLen;
-	if(bytesToCopy > buffOutLen)
-		bytesToCopy > buffOutLen;
-	memcpy(buffOut, data, bytesToCopy);
+	//Simple crop of image to target buffer
+	for(int x = 0; x < widthOut; x++)
+	{
+		for(int y = 0; y < heightOut; y++)
+		{
+			unsigned outOffset = x*3 + (y*3*widthOut);
+			if(outOffset + 3 >= buffOutLen) continue;
+			unsigned char *outPx = &buffOut[outOffset];
+
+			int row = y;
+			if(invertVertical) row = heightIn - y - 1;
+			unsigned inOffset = x*3 + (row*3*widthIn);
+			if(inOffset + 3 >= dataLen) continue;
+			const unsigned char *inPx = &data[inOffset];
+
+			outPx[0] = inPx[0];
+			outPx[1] = inPx[1];
+			outPx[2] = inPx[2];
+		}
+
+	}
+
 	return 1;
 }
