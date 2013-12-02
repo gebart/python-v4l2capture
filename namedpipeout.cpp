@@ -205,15 +205,19 @@ VOID GetAnswerToRequest(char *pReply, LPDWORD pchBytes, class InstanceConfig &in
 		unsigned char *imgPix = (unsigned char *)&pReply[8];
 
 		parent->Lock();
-		unsigned bytesToCopy = instanceConfig.frameLen;
-		//cout << bytesToCopy << "\t" << parent->currentFrameLen << endl;
-		if(bytesToCopy > parent->currentFrameLen)
-			bytesToCopy = parent->currentFrameLen;
 
-		memcpy(imgPix, parent->currentFrame, bytesToCopy);
+		//Copy and resize frame if necessary (and invert y)
+		ResizeRgb24Image(parent->currentFrame, parent->currentFrameLen, 
+			parent->currentFrameWidth, 
+			parent->currentFrameHeight,
+			imgPix,
+			instanceConfig.frameLen,
+			instanceConfig.width, instanceConfig.height, 1);
+
+		//memcpy(imgPix, parent->currentFrame, bytesToCopy);
 		parent->UnLock();
 
-		*pchBytes = 8 + bytesToCopy;
+		*pchBytes = 8 + instanceConfig.frameLen;
 	}
 	else
 	{
@@ -281,6 +285,8 @@ NamedPipeOut::NamedPipeOut(const char *devName) : Base_Video_Out()
 	currentFrameAlloc = 0;
 	currentFrameLen = 0;
 	currentFrame = NULL;
+	currentFrameWidth = 0;
+	currentFrameHeight = 0;
 	InitializeCriticalSection(&lock);
 }
 
@@ -304,17 +310,27 @@ void NamedPipeOut::SendFrame(const char *imgIn, unsigned imgLen, const char *pxF
 		&bgrBuff,
 		&bgrBuffLen);
 
-	this->Lock();
-	if(bgrBuffLen > this->currentFrameAlloc || this->currentFrame == NULL)
+	if(ret>0)
 	{
-		delete [] this->currentFrame;
-		this->currentFrame = new unsigned char [bgrBuffLen];
-		this->currentFrameAlloc = bgrBuffLen;
-	}
+		this->Lock();
+		if(bgrBuffLen > this->currentFrameAlloc || this->currentFrame == NULL)
+		{
+			delete [] this->currentFrame;
+			this->currentFrame = new unsigned char [bgrBuffLen];
+			this->currentFrameAlloc = bgrBuffLen;
+		}
 
-	memcpy(this->currentFrame, bgrBuff, bgrBuffLen);
-	this->currentFrameLen = bgrBuffLen;
-	this->UnLock();
+		memcpy(this->currentFrame, bgrBuff, bgrBuffLen);
+		this->currentFrameWidth = width;
+		this->currentFrameHeight = height;
+
+		this->currentFrameLen = bgrBuffLen;
+		this->UnLock();
+	}
+	else
+	{
+		throw std::runtime_error("Cannot convert pixel format to BGR24");
+	}
 }
 
 void NamedPipeOut::Stop()

@@ -25,6 +25,7 @@ public:
 	unsigned char *currentFrame;
 	unsigned currentFrameAlloc;
 	unsigned currentFrameLen;
+	unsigned currentFrameWidth, currentFrameHeight;
 
 	void Lock();
 	void UnLock();

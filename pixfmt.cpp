@@ -588,9 +588,17 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 
 	return 0;
 }
-
 // *********************************************************
 
-
-
-
+int ResizeRgb24Image(const unsigned char *data, unsigned dataLen, 
+	int widthIn, int heightIn,
+	unsigned char *buffOut,
+	unsigned buffOutLen,
+	int widthOut, int heightOut, int invertVertical)
+{
+	unsigned bytesToCopy = dataLen;
+	if(bytesToCopy > buffOutLen)
+		bytesToCopy > buffOutLen;
+	memcpy(buffOut, data, bytesToCopy);
+	return 1;
+}
