@@ -579,7 +579,7 @@ HRESULT CCameraStream::FillBuffer(IMediaSample *pms)
 		this->lastRxUpdateTime=fiTime;
 	}
 
-	if(this->currentFrame != NULL && frameChanged)
+	if(this->currentFrame != NULL)
 	{
 	   /* REFERENCE_TIME rtNow;
 		REFERENCE_TIME avgFrameTime = ((VIDEOINFOHEADER*)m_mt.pbFormat)->AvgTimePerFrame;
