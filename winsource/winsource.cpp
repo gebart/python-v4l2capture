@@ -590,8 +590,11 @@ HRESULT CCameraStream::FillBuffer(IMediaSample *pms)
 		pms->SetTime(&rtNow, &m_rtLastTime);
 		pms->SetSyncPoint(TRUE);
 		//End of slow?*/
+		unsigned bytesToCopy = lDataLen;
+		if(this->currentFrameLen < bytesToCopy)
+			bytesToCopy = this->currentFrameLen;
 
-		memcpy(pData, this->currentFrame, lDataLen);
+		memcpy(pData, this->currentFrame, bytesToCopy);
 	}
 
 	if(elapseTxMs > 40.)
