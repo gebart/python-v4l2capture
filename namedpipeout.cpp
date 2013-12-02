@@ -205,9 +205,9 @@ VOID GetAnswerToRequest(char *pReply, LPDWORD pchBytes, class InstanceConfig &in
 
 		parent->Lock();
 		unsigned bytesToCopy = instanceConfig.frameLen;
-		cout << bytesToCopy << "\t" << parent->currentFrameLen << endl;
-		//if(bytesToCopy > parent->currentFrameLen)
-		//	bytesToCopy = parent->currentFrameLen;
+		//cout << bytesToCopy << "\t" << parent->currentFrameLen << endl;
+		if(bytesToCopy > parent->currentFrameLen)
+			bytesToCopy = parent->currentFrameLen;
 
 		memcpy(imgPix, parent->currentFrame, bytesToCopy);
 		parent->UnLock();
