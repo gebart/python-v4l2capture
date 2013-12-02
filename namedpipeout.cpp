@@ -1,5 +1,6 @@
 
 #include "namedpipeout.h"
+#include "pixfmt.h"
 
 #include <iostream>
 #include <string>
@@ -292,16 +293,27 @@ void NamedPipeOut::SendFrame(const char *imgIn, unsigned imgLen, const char *pxF
 {
 	cout << "NamedPipeOut::SendFrame" << endl;
 
+	//Convert from input pxFmt to BGR24.
+
+	unsigned char *bgrBuff = NULL;
+	unsigned bgrBuffLen = 0;
+	int ret = DecodeFrame((unsigned char*)imgIn, imgLen, 
+		pxFmt,
+		width, height,
+		"BGR24",
+		&bgrBuff,
+		&bgrBuffLen);
+
 	this->Lock();
-	if(imgLen > this->currentFrameAlloc || this->currentFrame == NULL)
+	if(bgrBuffLen > this->currentFrameAlloc || this->currentFrame == NULL)
 	{
 		delete [] this->currentFrame;
-		this->currentFrame = new unsigned char [imgLen];
-		this->currentFrameAlloc = imgLen;
+		this->currentFrame = new unsigned char [bgrBuffLen];
+		this->currentFrameAlloc = bgrBuffLen;
 	}
 
-	memcpy(this->currentFrame, imgIn, imgLen);
-	this->currentFrameLen = imgLen;
+	memcpy(this->currentFrame, bgrBuff, bgrBuffLen);
+	this->currentFrameLen = bgrBuffLen;
 	this->UnLock();
 }
 

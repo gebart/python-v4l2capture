@@ -495,6 +495,46 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 		return 1;
 	}
 
+	//RGB24 -> BGR24
+	if(strcmp(inPxFmt,"RGB24")==0 && strcmp(targetPxFmt, "BGR24")==0)
+	{
+		*buffOut = new unsigned char[dataLen];
+		*buffOutLen = dataLen;
+		for(unsigned i = 0; i+2 < dataLen; i+=3)
+		{
+			(*buffOut)[i+0] = data[i+2];
+			(*buffOut)[i+1] = data[i+1];
+			(*buffOut)[i+2] = data[i+0];
+		}
+		return 1;
+	}
+
+	//If no direct conversion to BGR24 is possible, convert to RGB24
+	//as an intermediate step
+	if(strcmp(targetPxFmt, "BGR24")==0)
+	{
+		unsigned char *rgbBuff = NULL;
+		unsigned rgbBuffLen = 0;
+		int ret = DecodeFrame(data, dataLen, 
+			inPxFmt,
+			width, height,
+			"RGB24",
+			&rgbBuff,
+			&rgbBuffLen);
+
+		if(ret>0)
+		{
+			int ret2 = DecodeFrame(rgbBuff, rgbBuffLen,
+				"RBG24",
+				width, height,
+				targetPxFmt,
+				buffOut,
+				buffOutLen);
+			delete [] rgbBuff;
+			if(ret2>0) return ret2;
+		}
+	}
+
 	/*
 	//Untested code
 	if((strcmp(inPxFmt,"YUV2")==0 || strcmp(inPxFmt,"YVU2")==0) 

@@ -550,6 +550,7 @@ HRESULT CCameraStream::FillBuffer(IMediaSample *pms)
 	float elapseTxMs = elapseTx.LowPart / 10000.f;
 
 	int frameChanged = 0;
+
 	//Initialise test frame
 	if(this->currentFrame == NULL)
 	{
@@ -560,7 +561,7 @@ HRESULT CCameraStream::FillBuffer(IMediaSample *pms)
 		for(LONG y=0; y < height; y++)
 		for(LONG x=0; x < width; x++)
 		{
-			if(cursor > this->currentFrameLen) continue;
+			if(cursor >= this->currentFrameLen) continue;
 
 			this->currentFrame[cursor] = x % 255; //Blue
 			this->currentFrame[cursor+1] = y % 255; //Green
