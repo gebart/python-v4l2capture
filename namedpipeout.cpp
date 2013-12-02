@@ -207,7 +207,7 @@ VOID GetAnswerToRequest(char *pReply, LPDWORD pchBytes, class InstanceConfig &in
 		parent->Lock();
 
 		//Copy and resize frame if necessary (and invert y)
-		ResizeRgb24Image(parent->currentFrame, parent->currentFrameLen, 
+		ResizeRgb24ImageNN(parent->currentFrame, parent->currentFrameLen, 
 			parent->currentFrameWidth, 
 			parent->currentFrameHeight,
 			imgPix,

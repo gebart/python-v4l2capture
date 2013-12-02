@@ -590,7 +590,46 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 }
 // *********************************************************
 
-int ResizeRgb24Image(const unsigned char *data, unsigned dataLen, 
+int ResizeRgb24ImageNN(const unsigned char *data, unsigned dataLen, 
+	int widthIn, int heightIn,
+	unsigned char *buffOut,
+	unsigned buffOutLen,
+	int widthOut, int heightOut, int invertVertical)
+{
+	//Simple crop of image to target buffer
+	for(int x = 0; x < widthOut; x++)
+	{
+		for(int y = 0; y < heightOut; y++)
+		{
+			unsigned outOffset = x*3 + (y*3*widthOut);
+			if(outOffset + 3 >= buffOutLen) continue;
+			unsigned char *outPx = &buffOut[outOffset];
+
+			//Scale position
+			double inx = (double)x * (double)widthIn / (double)widthOut;
+			double iny = (double)y * (double)heightIn / (double)heightOut;
+
+			//Round to nearest pixel
+			int inxi = (int)(inx+0.5);
+			int inyi = (int)(iny+0.5);
+
+			int row = inyi;
+			if(invertVertical) row = heightIn - inyi - 1;
+			unsigned inOffset = inxi*3 + (row*3*widthIn);
+			if(inOffset + 3 >= dataLen) continue;
+			const unsigned char *inPx = &data[inOffset];
+
+			outPx[0] = inPx[0];
+			outPx[1] = inPx[1];
+			outPx[2] = inPx[2];
+		}
+
+	}
+
+	return 1;
+}
+
+int CropToFitRgb24Image(const unsigned char *data, unsigned dataLen, 
 	int widthIn, int heightIn,
 	unsigned char *buffOut,
 	unsigned buffOutLen,
