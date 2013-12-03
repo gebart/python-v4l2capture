@@ -277,6 +277,7 @@ public:
 	CRITICAL_SECTION lock;
 	int framePending;
 	unsigned int maxNumFrames;
+	unsigned int droppedFrames;
 
 	vector<char *> frameBuff;
 	vector<DWORD> frameLenBuff;
@@ -290,7 +291,8 @@ public:
 		m_nRefCount = 0;
 		framePending = 0;
 		InitializeCriticalSection(&lock);
-		maxNumFrames = 10;
+		maxNumFrames = 1;
+		droppedFrames = 0;
 	}
 
 	virtual ~SourceReaderCB()
@@ -310,29 +312,57 @@ public:
         return QISearch(this, qit, iid, ppv);
 	}
 
+	void CheckForBufferOverflow()
+	{
+		//The lock should already be in use
+		while(this->frameBuff.size() > this->maxNumFrames)
+		{
+			//Drop an old frame if buffer is starting to overflow
+			frameBuff.erase(frameBuff.begin());
+			frameLenBuff.erase(frameLenBuff.begin());
+			hrStatusBuff.erase(hrStatusBuff.begin());
+			dwStreamIndexBuff.erase(dwStreamIndexBuff.begin());
+			dwStreamFlagsBuff.erase(dwStreamFlagsBuff.begin());
+			llTimestampBuff.erase(llTimestampBuff.begin());
+			droppedFrames ++;
+		}
+	}
+
+	void SetMaxBufferSize(unsigned maxBuffSizeIn)
+	{
+		EnterCriticalSection(&lock);
+		this->maxNumFrames = maxBuffSizeIn;
+		this->CheckForBufferOverflow();
+		LeaveCriticalSection(&lock);
+	}
+
     STDMETHODIMP OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex,
         DWORD dwStreamFlags, LONGLONG llTimestamp, IMFSample *pSample)
 	{
 		//cout << "OnReadSample: " << llTimestamp << endl;
 		EnterCriticalSection(&lock);
 
-		if (pSample && this->frameBuff.size() < this->maxNumFrames)
+		if (pSample)
 		{
 			char *buff = NULL;
 			DWORD buffLen = SampleToStaticObj(pSample, &buff);
 			//cout << (long) buff << "," << buffLen << endl;
 			//if(buff!=NULL) delete [] buff;
 
+			//Always add frame to buffer
 			frameBuff.push_back(buff);
 			frameLenBuff.push_back(buffLen);
 			hrStatusBuff.push_back(hrStatus);
 			dwStreamIndexBuff.push_back(dwStreamIndex);
 			dwStreamFlagsBuff.push_back(dwStreamFlags);
 			llTimestampBuff.push_back(llTimestamp);
+
+			this->CheckForBufferOverflow();
 		}
 
 		this->framePending = 0;
 		LeaveCriticalSection(&lock);
+
 		return S_OK;
 	}
 
@@ -460,7 +490,7 @@ MfVideoIn::MfVideoIn(const wchar_t *devNameIn) : WmfBase()
 	this->startDevFlag = 0;
 	this->stopDevFlag = 0;
 	this->closeDevFlag = 0;
-	this->maxBuffSize = 10;
+	this->maxBuffSize = 1;
 	InitializeCriticalSection(&lock);
 }
 
