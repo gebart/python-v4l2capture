@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <iostream>
 
 #include "pixfmt.h"
 
@@ -414,6 +415,29 @@ int Video_in_Manager::StartDeviceInternal(int buffer_count = 10)
 		//TODO
 		int ret = GetFormatInternal();
 		if(!ret) throw std::runtime_error("Could not determine image format");
+	}
+
+	struct v4l2_streamparm streamparm;
+	memset (&streamparm, 0, sizeof (streamparm));
+	streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+	//Check if camera supports timeperframe
+	if(my_ioctl(this->fd, VIDIOC_G_PARM, &streamparm))
+	{
+		throw std::runtime_error("VIDIOC_G_PARM failed");
+	}
+	int timePerFrameSupported = (V4L2_CAP_TIMEPERFRAME & streamparm.parm.capture.capability) != 0;
+
+	if(timePerFrameSupported)
+	{
+	/*struct v4l2_fract *tpf = &streamparm.parm.capture.timeperframe;
+	tpf->numerator = 1;
+	tpf->denominator = 25;
+	if(my_ioctl(this->fd, VIDIOC_S_PARM, &streamparm))
+	{
+		throw std::runtime_error("VIDIOC_S_PARM failed");
+	}*/
+
 	}
 
 	struct v4l2_requestbuffers reqbuf;
