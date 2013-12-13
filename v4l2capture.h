@@ -109,6 +109,8 @@ public:
 	void CloseDevice();
 	int GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut);
 
+	void Test();
+
 protected:
 	int ReadFrame();
 	int OpenDeviceInternal();

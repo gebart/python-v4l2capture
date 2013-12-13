@@ -96,6 +96,25 @@ std::wstring CharArrayToWString(const char *in)
 	return tmpDevName2;
 }
 
+static void enumerate_menu (int fd, struct v4l2_queryctrl &queryctrl)
+{
+	struct v4l2_querymenu querymenu;
+	std::cout << "  Menu items:" << std::endl;
+
+	memset (&querymenu, 0, sizeof (querymenu));
+	querymenu.id = queryctrl.id;
+
+	for (querymenu.index = queryctrl.minimum;
+	     querymenu.index <= queryctrl.maximum;
+	      querymenu.index++) {
+		if (0 == my_ioctl (fd, VIDIOC_QUERYMENU, &querymenu)) {
+			std::cout << "  " << querymenu.index << " " << querymenu.name << std::endl;
+		} else {
+			std::cout << "  Error VIDIOC_QUERYMENU" << std::endl;
+		}
+	}
+}
+
 // **************************************************************************
 
 Video_in_Manager::Video_in_Manager(const char *devNameIn) : Base_Video_In()
@@ -304,6 +323,69 @@ int Video_in_Manager::OpenDeviceInternal()
 	return 1;
 }
 
+void Video_in_Manager::Test()
+{
+	/*struct v4l2_streamparm streamparm;
+	memset (&streamparm, 0, sizeof (streamparm));
+	streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+	//Check if camera supports timeperframe
+	if(my_ioctl(this->fd, VIDIOC_G_PARM, &streamparm))
+	{
+		throw std::runtime_error("VIDIOC_G_PARM failed");
+	}
+	int timePerFrameSupported = (V4L2_CAP_TIMEPERFRAME & streamparm.parm.capture.capability) != 0;
+	if(timePerFrameSupported)
+	{
+
+	//Enurate framerates
+	//struct v4l2_frmivalenum frmrates;
+	//memset (&frmrates, 0, sizeof (v4l2_frmivalenum));
+	//my_ioctl(this->fd, VIDIOC_ENUM_FRAMEINTERVALS, &frmrates);
+	//std::cout << "fr " << frmrates.discrete.numerator << "," << frmrates.discrete.denominator << std::endl;
+
+	//Set frame rate
+	struct v4l2_fract *tpf = &streamparm.parm.capture.timeperframe;
+	tpf->numerator = 1;
+	tpf->denominator = 30;
+	if(my_ioctl(this->fd, VIDIOC_S_PARM, &streamparm))
+	{
+		throw std::runtime_error("VIDIOC_S_PARM failed");
+	}
+
+	}
+
+	//Query controls
+	struct v4l2_queryctrl queryctrl;
+	queryctrl.id = V4L2_CID_EXPOSURE_AUTO;
+	my_ioctl (this->fd, VIDIOC_QUERYCTRL, &queryctrl);
+	if (!(queryctrl.flags & V4L2_CTRL_FLAG_DISABLED))
+	{
+		std::cout << "Control "<<queryctrl.name<< std::endl;
+		std::cout << "type" << queryctrl.type << std::endl;
+		enumerate_menu(this->fd, queryctrl);
+	}
+*/
+/*	//Read control
+	struct v4l2_control control;
+	memset (&control, 0, sizeof (control));
+	control.id = V4L2_CID_EXPOSURE_AUTO;
+	my_ioctl (fd, VIDIOC_QUERYCTRL, &control);
+	std::cout << "val1 " << control.value << std::endl;*/
+/*
+	//Set control
+	memset (&control, 0, sizeof (control));
+	control.id = V4L2_CID_EXPOSURE_AUTO;
+	control.value = V4L2_EXPOSURE_MANUAL;
+	std::cout << "ret " << my_ioctl (fd, VIDIOC_S_CTRL, &control) << std::endl;
+
+	//Confirm value
+	memset (&control, 0, sizeof (control));
+	control.id = V4L2_CID_EXPOSURE_AUTO;
+	my_ioctl (fd, VIDIOC_QUERYCTRL, &control);
+	std::cout << "val2 " << control.value << std::endl;*/
+}
+
 int Video_in_Manager::SetFormatInternal(class SetFormatParams &args)
 {
 	if(verbose) printf("SetFormatInternal\n");
@@ -417,29 +499,6 @@ int Video_in_Manager::StartDeviceInternal(int buffer_count = 10)
 		if(!ret) throw std::runtime_error("Could not determine image format");
 	}
 
-	struct v4l2_streamparm streamparm;
-	memset (&streamparm, 0, sizeof (streamparm));
-	streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-
-	//Check if camera supports timeperframe
-	if(my_ioctl(this->fd, VIDIOC_G_PARM, &streamparm))
-	{
-		throw std::runtime_error("VIDIOC_G_PARM failed");
-	}
-	int timePerFrameSupported = (V4L2_CAP_TIMEPERFRAME & streamparm.parm.capture.capability) != 0;
-
-	if(timePerFrameSupported)
-	{
-	/*struct v4l2_fract *tpf = &streamparm.parm.capture.timeperframe;
-	tpf->numerator = 1;
-	tpf->denominator = 25;
-	if(my_ioctl(this->fd, VIDIOC_S_PARM, &streamparm))
-	{
-		throw std::runtime_error("VIDIOC_S_PARM failed");
-	}*/
-
-	}
-
 	struct v4l2_requestbuffers reqbuf;
 	reqbuf.count = buffer_count;
 	reqbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -511,8 +570,10 @@ int Video_in_Manager::StartDeviceInternal(int buffer_count = 10)
 		throw std::runtime_error("VIDIOC_STREAMON failed");
 	}
 
+	this->Test();
+
 	this->deviceStarted = 1;
-	if(verbose) printf("Started ok\n");
+	if(verbose) printf("Started ok\n");	
 	return 1;
 }
 
