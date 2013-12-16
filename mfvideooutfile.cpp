@@ -20,9 +20,10 @@ const UINT32 VIDEO_HEIGHT = 480;
 const UINT32 VIDEO_FPS = 25;
 const UINT32 VIDEO_BIT_RATE = 800000;
 const GUID   VIDEO_ENCODING_FORMAT = MFVideoFormat_WMV3;
-const GUID   VIDEO_INPUT_FORMAT = MFVideoFormat_RGB24;
+const GUID   VIDEO_INPUT_FORMAT = MFVideoFormat_RGB32;
 const UINT32 VIDEO_PELS = VIDEO_WIDTH * VIDEO_HEIGHT;
 const UINT32 VIDEO_FRAME_COUNT = 20 * VIDEO_FPS;
+const UINT32 BYTES_PER_TUPLE = 4;
 
 MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
 {
@@ -159,10 +160,11 @@ void MfVideoOutFile::CloseFile()
 
 void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height)
 {
+	
 	IMFSample *pSample = NULL;
 	IMFMediaBuffer *pBuffer = NULL;
 
-	const LONG cbWidth = 3 * VIDEO_WIDTH;
+	const LONG cbWidth = BYTES_PER_TUPLE * VIDEO_WIDTH;
 	const DWORD cbBuffer = cbWidth * VIDEO_HEIGHT;
 
 	if(this->pSinkWriter == NULL)
@@ -180,14 +182,35 @@ void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *p
 	}
 	if (SUCCEEDED(hr))
 	{
-		hr = MFCopyImage(
+		//unsigned cpyLen = imgLen;
+		//if(cpyLen > cbBuffer) cpyLen = cbBuffer;
+		//memcpy(pData, imgIn, cpyLen);
+		/*hr = MFCopyImage(
 			pData,					  // Destination buffer.
 			cbWidth,					// Destination stride.
 			(BYTE*)imgIn,				// First row in source image.
 			cbWidth,					// Source stride.
 			cbWidth,					// Image width in bytes.
 			VIDEO_HEIGHT				// Image height in pixels.
-			);
+			);*/
+		for(int y = 0; y < height; y++)
+		{
+		int x = 0;
+		for(x = 0; x < width; x++)
+		{
+			
+			BYTE *dstPx = &pData[x * BYTES_PER_TUPLE + y * cbWidth];
+			const BYTE *srcPx = (const BYTE *)&imgIn[x * 3 + y * width * 3];
+			dstPx[2] = srcPx[0]; //Red
+			dstPx[1] = srcPx[1]; //Green
+			dstPx[0] = srcPx[2]; //Blue
+			//dstPx[0] = 0xff;
+			//dstPx[1] = 0xff;
+			//dstPx[2] = 0xff;
+			dstPx[3] = 0xff; //Alpha
+		}
+		}
+
 	}
 	if (pBuffer)
 	{
