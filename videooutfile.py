@@ -8,7 +8,10 @@ if __name__=="__main__":
 
 	outManager.open("test.wmv", "RGB24", 640, 480)
 
-	imgLen = 640 * 480 * 3
+	w = 800
+	h = 600
+
+	imgLen = w * h * 3
 	img = np.ones(shape=(imgLen,), dtype=np.uint8) * 0
 	for i in range(imgLen):
 		if (i % 3) == 0:
@@ -23,7 +26,7 @@ if __name__=="__main__":
 		#		img[i] = 128
 
 		print "Frame", frNum
-		outManager.send_frame("test.wmv", str(img.tostring()), "RGB24", 640, 480)
+		outManager.send_frame("test.wmv", str(img.tostring()), "RGB24", w, h)
 
 		time.sleep(0.01)
                 

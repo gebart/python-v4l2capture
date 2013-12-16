@@ -196,7 +196,6 @@ void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *p
 
 			//for(int i=0;i<10;i++)
 			//	std::cout << (int)((pData)[i]) << std::endl;
-
 		}
 		else
 		{

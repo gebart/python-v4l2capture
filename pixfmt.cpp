@@ -620,15 +620,15 @@ int ResizeRgb24ImageNN(const unsigned char *data, unsigned dataLen,
 	int widthIn, int heightIn,
 	unsigned char *buffOut,
 	unsigned buffOutLen,
-	int widthOut, int heightOut, int invertVertical)
+	int widthOut, int heightOut, int invertVertical, int tupleLen)
 {
 	//Simple crop of image to target buffer
 	for(int x = 0; x < widthOut; x++)
 	{
 		for(int y = 0; y < heightOut; y++)
 		{
-			unsigned outOffset = x*3 + (y*3*widthOut);
-			if(outOffset + 3 >= buffOutLen) continue;
+			unsigned outOffset = x*tupleLen + (y*tupleLen*widthOut);
+			if(outOffset + tupleLen >= buffOutLen) continue;
 			unsigned char *outPx = &buffOut[outOffset];
 
 			//Scale position
@@ -641,13 +641,12 @@ int ResizeRgb24ImageNN(const unsigned char *data, unsigned dataLen,
 
 			int row = inyi;
 			if(invertVertical) row = heightIn - inyi - 1;
-			unsigned inOffset = inxi*3 + (row*3*widthIn);
-			if(inOffset + 3 >= dataLen) continue;
+			unsigned inOffset = inxi*tupleLen + (row*tupleLen*widthIn);
+			if(inOffset + tupleLen >= dataLen) continue;
 			const unsigned char *inPx = &data[inOffset];
 
-			outPx[0] = inPx[0];
-			outPx[1] = inPx[1];
-			outPx[2] = inPx[2];
+			for(int c = 0; c < tupleLen; c++)
+				outPx[c] = inPx[c];
 		}
 
 	}
@@ -659,28 +658,26 @@ int CropToFitRgb24Image(const unsigned char *data, unsigned dataLen,
 	int widthIn, int heightIn,
 	unsigned char *buffOut,
 	unsigned buffOutLen,
-	int widthOut, int heightOut, int invertVertical)
+	int widthOut, int heightOut, int invertVertical, int tupleLen = 3)
 {
 	//Simple crop of image to target buffer
 	for(int x = 0; x < widthOut; x++)
 	{
 		for(int y = 0; y < heightOut; y++)
 		{
-			unsigned outOffset = x*3 + (y*3*widthOut);
-			if(outOffset + 3 >= buffOutLen) continue;
+			unsigned outOffset = x*tupleLen + (y*tupleLen*widthOut);
+			if(outOffset + tupleLen >= buffOutLen) continue;
 			unsigned char *outPx = &buffOut[outOffset];
 
 			int row = y;
 			if(invertVertical) row = heightIn - y - 1;
-			unsigned inOffset = x*3 + (row*3*widthIn);
-			if(inOffset + 3 >= dataLen) continue;
+			unsigned inOffset = x*tupleLen + (row*tupleLen*widthIn);
+			if(inOffset + tupleLen >= dataLen) continue;
 			const unsigned char *inPx = &data[inOffset];
 
-			outPx[0] = inPx[0];
-			outPx[1] = inPx[1];
-			outPx[2] = inPx[2];
+			for(int c = 0; c < tupleLen; c++)
+				outPx[c] = inPx[c];
 		}
-
 	}
 
 	return 1;
@@ -698,16 +695,118 @@ int DecodeAndResizeFrame(const unsigned char *data,
 	int dstWidth, 
 	int dstHeight)
 {
-	if(srcWidth != dstWidth || srcHeight != dstHeight)
-		throw std::runtime_error("Resize not implemented yet");
+	if(srcWidth==dstWidth && srcHeight==dstHeight)
+	{
+		//Resize is not required
+		int ret = DecodeFrame(data, dataLen, 
+			inPxFmt,
+			srcWidth, srcHeight,
+			targetPxFmt,
+			buffOut,
+			buffOutLen);
+		return ret;
+	}
 
-	int ret = DecodeFrame(data, dataLen, 
+	const unsigned char *currentImg = data;
+	unsigned currentLen = dataLen;
+	std::string currentPxFmt = inPxFmt;
+	int currentWidth = srcWidth;
+	int currentHeight = srcHeight;
+
+	unsigned char *tmpBuff = NULL;
+	unsigned tmpBuffLen = 0;
+	int resizeRet = ResizeFrame(currentImg, 
+		currentLen, 
+		currentPxFmt.c_str(),
+		currentWidth, currentHeight,
+		&tmpBuff,
+		&tmpBuffLen,
+		dstWidth, 
+		dstHeight);
+
+	if(resizeRet > 0)
+	{
+		//Resize succeeded
+		currentImg = tmpBuff;
+		currentLen = tmpBuffLen;
+		currentWidth = dstWidth;
+		currentHeight = dstHeight;
+
+		int decodeRet = DecodeFrame(currentImg, currentLen, 
+			currentPxFmt.c_str(),
+			currentWidth, currentHeight,
+			targetPxFmt,
+			buffOut,
+			buffOutLen);
+
+		//Free intermediate buff
+		if(tmpBuff != NULL)
+		{
+			delete [] tmpBuff;
+			tmpBuff = NULL;
+		}
+
+		return decodeRet;
+	}
+
+	//Attempt to convert pixel format first, do resize later
+	tmpBuff = NULL;
+	tmpBuffLen = 0;
+	int decodeRet = DecodeFrame(data, dataLen, 
 		inPxFmt,
 		srcWidth, srcHeight,
 		targetPxFmt,
-		buffOut,
-		buffOutLen);
+		&tmpBuff,
+		&tmpBuffLen);
 
-	return ret;
+	if(decodeRet <= 0)
+		return 0; //Conversion failed
+
+	//Now resize
+	resizeRet = ResizeFrame(tmpBuff, 
+		tmpBuffLen, 
+		targetPxFmt,
+		srcWidth, srcHeight,
+		buffOut,
+		buffOutLen,
+		dstWidth, 
+		dstHeight);
+
+	//Free intermediate buff
+	if(tmpBuff != NULL)
+	{
+		delete [] tmpBuff;
+		tmpBuff = NULL;
+	}
+
+	return resizeRet;
 }
 
+int ResizeFrame(const unsigned char *data, 
+	unsigned dataLen, 
+	const char *pxFmt,
+	int srcWidth, int srcHeight,
+	unsigned char **buffOut,
+	unsigned *buffOutLen,
+	int dstWidth, 
+	int dstHeight)
+{
+	if(strcmp(pxFmt,"RGB24")!=0 && strcmp(pxFmt,"BGR24")!=0)
+	{
+		//Allocate new buffer if needed
+		int dstBuffSize = 3 * dstWidth * dstHeight;
+		if(*buffOutLen != 0 && *buffOutLen != dstBuffSize)
+			throw std::runtime_error("Output buffer has incorrect size");
+		*buffOutLen = dstBuffSize;
+		if(*buffOut == NULL)
+			*buffOut = new unsigned char [*buffOutLen];
+
+		return ResizeRgb24ImageNN(data, dataLen, 
+			srcWidth, srcHeight,
+			*buffOut,
+			*buffOutLen,
+			dstWidth, dstHeight, 0, 3);
+	}
+	//Not supported
+	return 0;
+}

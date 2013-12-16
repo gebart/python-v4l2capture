@@ -21,13 +21,22 @@ int DecodeAndResizeFrame(const unsigned char *data,
 	int dstWidth, 
 	int dstHeight);
 
-int InsertHuffmanTableCTypes(const unsigned char* inBufferPtr, unsigned inBufferLen, std::string &outBuffer);
+int ResizeFrame(const unsigned char *data, 
+	unsigned dataLen, 
+	const char *pxFmt,
+	int srcWidth, int srcHeight,
+	unsigned char **buffOut,
+	unsigned *buffOutLen,
+	int dstWidth, 
+	int dstHeight);
 
 int ResizeRgb24ImageNN(const unsigned char *data, unsigned dataLen, 
 	int widthIn, int heightIn,
 	unsigned char *buffOut,
 	unsigned buffOutLen,
-	int widthOut, int heightOut, int invertVertical);
+	int widthOut, int heightOut, int invertVertical = 0, int tupleLen = 3);
+
+int InsertHuffmanTableCTypes(const unsigned char* inBufferPtr, unsigned inBufferLen, std::string &outBuffer);
 
 #endif //_PIXFMT_H_
 
