@@ -791,7 +791,7 @@ int ResizeFrame(const unsigned char *data,
 	int dstWidth, 
 	int dstHeight)
 {
-	if(strcmp(pxFmt,"RGB24")!=0 && strcmp(pxFmt,"BGR24")!=0)
+	if(strcmp(pxFmt,"RGB24")==0 || strcmp(pxFmt,"BGR24")==0)
 	{
 		//Allocate new buffer if needed
 		int dstBuffSize = 3 * dstWidth * dstHeight;

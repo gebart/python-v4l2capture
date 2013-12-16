@@ -186,6 +186,8 @@ void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *p
 	{
 		if(strcmp(this->pxFmt.c_str(), pxFmt)!=0)
 		{
+			//std::cout << (long) pData << std::endl;
+
 			unsigned int outBuffLen = cbBuffer;
 			DecodeAndResizeFrame((const unsigned char *)imgIn, imgLen, pxFmt,
 				width, height,
@@ -194,8 +196,7 @@ void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *p
 				&outBuffLen, 
 				VIDEO_WIDTH, VIDEO_HEIGHT);
 
-			//for(int i=0;i<10;i++)
-			//	std::cout << (int)((pData)[i]) << std::endl;
+			//std::cout << (long) pData << std::endl;
 		}
 		else
 		{
