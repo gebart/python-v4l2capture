@@ -5,6 +5,7 @@
 #include <setjmp.h>
 #include <assert.h>
 #include <stdexcept>
+#include <iostream>
 #include "pixfmt.h"
 
 // *********************************************************************
@@ -260,8 +261,14 @@ int ReadJpegFile(unsigned char * inbuffer,
 	/* Step 3: read file parameters with jpeg_read_header() */
 	jpeg_read_header(&cinfo, TRUE);
 
-	*outBufferSize = cinfo.image_width * cinfo.image_height * cinfo.num_components;
-	*outBuffer = new unsigned char[*outBufferSize];
+	unsigned int outBuffLen = cinfo.image_width * cinfo.image_height * cinfo.num_components;
+	if(*outBufferSize != 0 && *outBufferSize != outBuffLen)
+		throw std::runtime_error("Output buffer has incorrect size");
+	if(*outBuffer == NULL)
+	{
+		*outBuffer = new unsigned char[*outBufferSize];
+	}
+	*outBufferSize = outBuffLen;
 	*widthOut = cinfo.image_width;
 	*heightOut = cinfo.image_height;
 	*channelsOut = cinfo.num_components;
@@ -322,9 +329,15 @@ void ConvertRGBtoYUYVorSimilar(const unsigned char *im, unsigned sizeimage,
 {
 	unsigned bytesperline = width * 2;
 	unsigned padding = 0;
+	if(*outImSize != 0 && *outImSize != sizeimage)
+		throw std::runtime_error("Output buffer has incorrect size");
+	unsigned char *outBuff = *outIm;
+	if(*outIm == NULL)
+	{
+		outBuff = new unsigned char [*outImSize];
+		*outIm = outBuff;
+	}
 	*outImSize = sizeimage+padding;
-	unsigned char *outBuff = new unsigned char [*outImSize];
-	*outIm = outBuff;
 	unsigned char *im2 = (unsigned char *)im;
 
 	int uOffset = 0;
@@ -363,8 +376,8 @@ void ConvertRGBtoYUYVorSimilar(const unsigned char *im, unsigned sizeimage,
 		for(unsigned x=0;x< width;x+=2)
 		{
 			unsigned rgbOffset = width * y * 3 + x * 3;
-			outBuff[cursor+yOffset1] = im[rgbOffset] * 0.299 + im[rgbOffset+1] * 0.587 + im[rgbOffset+2] * 0.114;
-			outBuff[cursor+yOffset2] = im[rgbOffset+3] * 0.299 + im[rgbOffset+4] * 0.587 + im[rgbOffset+5] * 0.114;
+			outBuff[cursor+yOffset1] = (unsigned char)(im[rgbOffset] * 0.299 + im[rgbOffset+1] * 0.587 + im[rgbOffset+2] * 0.114 + 0.5);
+			outBuff[cursor+yOffset2] = (unsigned char)(im[rgbOffset+3] * 0.299 + im[rgbOffset+4] * 0.587 + im[rgbOffset+5] * 0.114 + 0.5);
 			cursor += 4;
 		}
 	
@@ -373,10 +386,10 @@ void ConvertRGBtoYUYVorSimilar(const unsigned char *im, unsigned sizeimage,
 		for(unsigned x=0;x< width;x+=2)
 		{
 			unsigned rgbOffset = width * y * 3 + x * 3;
-			float Pb1 = im2[rgbOffset+0] * -0.168736 + im2[rgbOffset+1] * -0.331264 + im2[rgbOffset+2] * 0.5;
-			float Pb2 = im2[rgbOffset+3] * -0.168736 + im2[rgbOffset+4] * -0.331264 + im2[rgbOffset+5] * 0.5;
+			double Pb1 = im2[rgbOffset+0] * -0.168736 + im2[rgbOffset+1] * -0.331264 + im2[rgbOffset+2] * 0.5;
+			double Pb2 = im2[rgbOffset+3] * -0.168736 + im2[rgbOffset+4] * -0.331264 + im2[rgbOffset+5] * 0.5;
 
-			outBuff[cursor+uOffset] = 0.5 * (Pb1 + Pb2) + 128;
+			outBuff[cursor+uOffset] = (unsigned char)(0.5 * (Pb1 + Pb2) + 128.5);
 			cursor += 4;
 		}
 
@@ -385,10 +398,10 @@ void ConvertRGBtoYUYVorSimilar(const unsigned char *im, unsigned sizeimage,
 		for(unsigned x=0;x< width;x+=2)
 		{
 			unsigned rgbOffset = width * y * 3 + x * 3;
-			float Pr1 = im2[rgbOffset+0] * 0.5 + im2[rgbOffset+1] * -0.418688 + im2[rgbOffset+2] * -0.081312;
-			float Pr2 = im2[rgbOffset+3] * 0.5 + im2[rgbOffset+4] * -0.418688 + im2[rgbOffset+5] * -0.081312;
+			double Pr1 = im2[rgbOffset+0] * 0.5 + im2[rgbOffset+1] * -0.418688 + im2[rgbOffset+2] * -0.081312;
+			double Pr2 = im2[rgbOffset+3] * 0.5 + im2[rgbOffset+4] * -0.418688 + im2[rgbOffset+5] * -0.081312;
 
-			outBuff[cursor+vOffset] = 0.5 * (Pr1 + Pr2) + 128;
+			outBuff[cursor+vOffset] = (unsigned char)(0.5 * (Pr1 + Pr2) + 128.5);
 			cursor += 4;
 		}
 	}
@@ -402,15 +415,18 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 	unsigned char **buffOut,
 	unsigned *buffOutLen)
 {
-	//printf("rx %d %s\n", dataLen, inPxFmt);
-	*buffOut = NULL;
-	*buffOutLen = 0;
-
 	if(strcmp(inPxFmt, targetPxFmt) == 0)
 	{
 		//Conversion not required, return a shallow copy
+		if (*buffOutLen != 0 && *buffOutLen != dataLen)
+		{
+			throw std::runtime_error("Output buffer has incorrect size");
+		}
+		if(*buffOut == NULL)
+		{
+			*buffOut = new unsigned char[dataLen];
+		}
 		*buffOutLen = dataLen;
-		*buffOut = new unsigned char[dataLen];
 		memcpy(*buffOut, data, dataLen);
 		return 1;
 	}
@@ -451,9 +467,16 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 		// Convert buffer from YUYV to RGB.
 		// For the byte order, see: http://v4l2spec.bytesex.org/spec/r4339.htm
 		// For the color conversion, see: http://v4l2spec.bytesex.org/spec/x2123.htm
-		*buffOutLen = dataLen * 6 / 4;
-		char *rgb = new char[*buffOutLen];
-		*buffOut = (unsigned char*)rgb;
+		unsigned int outBuffLen = dataLen * 6 / 4;
+		if(*buffOutLen != 0 && *buffOutLen != outBuffLen)
+			throw std::runtime_error("Output buffer has incorrect length");
+		*buffOutLen = outBuffLen;
+		char *rgb = (char*)*buffOut;
+		if(*buffOut == NULL)
+		{
+			rgb = new char[*buffOutLen];
+			*buffOut = (unsigned char*)rgb;
+		}
 
 		char *rgb_max = rgb + *buffOutLen;
 		const unsigned char *yuyv = data;
@@ -498,7 +521,10 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 	//RGB24 -> BGR24
 	if(strcmp(inPxFmt,"RGB24")==0 && strcmp(targetPxFmt, "BGR24")==0)
 	{
-		*buffOut = new unsigned char[dataLen];
+		if(*buffOutLen != 0 && *buffOutLen != dataLen)
+			throw std::runtime_error("Output buffer has incorrect size");
+		if(*buffOut == NULL)
+			*buffOut = new unsigned char[dataLen];
 		*buffOutLen = dataLen;
 		for(unsigned i = 0; i+2 < dataLen; i+=3)
 		{
@@ -659,3 +685,29 @@ int CropToFitRgb24Image(const unsigned char *data, unsigned dataLen,
 
 	return 1;
 }
+
+//*******************************************************************
+
+int DecodeAndResizeFrame(const unsigned char *data, 
+	unsigned dataLen, 
+	const char *inPxFmt,
+	int srcWidth, int srcHeight,
+	const char *targetPxFmt,
+	unsigned char **buffOut,
+	unsigned *buffOutLen, 
+	int dstWidth, 
+	int dstHeight)
+{
+	if(srcWidth != dstWidth || srcHeight != dstHeight)
+		throw std::runtime_error("Resize not implemented yet");
+
+	int ret = DecodeFrame(data, dataLen, 
+		inPxFmt,
+		srcWidth, srcHeight,
+		targetPxFmt,
+		buffOut,
+		buffOutLen);
+
+	return ret;
+}
+

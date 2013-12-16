@@ -32,7 +32,7 @@ protected:
 	DWORD		   streamIndex;	 
 	LONGLONG rtStart;
 	UINT64 rtDuration;
-
+	std::string pxFmt;
 };
 
 void *MfVideoOut_File_Worker_thread(void *arg);

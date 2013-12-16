@@ -1,5 +1,6 @@
 
 #include "mfvideooutfile.h"
+#include "pixfmt.h"
 #include <iostream>
 #include <stdexcept>
 #include <mfapi.h>
@@ -38,6 +39,7 @@ MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
 	this->pSinkWriter = NULL;
 	this->streamIndex = 0;
 	this->rtStart = 0;
+	this->pxFmt = "BGR24";
 }
 
 MfVideoOutFile::~MfVideoOutFile()
@@ -182,18 +184,26 @@ void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *p
 	}
 	if (SUCCEEDED(hr))
 	{
-		for(int y = 0; y < height; y++)
+		if(strcmp(this->pxFmt.c_str(), pxFmt)!=0)
 		{
-		for(int x = 0; x < width; x++)
-		{
-			BYTE *dstPx = &pData[x * BYTES_PER_TUPLE + y * cbWidth];
-			const BYTE *srcPx = (const BYTE *)&imgIn[x * 3 + y * width * 3];
-			dstPx[2] = srcPx[0]; //Red
-			dstPx[1] = srcPx[1]; //Green
-			dstPx[0] = srcPx[2]; //Blue
-		}
-		}
+			unsigned int outBuffLen = cbBuffer;
+			DecodeAndResizeFrame((const unsigned char *)imgIn, imgLen, pxFmt,
+				width, height,
+				this->pxFmt.c_str(),
+				(unsigned char **)&pData,
+				&outBuffLen, 
+				VIDEO_WIDTH, VIDEO_HEIGHT);
 
+			//for(int i=0;i<10;i++)
+			//	std::cout << (int)((pData)[i]) << std::endl;
+
+		}
+		else
+		{
+			DWORD cpyLen = imgLen;
+			if(cbBuffer < cpyLen) cpyLen = cbBuffer;
+			memcpy(pData, imgIn, cpyLen);
+		}
 	}
 	if (pBuffer)
 	{

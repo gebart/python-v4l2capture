@@ -11,6 +11,16 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 	unsigned char **buffOut,
 	unsigned *buffOutLen);
 
+int DecodeAndResizeFrame(const unsigned char *data, 
+	unsigned dataLen, 
+	const char *inPxFmt,
+	int srcWidth, int srcHeight,
+	const char *targetPxFmt,
+	unsigned char **buffOut,
+	unsigned *buffOutLen, 
+	int dstWidth, 
+	int dstHeight);
+
 int InsertHuffmanTableCTypes(const unsigned char* inBufferPtr, unsigned inBufferLen, std::string &outBuffer);
 
 int ResizeRgb24ImageNN(const unsigned char *data, unsigned dataLen, 
