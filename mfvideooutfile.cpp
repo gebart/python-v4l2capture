@@ -1,6 +1,7 @@
 
 #include "mfvideooutfile.h"
 #include <iostream>
+#include <stdexcept>
 #include <mfapi.h>
 #include <Mferror.h>
 using namespace std;
@@ -23,7 +24,7 @@ const GUID   VIDEO_INPUT_FORMAT = MFVideoFormat_RGB24;
 const UINT32 VIDEO_PELS = VIDEO_WIDTH * VIDEO_HEIGHT;
 const UINT32 VIDEO_FRAME_COUNT = 20 * VIDEO_FPS;
 
-MfVideoOutFile::MfVideoOutFile(const char *devName) : Base_Video_Out()
+MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
 {
 	HRESULT hr = MFStartup(MF_VERSION);
 	if(!SUCCEEDED(hr))
@@ -34,19 +35,37 @@ MfVideoOutFile::MfVideoOutFile(const char *devName) : Base_Video_Out()
 		throw std::runtime_error("CoInitializeEx failed");
 
 	this->pSinkWriter = NULL;
-	IMFMediaType	*pMediaTypeOut = NULL;   
-	IMFMediaType	*pMediaTypeIn = NULL;   
 	this->streamIndex = 0;
-
 	this->rtStart = 0;
+}
+
+MfVideoOutFile::~MfVideoOutFile()
+{
+	this->CloseFile();
+
+	MFShutdown();
+
+	CoUninitialize();
+}
+
+void MfVideoOutFile::OpenFile()
+{
+
+	if(this->pSinkWriter != NULL)
+	{
+		throw std::runtime_error("Video output file already open");
+	}
+	this->rtStart = 0;
+	IMFMediaType	*pMediaTypeOut = NULL;   
+	IMFMediaType	*pMediaTypeIn = NULL;
 	MFFrameRateToAverageTimePerFrame(VIDEO_FPS, 1, &this->rtDuration);
 
-	hr = MFCreateSinkWriterFromURL(L"output.wmv", NULL, NULL, &pSinkWriter);
+	HRESULT hr = MFCreateSinkWriterFromURL(L"output.wmv", NULL, NULL, &pSinkWriter);
 
 	// Set the output media type.
 	if (SUCCEEDED(hr))
 	{
-		hr = MFCreateMediaType(&pMediaTypeOut);   
+		hr = MFCreateMediaType(&pMediaTypeOut);  
 	}
 	if (SUCCEEDED(hr))
 	{
@@ -124,31 +143,18 @@ MfVideoOutFile::MfVideoOutFile(const char *devName) : Base_Video_Out()
 		hr = pSinkWriter->BeginWriting();
 	}
 
-	// Return the pointer to the caller.
-	if (SUCCEEDED(hr))
-	{
-		/**ppWriter = pSinkWriter;
-		(*ppWriter)->AddRef();
-		*pStreamIndex = streamIndex;*/
-	}
-	
-	//SafeRelease(&pSinkWriter);
 	SafeRelease(&pMediaTypeOut);
 	SafeRelease(&pMediaTypeIn);
 	return;
 }
 
-MfVideoOutFile::~MfVideoOutFile()
+void MfVideoOutFile::CloseFile()
 {
 	if(this->pSinkWriter != NULL)
 	{
 		HRESULT hr = this->pSinkWriter->Finalize();
 	}
 	SafeRelease(&pSinkWriter);
-
-	MFShutdown();
-
-	CoUninitialize();
 }
 
 void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height)
@@ -158,6 +164,9 @@ void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *p
 
 	const LONG cbWidth = 3 * VIDEO_WIDTH;
 	const DWORD cbBuffer = cbWidth * VIDEO_HEIGHT;
+
+	if(this->pSinkWriter == NULL)
+		this->OpenFile();
 
 	BYTE *pData = NULL;
 

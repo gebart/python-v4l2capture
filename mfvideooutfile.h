@@ -14,6 +14,9 @@ public:
 	MfVideoOutFile(const char *devName);
 	virtual ~MfVideoOutFile();
 
+	void OpenFile();
+	void CloseFile();
+
 	void SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height);
 	void Stop();
 	int WaitForStop();
@@ -22,6 +25,7 @@ public:
 	virtual void SetOutputPxFmt(const char *fmt);
 
 	void Run();
+
 
 protected:
 	IMFSinkWriter   *pSinkWriter;
