@@ -20,10 +20,10 @@ const UINT32 VIDEO_HEIGHT = 480;
 const UINT32 VIDEO_FPS = 25;
 const UINT32 VIDEO_BIT_RATE = 800000;
 const GUID   VIDEO_ENCODING_FORMAT = MFVideoFormat_WMV3;
-const GUID   VIDEO_INPUT_FORMAT = MFVideoFormat_RGB32;
+const GUID   VIDEO_INPUT_FORMAT = MFVideoFormat_RGB24;
 const UINT32 VIDEO_PELS = VIDEO_WIDTH * VIDEO_HEIGHT;
 const UINT32 VIDEO_FRAME_COUNT = 20 * VIDEO_FPS;
-const UINT32 BYTES_PER_TUPLE = 4;
+const UINT32 BYTES_PER_TUPLE = 3;
 
 MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
 {
@@ -207,7 +207,7 @@ void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *p
 			//dstPx[0] = 0xff;
 			//dstPx[1] = 0xff;
 			//dstPx[2] = 0xff;
-			dstPx[3] = 0xff; //Alpha
+			//dstPx[3] = 0xff; //Alpha
 		}
 		}
 
