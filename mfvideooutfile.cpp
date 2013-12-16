@@ -1,7 +1,27 @@
 
 #include "mfvideooutfile.h"
+#include <iostream>
 #include <mfapi.h>
 #include <Mferror.h>
+using namespace std;
+
+template <class T> void SafeRelease(T **ppT)
+{
+	if (*ppT)
+	{
+		(*ppT)->Release();
+		*ppT = NULL;
+	}
+}
+
+const UINT32 VIDEO_WIDTH = 640;
+const UINT32 VIDEO_HEIGHT = 480;
+const UINT32 VIDEO_FPS = 25;
+const UINT32 VIDEO_BIT_RATE = 800000;
+const GUID   VIDEO_ENCODING_FORMAT = MFVideoFormat_WMV3;
+const GUID   VIDEO_INPUT_FORMAT = MFVideoFormat_RGB24;
+const UINT32 VIDEO_PELS = VIDEO_WIDTH * VIDEO_HEIGHT;
+const UINT32 VIDEO_FRAME_COUNT = 20 * VIDEO_FPS;
 
 MfVideoOutFile::MfVideoOutFile(const char *devName) : Base_Video_Out()
 {
@@ -13,14 +33,119 @@ MfVideoOutFile::MfVideoOutFile(const char *devName) : Base_Video_Out()
 	if(hr == RPC_E_CHANGED_MODE)
 		throw std::runtime_error("CoInitializeEx failed");
 
+	this->pSinkWriter = NULL;
+	IMFMediaType	*pMediaTypeOut = NULL;   
+	IMFMediaType	*pMediaTypeIn = NULL;   
+	this->streamIndex = 0;
 
+	this->rtStart = 0;
+	MFFrameRateToAverageTimePerFrame(VIDEO_FPS, 1, &this->rtDuration);
 
+	hr = MFCreateSinkWriterFromURL(L"output.wmv", NULL, NULL, &pSinkWriter);
 
+	// Set the output media type.
+	if (SUCCEEDED(hr))
+	{
+		hr = MFCreateMediaType(&pMediaTypeOut);   
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = pMediaTypeOut->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);	 
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = pMediaTypeOut->SetGUID(MF_MT_SUBTYPE, VIDEO_ENCODING_FORMAT);   
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = pMediaTypeOut->SetUINT32(MF_MT_AVG_BITRATE, VIDEO_BIT_RATE);   
+	}
 
+	if (SUCCEEDED(hr))
+	{
+		hr = pMediaTypeOut->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive);   
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = MFSetAttributeSize(pMediaTypeOut, MF_MT_FRAME_SIZE, VIDEO_WIDTH, VIDEO_HEIGHT);   
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = MFSetAttributeRatio(pMediaTypeOut, MF_MT_FRAME_RATE, VIDEO_FPS, 1);   
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = MFSetAttributeRatio(pMediaTypeOut, MF_MT_PIXEL_ASPECT_RATIO, 1, 1);   
+	}
+
+	if (SUCCEEDED(hr))
+	{
+		hr = pSinkWriter->AddStream(pMediaTypeOut, &streamIndex);   
+	}
+
+	// Set the input media type.
+	if (SUCCEEDED(hr))
+	{
+		hr = MFCreateMediaType(&pMediaTypeIn);   
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = pMediaTypeIn->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);   
+	}
+
+	if (SUCCEEDED(hr))
+	{
+		hr = pMediaTypeIn->SetGUID(MF_MT_SUBTYPE, VIDEO_INPUT_FORMAT);	 
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = pMediaTypeIn->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive);   
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = MFSetAttributeSize(pMediaTypeIn, MF_MT_FRAME_SIZE, VIDEO_WIDTH, VIDEO_HEIGHT);   
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = MFSetAttributeRatio(pMediaTypeIn, MF_MT_FRAME_RATE, VIDEO_FPS, 1);   
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = MFSetAttributeRatio(pMediaTypeIn, MF_MT_PIXEL_ASPECT_RATIO, 1, 1);   
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = pSinkWriter->SetInputMediaType(streamIndex, pMediaTypeIn, NULL);   
+	}
+	
+	// Tell the sink writer to start accepting data.
+	if (SUCCEEDED(hr))
+	{
+		hr = pSinkWriter->BeginWriting();
+	}
+
+	// Return the pointer to the caller.
+	if (SUCCEEDED(hr))
+	{
+		/**ppWriter = pSinkWriter;
+		(*ppWriter)->AddRef();
+		*pStreamIndex = streamIndex;*/
+	}
+	
+	//SafeRelease(&pSinkWriter);
+	SafeRelease(&pMediaTypeOut);
+	SafeRelease(&pMediaTypeIn);
+	return;
 }
 
 MfVideoOutFile::~MfVideoOutFile()
 {
+	if(this->pSinkWriter != NULL)
+	{
+		HRESULT hr = this->pSinkWriter->Finalize();
+	}
+	SafeRelease(&pSinkWriter);
+
 	MFShutdown();
 
 	CoUninitialize();
@@ -28,7 +153,74 @@ MfVideoOutFile::~MfVideoOutFile()
 
 void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height)
 {
+	IMFSample *pSample = NULL;
+	IMFMediaBuffer *pBuffer = NULL;
 
+	const LONG cbWidth = 3 * VIDEO_WIDTH;
+	const DWORD cbBuffer = cbWidth * VIDEO_HEIGHT;
+
+	BYTE *pData = NULL;
+
+	// Create a new memory buffer.
+	HRESULT hr = MFCreateMemoryBuffer(cbBuffer, &pBuffer);
+
+	// Lock the buffer and copy the video frame to the buffer.
+	if (SUCCEEDED(hr))
+	{
+		hr = pBuffer->Lock(&pData, NULL, NULL);
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = MFCopyImage(
+			pData,					  // Destination buffer.
+			cbWidth,					// Destination stride.
+			(BYTE*)imgIn,				// First row in source image.
+			cbWidth,					// Source stride.
+			cbWidth,					// Image width in bytes.
+			VIDEO_HEIGHT				// Image height in pixels.
+			);
+	}
+	if (pBuffer)
+	{
+		pBuffer->Unlock();
+	}
+
+	// Set the data length of the buffer.
+	if (SUCCEEDED(hr))
+	{
+		hr = pBuffer->SetCurrentLength(cbBuffer);
+	}
+
+	// Create a media sample and add the buffer to the sample.
+	if (SUCCEEDED(hr))
+	{
+		hr = MFCreateSample(&pSample);
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = pSample->AddBuffer(pBuffer);
+	}
+
+	// Set the time stamp and the duration.
+	if (SUCCEEDED(hr))
+	{
+		hr = pSample->SetSampleTime(rtStart);
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = pSample->SetSampleDuration(rtDuration);
+	}
+
+	// Send the sample to the Sink Writer.
+	if (SUCCEEDED(hr) && this->pSinkWriter != NULL)
+	{
+		hr = this->pSinkWriter->WriteSample(streamIndex, pSample);
+	}
+
+	this->rtStart += this->rtDuration;
+
+	SafeRelease(&pSample);
+	SafeRelease(&pBuffer);
 }
 
 void MfVideoOutFile::Stop()
@@ -53,6 +245,7 @@ void MfVideoOutFile::SetOutputPxFmt(const char *fmt)
 
 void MfVideoOutFile::Run()
 {
+
 
 }
 

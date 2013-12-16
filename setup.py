@@ -13,7 +13,7 @@
 from distutils.core import Extension, setup
 import os
 
-debug = 0
+debug = 1
 
 if os.name == "nt":
     if debug:
@@ -23,8 +23,8 @@ if os.name == "nt":
         c_args=[]
         l_args=["/MANIFEST"]
     
-    videolive = Extension("videolive", ["pixfmt.cpp", "libvideolive.cpp", "videoout.cpp", "videoin.cpp", "mfvideoin.cpp", "namedpipeout.cpp",
-											"videooutfile.cpp", "mfvideooutfile.cpp"],
+    videolive = Extension("videolive", ["mfvideooutfile.cpp", "pixfmt.cpp", "libvideolive.cpp", "videoout.cpp", "videoin.cpp", "mfvideoin.cpp", "namedpipeout.cpp",
+											"videooutfile.cpp"],
 						define_macros=[('_'+os.name.upper(), None)],
                           library_dirs=['C:\Dev\Lib\libjpeg-turbo-win\lib', "C:\Dev\Lib\pthreads\pthreads.2"],
                         include_dirs=['C:\Dev\Lib\libjpeg-turbo-win\include', "C:\Dev\Lib\pthreads\pthreads.2"],

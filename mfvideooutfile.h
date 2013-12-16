@@ -4,6 +4,8 @@
 
 #include <vector>
 #include <string>
+#include <Mfidl.h>
+#include <Mfreadwrite.h>
 #include "base.h"
 
 class MfVideoOutFile : public Base_Video_Out
@@ -20,6 +22,12 @@ public:
 	virtual void SetOutputPxFmt(const char *fmt);
 
 	void Run();
+
+protected:
+	IMFSinkWriter   *pSinkWriter;
+	DWORD		   streamIndex;	 
+	LONGLONG rtStart;
+	UINT64 rtDuration;
 
 };
 
