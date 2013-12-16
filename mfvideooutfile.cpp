@@ -182,32 +182,15 @@ void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *p
 	}
 	if (SUCCEEDED(hr))
 	{
-		//unsigned cpyLen = imgLen;
-		//if(cpyLen > cbBuffer) cpyLen = cbBuffer;
-		//memcpy(pData, imgIn, cpyLen);
-		/*hr = MFCopyImage(
-			pData,					  // Destination buffer.
-			cbWidth,					// Destination stride.
-			(BYTE*)imgIn,				// First row in source image.
-			cbWidth,					// Source stride.
-			cbWidth,					// Image width in bytes.
-			VIDEO_HEIGHT				// Image height in pixels.
-			);*/
 		for(int y = 0; y < height; y++)
 		{
-		int x = 0;
-		for(x = 0; x < width; x++)
+		for(int x = 0; x < width; x++)
 		{
-			
 			BYTE *dstPx = &pData[x * BYTES_PER_TUPLE + y * cbWidth];
 			const BYTE *srcPx = (const BYTE *)&imgIn[x * 3 + y * width * 3];
 			dstPx[2] = srcPx[0]; //Red
 			dstPx[1] = srcPx[1]; //Green
 			dstPx[0] = srcPx[2]; //Blue
-			//dstPx[0] = 0xff;
-			//dstPx[1] = 0xff;
-			//dstPx[2] = 0xff;
-			//dstPx[3] = 0xff; //Alpha
 		}
 		}
 
