@@ -213,11 +213,11 @@ void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *p
 	// Set the time stamp and the duration.
 	if (SUCCEEDED(hr))
 	{
-		hr = pSample->SetSampleTime(rtStart);
+		hr = pSample->SetSampleTime(this->rtStart);
 	}
 	if (SUCCEEDED(hr))
 	{
-		hr = pSample->SetSampleDuration(rtDuration);
+		hr = pSample->SetSampleDuration(this->rtDuration);
 	}
 
 	// Send the sample to the Sink Writer.
