@@ -17,6 +17,7 @@
 #include "pixfmt.h"
 #include "videoout.h"
 #include "videoin.h"
+#include "videooutfile.h"
 
 // *********************************************************************
 
@@ -116,13 +117,37 @@ static PyMethodDef Video_out_manager_methods[] = {
 
 static PyTypeObject Video_out_manager_type = {
 	PyObject_HEAD_INIT(NULL)
-			0, "v4l2capture.Video_out_manager", sizeof(Video_out_manager), 0,
+			0, "v4l2capture.Video_out_stream_manager", sizeof(Video_out_manager), 0,
 			(destructor)Video_out_manager_dealloc, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, Py_TPFLAGS_DEFAULT, "Video_out_manager(path)\n\nOpens the video device at "
 			"the given path and returns an object that can capture images. The "
 			"constructor and all methods except close may raise IOError.", 0, 0, 0,
 			0, 0, 0, Video_out_manager_methods, 0, 0, 0, 0, 0, 0, 0,
 			(initproc)Video_out_manager_init
+};
+
+static PyMethodDef Video_out_file_manager_methods[] = {
+	{"open", (PyCFunction)Video_out_file_manager_open, METH_VARARGS,
+			 "open(filename = '\\dev\\video0', pixel_format, width, height)\n\n"
+			 "Open video output."},
+	{"send_frame", (PyCFunction)Video_out_file_manager_Send_frame, METH_VARARGS,
+			 "send_frame(dev = '\\dev\\video0', img, pixel_format, width, height)\n\n"
+			 "Send frame to video stream output."},
+	{"close", (PyCFunction)Video_out_file_manager_close, METH_VARARGS,
+			 "close(dev = '\\dev\\video0')\n\n"
+			 "Close video device. Subsequent calls to other methods will fail."},
+	{NULL}
+};
+
+static PyTypeObject Video_out_file_manager_type = {
+	PyObject_HEAD_INIT(NULL)
+			0, "v4l2capture.Video_out_file_manager", sizeof(Video_out_manager), 0,
+			(destructor)Video_out_file_manager_dealloc, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, Py_TPFLAGS_DEFAULT, "Video_out_manager(path)\n\nOpens the video device at "
+			"the given path and returns an object that can capture images. The "
+			"constructor and all methods except close may raise IOError.", 0, 0, 0,
+			0, 0, 0, Video_out_file_manager_methods, 0, 0, 0, 0, 0, 0, 0,
+			(initproc)Video_out_file_manager_init
 };
 
 // *********************************************************************
@@ -136,12 +161,17 @@ PyMODINIT_FUNC initvideolive(void)
 {
 	Device_manager_type.tp_new = PyType_GenericNew;
 	Video_out_manager_type.tp_new = PyType_GenericNew;
+	Video_out_file_manager_type.tp_new = PyType_GenericNew;
 
 	if(PyType_Ready(&Device_manager_type) < 0)
 		{
 			return;
 		}
 	if(PyType_Ready(&Video_out_manager_type) < 0)
+		{
+			return;
+		}
+	if(PyType_Ready(&Video_out_file_manager_type) < 0)
 		{
 			return;
 		}
@@ -155,7 +185,8 @@ PyMODINIT_FUNC initvideolive(void)
 		}
 
 	Py_INCREF(&Device_manager_type);
-	PyModule_AddObject(module, "Video_in_manager", (PyObject *)&Device_manager_type);
-	PyModule_AddObject(module, "Video_out_manager", (PyObject *)&Video_out_manager_type);
+	PyModule_AddObject(module, "Video_in_stream_manager", (PyObject *)&Device_manager_type);
+	PyModule_AddObject(module, "Video_out_stream_manager", (PyObject *)&Video_out_manager_type);
+	PyModule_AddObject(module, "Video_out_file_manager", (PyObject *)&Video_out_file_manager_type);
 
 }
