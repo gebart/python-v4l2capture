@@ -27,7 +27,7 @@ std::wstring CStringToWString(const char *inStr)
 	return tmpDevName2;
 }
 
-const UINT32 VIDEO_FPS = 25;
+//const UINT32 VIDEO_FPS = 25;
 const UINT32 BYTES_PER_TUPLE = 3;
 
 MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
@@ -100,10 +100,10 @@ void MfVideoOutFile::OpenFile()
 	{
 		hr = MFSetAttributeSize(pMediaTypeOut, MF_MT_FRAME_SIZE, this->outputWidth, this->outputHeight);   
 	}
-	if (SUCCEEDED(hr))
-	{
-		hr = MFSetAttributeRatio(pMediaTypeOut, MF_MT_FRAME_RATE, VIDEO_FPS, 1);   
-	}
+	//if (SUCCEEDED(hr))
+	//{
+	//	hr = MFSetAttributeRatio(pMediaTypeOut, MF_MT_FRAME_RATE, VIDEO_FPS, 1);   
+	//}
 	if (SUCCEEDED(hr))
 	{
 		hr = MFSetAttributeRatio(pMediaTypeOut, MF_MT_PIXEL_ASPECT_RATIO, 1, 1);   
