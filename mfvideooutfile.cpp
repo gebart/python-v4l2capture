@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <mfapi.h>
 #include <Mferror.h>
+#include <comdef.h>
 using namespace std;
 
 template <class T> void SafeRelease(T **ppT)
@@ -14,6 +15,24 @@ template <class T> void SafeRelease(T **ppT)
 		(*ppT)->Release();
 		*ppT = NULL;
 	}
+}
+
+std::string HrCodeToStdString(HRESULT hr)
+{
+	std::string out;
+	_com_error err(hr);
+	LPCTSTR hrErrMsg = err.ErrorMessage();
+	
+#ifdef  UNICODE 
+	size_t errsize = wcstombs(NULL, hrErrMsg, 0);
+	char* tmpStr = new char[errsize + 1];
+	wcstombs(tmpStr, hrErrMsg, errsize + 1 );
+	out = hrErrMsg;
+	delete tmpStr;
+#else
+	out = hrErrMsg;
+#endif
+	return out;
 }
 
 FILETIME GetTimeNow()
@@ -158,7 +177,28 @@ void MfVideoOutFile::OpenFile()
 	if (SUCCEEDED(hr))
 	{
 		hr = pSinkWriter->AddStream(pMediaTypeOut, &streamIndex);   
-		if (!SUCCEEDED(hr)) errMsg = "Set AddStream failed";
+		if (!SUCCEEDED(hr)) errMsg = "AddStream failed";
+	}
+
+	// Get supported types of output
+	IMFTransform *transform = NULL;
+	if (SUCCEEDED(hr))
+	{
+		hr = pSinkWriter->GetServiceForStream(streamIndex, GUID_NULL, IID_IMFTransform, (LPVOID*)&transform);
+		if (!SUCCEEDED(hr))
+		{
+			errMsg = "GetServiceForStream failed: ";
+			std::string hrErrStr = HrCodeToStdString(hr);
+			errMsg += hrErrStr;
+		}
+	}
+
+	if (SUCCEEDED(hr) && transform != NULL)
+	{
+		IMFMediaType *fmtType;
+		hr = transform->GetInputAvailableType(streamIndex, 0, &fmtType);
+		std::cout << SUCCEEDED(hr) << "," << (LONG)fmtType << std::endl;
+		if (!SUCCEEDED(hr)) errMsg = "GetInputAvailableType failed";
 	}
 
 	// Set the input media type.
@@ -202,6 +242,9 @@ void MfVideoOutFile::OpenFile()
 	{
 		hr = pSinkWriter->SetInputMediaType(streamIndex, pMediaTypeIn, NULL);   
 		if (!SUCCEEDED(hr)) errMsg = "SetInputMediaType failed";
+		if(hr == MF_E_INVALIDMEDIATYPE) errMsg.append(": MF_E_INVALIDMEDIATYPE");
+		if(hr == MF_E_INVALIDSTREAMNUMBER) errMsg.append(": MF_E_INVALIDSTREAMNUMBER");
+		if(hr == MF_E_TOPO_CODEC_NOT_FOUND) errMsg.append(": MF_E_TOPO_CODEC_NOT_FOUND");
 	}
 	
 	// Tell the sink writer to start accepting data.
@@ -361,7 +404,7 @@ void MfVideoOutFile::CopyFromBufferToOutFile(int lastFrame)
 	else
 	{
 		duration = this->prevFrameDuration;
-		if(duration == 0) duration = 1e7; //Avoid zero duration frames
+		if(duration == 0) duration = (LONGLONG)1e7; //Avoid zero duration frames
 	}
 
 	if (SUCCEEDED(hr))
