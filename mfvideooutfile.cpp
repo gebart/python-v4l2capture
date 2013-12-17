@@ -18,7 +18,6 @@ template <class T> void SafeRelease(T **ppT)
 
 const UINT32 VIDEO_FPS = 25;
 const GUID   VIDEO_ENCODING_FORMAT = MFVideoFormat_WMV3;
-const GUID   VIDEO_INPUT_FORMAT = MFVideoFormat_RGB24;
 const UINT32 BYTES_PER_TUPLE = 3;
 
 MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
@@ -62,7 +61,8 @@ void MfVideoOutFile::OpenFile()
 	IMFMediaType	*pMediaTypeIn = NULL;
 	MFFrameRateToAverageTimePerFrame(VIDEO_FPS, 1, &this->rtDuration);
 
-	HRESULT hr = MFCreateSinkWriterFromURL(L"output.wmv", NULL, NULL, &pSinkWriter);
+	this->fina = L"output.wmv";
+	HRESULT hr = MFCreateSinkWriterFromURL(this->fina.c_str(), NULL, NULL, &pSinkWriter);
 
 	// Set the output media type.
 	if (SUCCEEDED(hr))
@@ -75,7 +75,8 @@ void MfVideoOutFile::OpenFile()
 	}
 	if (SUCCEEDED(hr))
 	{
-		hr = pMediaTypeOut->SetGUID(MF_MT_SUBTYPE, VIDEO_ENCODING_FORMAT);   
+		if(strcmp(this->pxFmt.c_str(), "BGR24")==0)
+			hr = pMediaTypeOut->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB24); 
 	}
 	if (SUCCEEDED(hr))
 	{
@@ -116,7 +117,8 @@ void MfVideoOutFile::OpenFile()
 
 	if (SUCCEEDED(hr))
 	{
-		hr = pMediaTypeIn->SetGUID(MF_MT_SUBTYPE, VIDEO_INPUT_FORMAT);	 
+		if(strcmp(this->pxFmt.c_str(), "BGR24")==0)
+			hr = pMediaTypeIn->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB24);	 
 	}
 	if (SUCCEEDED(hr))
 	{
@@ -273,6 +275,8 @@ void MfVideoOutFile::SetOutputPxFmt(const char *fmt)
 	{
 		throw std::runtime_error("Set video format before opening video file");
 	}
+	if(strcmp(fmt,"BGR24")!=0)
+		throw std::runtime_error("Only BGR24 is supported");
 	this->pxFmt = fmt;
 }
 

@@ -32,6 +32,7 @@ protected:
 	LONGLONG rtStart;
 	UINT64 rtDuration;
 	std::string pxFmt;
+	std::wstring fina;
 
 	int outputWidth, outputHeight;
 	UINT32 bitRate;

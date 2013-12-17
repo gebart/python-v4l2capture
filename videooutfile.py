@@ -6,7 +6,7 @@ if __name__=="__main__":
 	outManager = videolive.Video_out_file_manager()
 	print outManager
 
-	outManager.open("test.wmv", "RGB24", 640, 480)
+	outManager.open("test.wmv", "BGR24", 640, 480)
 
 	w = 800
 	h = 600
