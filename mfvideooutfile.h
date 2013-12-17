@@ -26,13 +26,15 @@ public:
 
 	void Run();
 
-
 protected:
-	IMFSinkWriter   *pSinkWriter;
-	DWORD		   streamIndex;	 
+	IMFSinkWriter *pSinkWriter;
+	DWORD streamIndex;	 
 	LONGLONG rtStart;
 	UINT64 rtDuration;
 	std::string pxFmt;
+
+	int outputWidth, outputHeight;
+	UINT32 bitRate;
 };
 
 void *MfVideoOut_File_Worker_thread(void *arg);

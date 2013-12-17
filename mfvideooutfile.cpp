@@ -16,14 +16,9 @@ template <class T> void SafeRelease(T **ppT)
 	}
 }
 
-const UINT32 VIDEO_WIDTH = 640;
-const UINT32 VIDEO_HEIGHT = 480;
 const UINT32 VIDEO_FPS = 25;
-const UINT32 VIDEO_BIT_RATE = 800000;
 const GUID   VIDEO_ENCODING_FORMAT = MFVideoFormat_WMV3;
 const GUID   VIDEO_INPUT_FORMAT = MFVideoFormat_RGB24;
-const UINT32 VIDEO_PELS = VIDEO_WIDTH * VIDEO_HEIGHT;
-const UINT32 VIDEO_FRAME_COUNT = 20 * VIDEO_FPS;
 const UINT32 BYTES_PER_TUPLE = 3;
 
 MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
@@ -40,6 +35,10 @@ MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
 	this->streamIndex = 0;
 	this->rtStart = 0;
 	this->pxFmt = "BGR24";
+
+	this->outputWidth = 640;
+	this->outputHeight = 480;
+	this->bitRate = 800000;
 }
 
 MfVideoOutFile::~MfVideoOutFile()
@@ -80,7 +79,7 @@ void MfVideoOutFile::OpenFile()
 	}
 	if (SUCCEEDED(hr))
 	{
-		hr = pMediaTypeOut->SetUINT32(MF_MT_AVG_BITRATE, VIDEO_BIT_RATE);   
+		hr = pMediaTypeOut->SetUINT32(MF_MT_AVG_BITRATE, this->bitRate);
 	}
 
 	if (SUCCEEDED(hr))
@@ -89,7 +88,7 @@ void MfVideoOutFile::OpenFile()
 	}
 	if (SUCCEEDED(hr))
 	{
-		hr = MFSetAttributeSize(pMediaTypeOut, MF_MT_FRAME_SIZE, VIDEO_WIDTH, VIDEO_HEIGHT);   
+		hr = MFSetAttributeSize(pMediaTypeOut, MF_MT_FRAME_SIZE, this->outputWidth, this->outputHeight);   
 	}
 	if (SUCCEEDED(hr))
 	{
@@ -125,7 +124,7 @@ void MfVideoOutFile::OpenFile()
 	}
 	if (SUCCEEDED(hr))
 	{
-		hr = MFSetAttributeSize(pMediaTypeIn, MF_MT_FRAME_SIZE, VIDEO_WIDTH, VIDEO_HEIGHT);   
+		hr = MFSetAttributeSize(pMediaTypeIn, MF_MT_FRAME_SIZE, this->outputWidth, this->outputHeight);
 	}
 	if (SUCCEEDED(hr))
 	{
@@ -166,8 +165,8 @@ void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *p
 	IMFSample *pSample = NULL;
 	IMFMediaBuffer *pBuffer = NULL;
 
-	const LONG cbWidth = BYTES_PER_TUPLE * VIDEO_WIDTH;
-	const DWORD cbBuffer = cbWidth * VIDEO_HEIGHT;
+	const LONG cbWidth = BYTES_PER_TUPLE * this->outputWidth;
+	const DWORD cbBuffer = cbWidth * this->outputHeight;
 
 	if(this->pSinkWriter == NULL)
 		this->OpenFile();
@@ -194,7 +193,7 @@ void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *p
 				this->pxFmt.c_str(),
 				(unsigned char **)&pData,
 				&outBuffLen, 
-				VIDEO_WIDTH, VIDEO_HEIGHT);
+				this->outputWidth, this->outputHeight);
 
 			//std::cout << (long) pData << std::endl;
 		}
@@ -260,12 +259,21 @@ int MfVideoOutFile::WaitForStop()
 
 void MfVideoOutFile::SetOutputSize(int width, int height)
 {
-
+	if(this->pSinkWriter != NULL)
+	{
+		throw std::runtime_error("Set video size before opening video file");
+	}
+	this->outputWidth = width;
+	this->outputHeight = height;
 }
 
 void MfVideoOutFile::SetOutputPxFmt(const char *fmt)
 {
-
+	if(this->pSinkWriter != NULL)
+	{
+		throw std::runtime_error("Set video format before opening video file");
+	}
+	this->pxFmt = fmt;
 }
 
 void MfVideoOutFile::Run()
