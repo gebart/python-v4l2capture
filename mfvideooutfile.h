@@ -25,6 +25,7 @@ public:
 	virtual void SetOutputPxFmt(const char *fmt);
 	virtual void SetFrameRate(UINT32 frameRateIn);
 
+	void MfVideoOutFile::CopyFromBufferToOutFile(int lastFrame = 0);
 	void Run();
 
 protected:
@@ -37,6 +38,10 @@ protected:
 
 	int outputWidth, outputHeight;
 	UINT32 bitRate, forceFrameRateFps;
+	FILETIME startVideoTime;
+	std::vector<class FrameMetaData> outBufferMeta;
+	std::vector<std::string> outBuffer;
+	LONGLONG prevFrameDuration;
 };
 
 void *MfVideoOut_File_Worker_thread(void *arg);

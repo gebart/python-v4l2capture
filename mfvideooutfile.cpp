@@ -16,6 +16,36 @@ template <class T> void SafeRelease(T **ppT)
 	}
 }
 
+FILETIME GetTimeNow()
+{
+	SYSTEMTIME systime;
+	GetSystemTime(&systime);
+	FILETIME time;
+	SystemTimeToFileTime(&systime, &time);
+	return time;
+}
+
+double SubtractTimes(FILETIME first, FILETIME second)
+{
+	LONGLONG diffInTicks =
+		reinterpret_cast<LARGE_INTEGER*>(&first)->QuadPart -
+		reinterpret_cast<LARGE_INTEGER*>(&second)->QuadPart;
+	double diffInSec = diffInTicks / (double)1e7;
+	return diffInSec;
+}
+
+void SetTimeToZero(FILETIME &t)
+{
+	t.dwLowDateTime = 0;
+	t.dwHighDateTime = 0;
+}
+
+bool TimeIsZero(FILETIME &t)
+{
+	if (t.dwLowDateTime != 0) return 0;
+	return t.dwHighDateTime == 0;
+}
+
 std::wstring CStringToWString(const char *inStr)
 {
 	wchar_t *tmpDevName = new wchar_t[strlen(inStr)+1];
@@ -48,13 +78,13 @@ MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
 	this->outputHeight = 480;
 	this->bitRate = 800000;
 	this->fina = CStringToWString(fiName);
-	this->forceFrameRateFps = 25;
+	this->forceFrameRateFps = 0;
+	this->prevFrameDuration = 0;
+	SetTimeToZero(this->startVideoTime);
 }
 
 MfVideoOutFile::~MfVideoOutFile()
 {
-	this->CloseFile();
-
 	MFShutdown();
 
 	CoUninitialize();
@@ -164,6 +194,8 @@ void MfVideoOutFile::OpenFile()
 
 void MfVideoOutFile::CloseFile()
 {
+	this->CopyFromBufferToOutFile(1);
+
 	if(this->pSinkWriter != NULL)
 	{
 		HRESULT hr = this->pSinkWriter->Finalize();
@@ -173,15 +205,68 @@ void MfVideoOutFile::CloseFile()
 
 void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height)
 {
-	
+
+	if(this->pSinkWriter == NULL)
+		this->OpenFile();
+
+	FILETIME timeNow = GetTimeNow();
+	if(TimeIsZero(this->startVideoTime))
+	{
+		this->startVideoTime = timeNow;
+	}
+
+	//Time since video start
+	unsigned long elapseSec = 0;
+	unsigned long elapseUSec = 0;
+	if(this->forceFrameRateFps > 0)
+	{
+		//Fixed frame rate
+		elapseSec = (unsigned long)(this->rtStart / 1e7);
+		elapseUSec = (unsigned long)((this->rtStart - elapseSec * 1e7)/10. + 0.5);
+		this->rtStart += this->rtDuration;
+	}
+	else
+	{
+		//Real time frames
+		double elapse = SubtractTimes(timeNow, this->startVideoTime);
+		elapseSec = (unsigned long)elapse;
+		elapseUSec = (unsigned long)(((elapse - (double)elapseSec) / (double)1e6) + 0.5);
+	}
+
+	//Add frame to output buffer
+	class FrameMetaData tmp;
+	this->outBufferMeta.push_back(tmp);
+	class FrameMetaData &meta = this->outBufferMeta[this->outBufferMeta.size()-1];
+	meta.fmt = pxFmt;
+	meta.width = width;
+	meta.height = height;
+	meta.buffLen = imgLen;
+	meta.tv_sec = elapseSec;
+	meta.tv_usec = elapseUSec;
+	std::string img(imgIn, imgLen);
+	this->outBuffer.push_back(img);
+
+	this->CopyFromBufferToOutFile(0);
+}
+
+void MfVideoOutFile::CopyFromBufferToOutFile(int lastFrame)
+{
+	if(this->outBuffer.size() < 2 && !lastFrame)
+		return;
+	if(this->outBuffer.size() == 0)
+		return;
+
+	std::string &frame = this->outBuffer[0];
+	class FrameMetaData &meta = this->outBufferMeta[0];
+	class FrameMetaData *metaNext = NULL;
+	if(this->outBuffer.size() >= 2)
+		metaNext = &this->outBufferMeta[1];
+
 	IMFSample *pSample = NULL;
 	IMFMediaBuffer *pBuffer = NULL;
 
 	const LONG cbWidth = BYTES_PER_TUPLE * this->outputWidth;
 	const DWORD cbBuffer = cbWidth * this->outputHeight;
-
-	if(this->pSinkWriter == NULL)
-		this->OpenFile();
 
 	BYTE *pData = NULL;
 
@@ -195,13 +280,13 @@ void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *p
 	}
 	if (SUCCEEDED(hr))
 	{
-		if(strcmp(this->pxFmt.c_str(), pxFmt)!=0)
+		if(strcmp(this->pxFmt.c_str(), meta.fmt.c_str())!=0)
 		{
 			//std::cout << (long) pData << std::endl;
 
 			unsigned int outBuffLen = cbBuffer;
-			DecodeAndResizeFrame((const unsigned char *)imgIn, imgLen, pxFmt,
-				width, height,
+			DecodeAndResizeFrame((const unsigned char *)frame.c_str(), frame.size(), meta.fmt.c_str(),
+				meta.width, meta.height,
 				this->pxFmt.c_str(),
 				(unsigned char **)&pData,
 				&outBuffLen, 
@@ -211,9 +296,9 @@ void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *p
 		}
 		else
 		{
-			DWORD cpyLen = imgLen;
+			DWORD cpyLen = frame.size();
 			if(cbBuffer < cpyLen) cpyLen = cbBuffer;
-			memcpy(pData, imgIn, cpyLen);
+			memcpy(pData, frame.c_str(), cpyLen);
 		}
 	}
 	if (pBuffer)
@@ -238,13 +323,26 @@ void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *p
 	}
 
 	// Set the time stamp and the duration.
+	LONGLONG frameTime = (LONGLONG)meta.tv_sec * (LONGLONG)1e7 + (LONGLONG)meta.tv_usec * 10;
+	LONGLONG duration = 0;
+	if(metaNext!=NULL)
+	{
+		LONGLONG frameTimeNext = (LONGLONG)metaNext->tv_sec * (LONGLONG)1e7 + (LONGLONG)metaNext->tv_usec * 10;
+		duration = frameTimeNext - frameTime;
+	}
+	else
+	{
+		duration = this->prevFrameDuration;
+		if(duration == 0) duration = 1e7; //Avoid zero duration frames
+	}
+
 	if (SUCCEEDED(hr))
 	{
-		hr = pSample->SetSampleTime(this->rtStart);
+		hr = pSample->SetSampleTime(frameTime);
 	}
 	if (SUCCEEDED(hr))
 	{
-		hr = pSample->SetSampleDuration(this->rtDuration);
+		hr = pSample->SetSampleDuration(duration);
 	}
 
 	// Send the sample to the Sink Writer.
@@ -253,14 +351,17 @@ void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *p
 		hr = this->pSinkWriter->WriteSample(streamIndex, pSample);
 	}
 
-	this->rtStart += this->rtDuration;
-
 	SafeRelease(&pSample);
 	SafeRelease(&pBuffer);
+
+	this->outBuffer.erase(this->outBuffer.begin());
+	this->outBufferMeta.erase(this->outBufferMeta.begin());
+	this->prevFrameDuration = duration;
 }
 
 void MfVideoOutFile::Stop()
 {
+	this->CloseFile();
 
 }
 
