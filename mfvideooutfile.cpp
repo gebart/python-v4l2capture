@@ -27,7 +27,6 @@ std::wstring CStringToWString(const char *inStr)
 	return tmpDevName2;
 }
 
-//const UINT32 VIDEO_FPS = 25;
 const UINT32 BYTES_PER_TUPLE = 3;
 
 MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
@@ -49,6 +48,7 @@ MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
 	this->outputHeight = 480;
 	this->bitRate = 800000;
 	this->fina = CStringToWString(fiName);
+	this->forceFrameRateFps = 25;
 }
 
 MfVideoOutFile::~MfVideoOutFile()
@@ -70,7 +70,9 @@ void MfVideoOutFile::OpenFile()
 	this->rtStart = 0;
 	IMFMediaType	*pMediaTypeOut = NULL;   
 	IMFMediaType	*pMediaTypeIn = NULL;
-	MFFrameRateToAverageTimePerFrame(VIDEO_FPS, 1, &this->rtDuration);
+	this->rtDuration = 1;
+	if(this->forceFrameRateFps > 0)
+		MFFrameRateToAverageTimePerFrame(this->forceFrameRateFps, 1, &this->rtDuration);
 
 	HRESULT hr = MFCreateSinkWriterFromURL(this->fina.c_str(), NULL, NULL, &pSinkWriter);
 
@@ -100,10 +102,10 @@ void MfVideoOutFile::OpenFile()
 	{
 		hr = MFSetAttributeSize(pMediaTypeOut, MF_MT_FRAME_SIZE, this->outputWidth, this->outputHeight);   
 	}
-	//if (SUCCEEDED(hr))
-	//{
-	//	hr = MFSetAttributeRatio(pMediaTypeOut, MF_MT_FRAME_RATE, VIDEO_FPS, 1);   
-	//}
+	if (SUCCEEDED(hr) && this->forceFrameRateFps > 0)
+	{
+		hr = MFSetAttributeRatio(pMediaTypeOut, MF_MT_FRAME_RATE, this->forceFrameRateFps, 1);   
+	}
 	if (SUCCEEDED(hr))
 	{
 		hr = MFSetAttributeRatio(pMediaTypeOut, MF_MT_PIXEL_ASPECT_RATIO, 1, 1);   
@@ -136,9 +138,9 @@ void MfVideoOutFile::OpenFile()
 	{
 		hr = MFSetAttributeSize(pMediaTypeIn, MF_MT_FRAME_SIZE, this->outputWidth, this->outputHeight);
 	}
-	if (SUCCEEDED(hr))
+	if (SUCCEEDED(hr) && this->forceFrameRateFps > 0)
 	{
-		hr = MFSetAttributeRatio(pMediaTypeIn, MF_MT_FRAME_RATE, VIDEO_FPS, 1);   
+		hr = MFSetAttributeRatio(pMediaTypeIn, MF_MT_FRAME_RATE, this->forceFrameRateFps, 1);   
 	}
 	if (SUCCEEDED(hr))
 	{
@@ -286,6 +288,15 @@ void MfVideoOutFile::SetOutputPxFmt(const char *fmt)
 	if(strcmp(fmt,"BGR24")!=0)
 		throw std::runtime_error("Only BGR24 is supported");
 	this->pxFmt = fmt;
+}
+
+void MfVideoOutFile::SetFrameRate(UINT32 frameRateIn)
+{
+	if(this->pSinkWriter != NULL)
+	{
+		throw std::runtime_error("Set video parameters before opening video file");
+	}
+	this->forceFrameRateFps = frameRateIn;
 }
 
 void MfVideoOutFile::Run()

@@ -23,6 +23,7 @@ public:
 
 	virtual void SetOutputSize(int width, int height);
 	virtual void SetOutputPxFmt(const char *fmt);
+	virtual void SetFrameRate(UINT32 frameRateIn);
 
 	void Run();
 
@@ -35,7 +36,7 @@ protected:
 	std::wstring fina;
 
 	int outputWidth, outputHeight;
-	UINT32 bitRate;
+	UINT32 bitRate, forceFrameRateFps;
 };
 
 void *MfVideoOut_File_Worker_thread(void *arg);
