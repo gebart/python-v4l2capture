@@ -18,6 +18,7 @@ template <class T> void SafeRelease(T **ppT)
 
 const UINT32 VIDEO_FPS = 25;
 const GUID   VIDEO_ENCODING_FORMAT = MFVideoFormat_WMV3;
+const GUID   VIDEO_INPUT_FORMAT = MFVideoFormat_RGB24;
 const UINT32 BYTES_PER_TUPLE = 3;
 
 MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
@@ -75,8 +76,7 @@ void MfVideoOutFile::OpenFile()
 	}
 	if (SUCCEEDED(hr))
 	{
-		if(strcmp(this->pxFmt.c_str(), "BGR24")==0)
-			hr = pMediaTypeOut->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB24); 
+		hr = pMediaTypeOut->SetGUID(MF_MT_SUBTYPE, VIDEO_ENCODING_FORMAT);   
 	}
 	if (SUCCEEDED(hr))
 	{
@@ -117,8 +117,7 @@ void MfVideoOutFile::OpenFile()
 
 	if (SUCCEEDED(hr))
 	{
-		if(strcmp(this->pxFmt.c_str(), "BGR24")==0)
-			hr = pMediaTypeIn->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB24);	 
+		hr = pMediaTypeIn->SetGUID(MF_MT_SUBTYPE, VIDEO_INPUT_FORMAT);	 
 	}
 	if (SUCCEEDED(hr))
 	{
