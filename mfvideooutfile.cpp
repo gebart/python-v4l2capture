@@ -16,9 +16,18 @@ template <class T> void SafeRelease(T **ppT)
 	}
 }
 
+std::wstring CStringToWString(const char *inStr)
+{
+	wchar_t *tmpDevName = new wchar_t[strlen(inStr)+1];
+	size_t returnValue;
+	
+	mbstowcs_s(&returnValue, tmpDevName, strlen(inStr)+1, inStr, strlen(inStr)+1);
+	std::wstring tmpDevName2(tmpDevName);
+	delete [] tmpDevName;
+	return tmpDevName2;
+}
+
 const UINT32 VIDEO_FPS = 25;
-const GUID   VIDEO_ENCODING_FORMAT = MFVideoFormat_WMV3;
-const GUID   VIDEO_INPUT_FORMAT = MFVideoFormat_RGB24;
 const UINT32 BYTES_PER_TUPLE = 3;
 
 MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
@@ -39,6 +48,7 @@ MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
 	this->outputWidth = 640;
 	this->outputHeight = 480;
 	this->bitRate = 800000;
+	this->fina = CStringToWString(fiName);
 }
 
 MfVideoOutFile::~MfVideoOutFile()
@@ -62,7 +72,6 @@ void MfVideoOutFile::OpenFile()
 	IMFMediaType	*pMediaTypeIn = NULL;
 	MFFrameRateToAverageTimePerFrame(VIDEO_FPS, 1, &this->rtDuration);
 
-	this->fina = L"output.wmv";
 	HRESULT hr = MFCreateSinkWriterFromURL(this->fina.c_str(), NULL, NULL, &pSinkWriter);
 
 	// Set the output media type.
@@ -76,7 +85,7 @@ void MfVideoOutFile::OpenFile()
 	}
 	if (SUCCEEDED(hr))
 	{
-		hr = pMediaTypeOut->SetGUID(MF_MT_SUBTYPE, VIDEO_ENCODING_FORMAT);   
+		hr = pMediaTypeOut->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_WMV3);
 	}
 	if (SUCCEEDED(hr))
 	{
@@ -117,7 +126,7 @@ void MfVideoOutFile::OpenFile()
 
 	if (SUCCEEDED(hr))
 	{
-		hr = pMediaTypeIn->SetGUID(MF_MT_SUBTYPE, VIDEO_INPUT_FORMAT);	 
+		hr = pMediaTypeIn->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB24);	 
 	}
 	if (SUCCEEDED(hr))
 	{

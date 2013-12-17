@@ -57,7 +57,7 @@ PyObject *Device_manager_open(Device_manager *self, PyObject *args)
 	#ifdef _NT
 	wchar_t *tmpDevName = new wchar_t[strlen(devarg)+1];
 	size_t returnValue;
-	//returnValue = mbstowcs(tmpDevName, devarg, strlen(devarg)+1);
+	
 	mbstowcs_s(&returnValue, tmpDevName, strlen(devarg)+1, devarg, strlen(devarg)+1);
 	std::wstring tmpDevName2(tmpDevName);
 	delete [] tmpDevName;
