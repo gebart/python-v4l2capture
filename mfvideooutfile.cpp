@@ -92,6 +92,7 @@ MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
 	this->streamIndex = 0;
 	this->rtStart = 0;
 	this->pxFmt = "BGR24";
+	this->videoCodec = "WMV3";
 
 	this->outputWidth = 640;
 	this->outputHeight = 480;
@@ -143,8 +144,10 @@ void MfVideoOutFile::OpenFile()
 	}
 	if (SUCCEEDED(hr))
 	{
-		//hr = pMediaTypeOut->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_WMV3);
-		hr = pMediaTypeOut->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_H264);
+		if(strcmp(this->videoCodec.c_str(), "WMV3")==0)
+			hr = pMediaTypeOut->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_WMV3);
+		if(strcmp(this->videoCodec.c_str(), "H264")==0)
+			hr = pMediaTypeOut->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_H264);
 		if (!SUCCEEDED(hr)) errMsg = "SetGUID MF_MT_SUBTYPE failed";
 	}
 	if (SUCCEEDED(hr))
@@ -163,7 +166,7 @@ void MfVideoOutFile::OpenFile()
 		hr = MFSetAttributeSize(pMediaTypeOut, MF_MT_FRAME_SIZE, this->outputWidth, this->outputHeight);   
 		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_FRAME_SIZE failed";
 	}
-	if (SUCCEEDED(hr) && this->forceFrameRateFps > 0)
+	if (SUCCEEDED(hr))
 	{
 		hr = MFSetAttributeRatio(pMediaTypeOut, MF_MT_FRAME_RATE, this->forceFrameRateFps, 1);   
 		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_FRAME_RATE failed";
@@ -181,7 +184,7 @@ void MfVideoOutFile::OpenFile()
 	}
 
 	// Get supported types of output
-	IMFTransform *transform = NULL;
+	/*IMFTransform *transform = NULL;
 	if (SUCCEEDED(hr))
 	{
 		hr = pSinkWriter->GetServiceForStream(streamIndex, GUID_NULL, IID_IMFTransform, (LPVOID*)&transform);
@@ -199,7 +202,7 @@ void MfVideoOutFile::OpenFile()
 		hr = transform->GetInputAvailableType(streamIndex, 0, &fmtType);
 		std::cout << SUCCEEDED(hr) << "," << (LONG)fmtType << std::endl;
 		if (!SUCCEEDED(hr)) errMsg = "GetInputAvailableType failed";
-	}
+	}*/
 
 	// Set the input media type.
 	if (SUCCEEDED(hr))
@@ -215,7 +218,10 @@ void MfVideoOutFile::OpenFile()
 
 	if (SUCCEEDED(hr))
 	{
-		hr = pMediaTypeIn->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB24);	 
+		if(strcmp(this->pxFmt.c_str(), "BGR24")==0)
+			hr = pMediaTypeIn->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB24);	 
+		if(strcmp(this->pxFmt.c_str(), "YUY2")==0) //Supported by H264
+			hr = pMediaTypeIn->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_YUY2);	  
 		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_SUBTYPE failed";
 	}
 	if (SUCCEEDED(hr))
@@ -228,7 +234,7 @@ void MfVideoOutFile::OpenFile()
 		hr = MFSetAttributeSize(pMediaTypeIn, MF_MT_FRAME_SIZE, this->outputWidth, this->outputHeight);
 		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_FRAME_SIZE failed";
 	}
-	if (SUCCEEDED(hr) && this->forceFrameRateFps > 0)
+	if (SUCCEEDED(hr))
 	{
 		hr = MFSetAttributeRatio(pMediaTypeIn, MF_MT_FRAME_RATE, this->forceFrameRateFps, 1);   
 		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_FRAME_RATE failed";
@@ -469,6 +475,18 @@ void MfVideoOutFile::SetFrameRate(UINT32 frameRateIn)
 		throw std::runtime_error("Set video parameters before opening video file");
 	}
 	this->forceFrameRateFps = frameRateIn;
+}
+
+void MfVideoOutFile::SetVideoCodec(const char *codec, UINT32 bitrateIn)
+{
+	if(this->pSinkWriter != NULL)
+	{
+		throw std::runtime_error("Set video parameters before opening video file");
+	}
+	if(codec!=NULL)
+		this->videoCodec = codec;
+	if(bitrateIn > 0)
+		this->bitRate = bitrateIn;
 }
 
 void MfVideoOutFile::Run()

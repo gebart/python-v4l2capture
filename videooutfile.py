@@ -13,7 +13,7 @@ if __name__=="__main__":
 	h = lena.shape[0]
 
 	outManager.open("test.wmv", "BGR24", 640, 480)
-	outManager.set_frame_rate("test.wmv", 5)
+	outManager.set_frame_rate("test.wmv", 10)
 	imgLen = w * h * 3
 	#img = np.ones(shape=(imgLen,), dtype=np.uint8) * 0
 	#for i in range(imgLen):

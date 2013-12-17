@@ -138,7 +138,7 @@ static PyMethodDef Video_out_file_manager_methods[] = {
 			 "Close video device. Subsequent calls to other methods will fail."},
 	{"set_frame_rate", (PyCFunction)Video_out_file_manager_Set_Frame_Rate, METH_VARARGS,
 			 "set_frame_rate(filename = 'out.wmv', frame_rate)\n\n"
-			 "Set output frame rate. Use frame rate of 0 for real time frame processing."},
+			 "Set output frame rate."},
 	{NULL}
 };
 
