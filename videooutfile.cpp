@@ -44,18 +44,26 @@ PyObject *Video_out_file_manager_open(Video_out_file_manager *self, PyObject *ar
 
 	if(!PyArg_ParseTuple(args, "ssii", &devarg, &pxFmtIn, &widthIn, &heightIn))
 	{
-		std::cout << "err" << std::endl;
 		PyErr_Format(PyExc_RuntimeError, "Incorrect arguments to function.");
 		Py_RETURN_NONE;
 	}
 
 	//Create worker thread
 	pthread_t thread;
+	MfVideoOutFile *threadArgs = NULL;
 	#ifdef _POSIX
 	//TODO
 	#endif
 	#ifdef _NT
-	MfVideoOutFile *threadArgs = new MfVideoOutFile(devarg);
+	try
+	{
+		threadArgs = new MfVideoOutFile(devarg);
+	}
+	catch(std::exception &err)
+	{
+		PyErr_Format(PyExc_RuntimeError, err.what());
+		Py_RETURN_NONE;
+	}
 	#endif
 
 	#ifdef _NT //TODO Remove ifdef when POSIX approah is established
@@ -112,7 +120,15 @@ PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObje
 
 	if(it != self->threads->end())
 	{
-		it->second->SendFrame(imgIn, imgLen, pxFmtIn, widthIn, heightIn);
+		try
+		{
+			it->second->SendFrame(imgIn, imgLen, pxFmtIn, widthIn, heightIn);
+		}
+		catch (std::exception &err)
+		{
+			PyErr_Format(PyExc_RuntimeError, err.what());
+			Py_RETURN_NONE;
+		}
 	}
 	else
 	{

@@ -101,94 +101,123 @@ void MfVideoOutFile::OpenFile()
 	IMFMediaType	*pMediaTypeOut = NULL;   
 	IMFMediaType	*pMediaTypeIn = NULL;
 	this->rtDuration = 1;
+	std::string errMsg;
 	if(this->forceFrameRateFps > 0)
 		MFFrameRateToAverageTimePerFrame(this->forceFrameRateFps, 1, &this->rtDuration);
 
 	HRESULT hr = MFCreateSinkWriterFromURL(this->fina.c_str(), NULL, NULL, &pSinkWriter);
+	if (!SUCCEEDED(hr))
+	{
+		errMsg = "MFCreateSinkWriterFromURL failed";
+	}
 
 	// Set the output media type.
 	if (SUCCEEDED(hr))
 	{
-		hr = MFCreateMediaType(&pMediaTypeOut);  
+		hr = MFCreateMediaType(&pMediaTypeOut);
+		if (!SUCCEEDED(hr)) errMsg = "MFCreateMediaType failed";
 	}
 	if (SUCCEEDED(hr))
 	{
 		hr = pMediaTypeOut->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);	 
+		if (!SUCCEEDED(hr)) errMsg = "SetGUID MF_MT_MAJOR_TYPE failed";
 	}
 	if (SUCCEEDED(hr))
 	{
-		hr = pMediaTypeOut->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_WMV3);
+		//hr = pMediaTypeOut->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_WMV3);
+		hr = pMediaTypeOut->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_H264);
+		if (!SUCCEEDED(hr)) errMsg = "SetGUID MF_MT_SUBTYPE failed";
 	}
 	if (SUCCEEDED(hr))
 	{
 		hr = pMediaTypeOut->SetUINT32(MF_MT_AVG_BITRATE, this->bitRate);
+		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_AVG_BITRATE failed";
 	}
 
 	if (SUCCEEDED(hr))
 	{
 		hr = pMediaTypeOut->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive);   
+		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_INTERLACE_MODE failed";
 	}
 	if (SUCCEEDED(hr))
 	{
 		hr = MFSetAttributeSize(pMediaTypeOut, MF_MT_FRAME_SIZE, this->outputWidth, this->outputHeight);   
+		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_FRAME_SIZE failed";
 	}
 	if (SUCCEEDED(hr) && this->forceFrameRateFps > 0)
 	{
 		hr = MFSetAttributeRatio(pMediaTypeOut, MF_MT_FRAME_RATE, this->forceFrameRateFps, 1);   
+		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_FRAME_RATE failed";
 	}
 	if (SUCCEEDED(hr))
 	{
 		hr = MFSetAttributeRatio(pMediaTypeOut, MF_MT_PIXEL_ASPECT_RATIO, 1, 1);   
+		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_PIXEL_ASPECT_RATIO failed";
 	}
 
 	if (SUCCEEDED(hr))
 	{
 		hr = pSinkWriter->AddStream(pMediaTypeOut, &streamIndex);   
+		if (!SUCCEEDED(hr)) errMsg = "Set AddStream failed";
 	}
 
 	// Set the input media type.
 	if (SUCCEEDED(hr))
 	{
 		hr = MFCreateMediaType(&pMediaTypeIn);   
+		if (!SUCCEEDED(hr)) errMsg = "Set MFCreateMediaType failed";
 	}
 	if (SUCCEEDED(hr))
 	{
 		hr = pMediaTypeIn->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);   
+		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_MAJOR_TYPE failed";
 	}
 
 	if (SUCCEEDED(hr))
 	{
 		hr = pMediaTypeIn->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB24);	 
+		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_SUBTYPE failed";
 	}
 	if (SUCCEEDED(hr))
 	{
 		hr = pMediaTypeIn->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive);   
+		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_INTERLACE_MODE failed";
 	}
 	if (SUCCEEDED(hr))
 	{
 		hr = MFSetAttributeSize(pMediaTypeIn, MF_MT_FRAME_SIZE, this->outputWidth, this->outputHeight);
+		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_FRAME_SIZE failed";
 	}
 	if (SUCCEEDED(hr) && this->forceFrameRateFps > 0)
 	{
 		hr = MFSetAttributeRatio(pMediaTypeIn, MF_MT_FRAME_RATE, this->forceFrameRateFps, 1);   
+		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_FRAME_RATE failed";
 	}
 	if (SUCCEEDED(hr))
 	{
 		hr = MFSetAttributeRatio(pMediaTypeIn, MF_MT_PIXEL_ASPECT_RATIO, 1, 1);   
+		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_PIXEL_ASPECT_RATIO failed";
 	}
 	if (SUCCEEDED(hr))
 	{
 		hr = pSinkWriter->SetInputMediaType(streamIndex, pMediaTypeIn, NULL);   
+		if (!SUCCEEDED(hr)) errMsg = "SetInputMediaType failed";
 	}
 	
 	// Tell the sink writer to start accepting data.
 	if (SUCCEEDED(hr))
 	{
 		hr = pSinkWriter->BeginWriting();
+		if (!SUCCEEDED(hr)) errMsg = "BeginWriting failed";
 	}
 
 	SafeRelease(&pMediaTypeOut);
 	SafeRelease(&pMediaTypeIn);
+
+	if(errMsg.size() > 0)
+	{
+		throw runtime_error(errMsg);
+	}
 	return;
 }
 
@@ -205,7 +234,6 @@ void MfVideoOutFile::CloseFile()
 
 void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height)
 {
-
 	if(this->pSinkWriter == NULL)
 		this->OpenFile();
 
