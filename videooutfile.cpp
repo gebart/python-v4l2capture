@@ -34,7 +34,7 @@ void Video_out_file_manager_dealloc(Video_out_file_manager *self)
 
 PyObject *Video_out_file_manager_open(Video_out_file_manager *self, PyObject *args)
 {
-	std::cout << "Video_out_manager_open" << std::endl;
+	std::cout << "Video_out_file_manager_open" << std::endl;
 
 	//Process arguments
 	const char *devarg = NULL;
@@ -144,3 +144,35 @@ PyObject *Video_out_file_manager_close(Video_out_file_manager *self, PyObject *a
 	Py_RETURN_NONE;
 }
 
+PyObject *Video_out_file_manager_Set_Frame_Rate(Video_out_file_manager *self, PyObject *args)
+{
+	//Process arguments
+	const char *devarg = NULL;
+	int frameRate = 0;
+
+	if(PyObject_Length(args) < 2)
+	{
+		PyErr_Format(PyExc_RuntimeError, "Too few arguments.");
+		Py_RETURN_NONE;
+	}
+
+	PyObject *pydev = PyTuple_GetItem(args, 0);
+	devarg = PyString_AsString(pydev);
+
+	PyObject *pyFrameRate = PyTuple_GetItem(args, 1);
+	frameRate = PyInt_AsLong(pyFrameRate);
+
+	std::map<std::string, class Base_Video_Out *>::iterator it = self->threads->find(devarg);
+
+	if(it != self->threads->end())
+	{
+		it->second->SetFrameRate(frameRate);
+	}
+	else
+	{
+		PyErr_Format(PyExc_RuntimeError, "Device not found.");
+		Py_RETURN_NONE;
+	}
+
+	Py_RETURN_NONE;
+}

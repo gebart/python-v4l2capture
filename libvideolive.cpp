@@ -128,14 +128,17 @@ static PyTypeObject Video_out_manager_type = {
 
 static PyMethodDef Video_out_file_manager_methods[] = {
 	{"open", (PyCFunction)Video_out_file_manager_open, METH_VARARGS,
-			 "open(filename = '\\dev\\video0', pixel_format, width, height)\n\n"
+			 "open(filename = 'out.wmv', pixel_format, width, height)\n\n"
 			 "Open video output."},
 	{"send_frame", (PyCFunction)Video_out_file_manager_Send_frame, METH_VARARGS,
-			 "send_frame(dev = '\\dev\\video0', img, pixel_format, width, height)\n\n"
+			 "send_frame(filename = 'out.wmv', img, pixel_format, width, height)\n\n"
 			 "Send frame to video stream output."},
 	{"close", (PyCFunction)Video_out_file_manager_close, METH_VARARGS,
-			 "close(dev = '\\dev\\video0')\n\n"
+			 "close(filename = 'out.wmv')\n\n"
 			 "Close video device. Subsequent calls to other methods will fail."},
+	{"set_frame_rate", (PyCFunction)Video_out_file_manager_Set_Frame_Rate, METH_VARARGS,
+			 "set_frame_rate(filename = 'out.wmv', frame_rate)\n\n"
+			 "Set output frame rate. Use frame rate of 0 for real time frame processing."},
 	{NULL}
 };
 

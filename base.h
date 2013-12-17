@@ -75,6 +75,7 @@ public:
 	virtual int WaitForStop() {return 1;};
 	virtual void SetOutputSize(int width, int height) {};
 	virtual void SetOutputPxFmt(const char *fmt) {};
+	virtual void SetFrameRate(UINT32 frameRateIn) {};
 
 	void Run() {};
 };
