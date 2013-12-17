@@ -139,6 +139,12 @@ static PyMethodDef Video_out_file_manager_methods[] = {
 	{"set_frame_rate", (PyCFunction)Video_out_file_manager_Set_Frame_Rate, METH_VARARGS,
 			 "set_frame_rate(filename = 'out.wmv', frame_rate)\n\n"
 			 "Set output frame rate."},
+	{"set_video_codec", (PyCFunction)Video_out_file_manager_Set_Video_Codec, METH_VARARGS,
+			 "set_video_codec(filename = 'out.wmv', codec = 'H264', bitrate)\n\n"
+			 "Set output video codec."},
+	{"enable_real_time_frame_rate", (PyCFunction)Video_out_file_manager_Enable_Real_Time_Frame_Rate, METH_VARARGS,
+			 "enable_real_time_frame_rate(filename = 'out.wmv', enable)\n\n"
+			 "Set real time frame encoding."},
 	{NULL}
 };
 

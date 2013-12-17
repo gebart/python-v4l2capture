@@ -76,6 +76,8 @@ public:
 	virtual void SetOutputSize(int width, int height) {};
 	virtual void SetOutputPxFmt(const char *fmt) {};
 	virtual void SetFrameRate(UINT32 frameRateIn) {};
+	virtual void SetVideoCodec(const char *codec, UINT32 bitrate) {};
+	virtual void EnableRealTimeFrameRate(int varEnable) {};
 
 	void Run() {};
 };

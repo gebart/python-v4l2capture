@@ -98,7 +98,7 @@ MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
 	this->outputHeight = 480;
 	this->bitRate = 800000;
 	this->fina = CStringToWString(fiName);
-	this->forceFrameRateFps = 0;
+	this->frameRateFps = 0;
 	this->prevFrameDuration = 0;
 	SetTimeToZero(this->startVideoTime);
 }
@@ -122,8 +122,8 @@ void MfVideoOutFile::OpenFile()
 	IMFMediaType	*pMediaTypeIn = NULL;
 	this->rtDuration = 1;
 	std::string errMsg;
-	if(this->forceFrameRateFps > 0)
-		MFFrameRateToAverageTimePerFrame(this->forceFrameRateFps, 1, &this->rtDuration);
+	if(!this->variableFrameRateEnabled)
+		MFFrameRateToAverageTimePerFrame(this->frameRateFps, 1, &this->rtDuration);
 
 	HRESULT hr = MFCreateSinkWriterFromURL(this->fina.c_str(), NULL, NULL, &pSinkWriter);
 	if (!SUCCEEDED(hr))
@@ -168,7 +168,7 @@ void MfVideoOutFile::OpenFile()
 	}
 	if (SUCCEEDED(hr))
 	{
-		hr = MFSetAttributeRatio(pMediaTypeOut, MF_MT_FRAME_RATE, this->forceFrameRateFps, 1);   
+		hr = MFSetAttributeRatio(pMediaTypeOut, MF_MT_FRAME_RATE, this->frameRateFps, 1);   
 		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_FRAME_RATE failed";
 	}
 	if (SUCCEEDED(hr))
@@ -236,7 +236,7 @@ void MfVideoOutFile::OpenFile()
 	}
 	if (SUCCEEDED(hr))
 	{
-		hr = MFSetAttributeRatio(pMediaTypeIn, MF_MT_FRAME_RATE, this->forceFrameRateFps, 1);   
+		hr = MFSetAttributeRatio(pMediaTypeIn, MF_MT_FRAME_RATE, this->frameRateFps, 1);   
 		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_FRAME_RATE failed";
 	}
 	if (SUCCEEDED(hr))
@@ -295,7 +295,7 @@ void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *p
 	//Time since video start
 	unsigned long elapseSec = 0;
 	unsigned long elapseUSec = 0;
-	if(this->forceFrameRateFps > 0)
+	if(!this->variableFrameRateEnabled)
 	{
 		//Fixed frame rate
 		elapseSec = (unsigned long)(this->rtStart / 1e7);
@@ -474,7 +474,7 @@ void MfVideoOutFile::SetFrameRate(UINT32 frameRateIn)
 	{
 		throw std::runtime_error("Set video parameters before opening video file");
 	}
-	this->forceFrameRateFps = frameRateIn;
+	this->frameRateFps = frameRateIn;
 }
 
 void MfVideoOutFile::SetVideoCodec(const char *codec, UINT32 bitrateIn)
@@ -487,6 +487,15 @@ void MfVideoOutFile::SetVideoCodec(const char *codec, UINT32 bitrateIn)
 		this->videoCodec = codec;
 	if(bitrateIn > 0)
 		this->bitRate = bitrateIn;
+}
+
+void MfVideoOutFile::EnableRealTimeFrameRate(int varEnable)
+{
+	if(this->pSinkWriter != NULL)
+	{
+		throw std::runtime_error("Set video parameters before opening video file");
+	}
+	this->variableFrameRateEnabled = varEnable;
 }
 
 void MfVideoOutFile::Run()

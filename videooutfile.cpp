@@ -192,3 +192,79 @@ PyObject *Video_out_file_manager_Set_Frame_Rate(Video_out_file_manager *self, Py
 
 	Py_RETURN_NONE;
 }
+
+PyObject *Video_out_file_manager_Set_Video_Codec(Video_out_file_manager *self, PyObject *args)
+{
+	//Process arguments
+	const char *devarg = NULL;
+	char *videoCodec = NULL;
+	int bitRate = 0;
+
+	if(PyObject_Length(args) < 2)
+	{
+		PyErr_Format(PyExc_RuntimeError, "Too few arguments.");
+		Py_RETURN_NONE;
+	}
+
+	PyObject *pydev = PyTuple_GetItem(args, 0);
+	devarg = PyString_AsString(pydev);
+
+	PyObject *pyVideoCodec = PyTuple_GetItem(args, 1);
+	if(pyVideoCodec != Py_None)
+		videoCodec = PyString_AsString(pyVideoCodec);
+	else
+		videoCodec = NULL;
+
+	if(PyObject_Length(args) >= 3)
+	{
+		PyObject *pyBitRate = PyTuple_GetItem(args, 2);
+		bitRate = PyInt_AsLong(pyBitRate);
+	}
+
+	std::map<std::string, class Base_Video_Out *>::iterator it = self->threads->find(devarg);
+
+	if(it != self->threads->end())
+	{
+		it->second->SetVideoCodec(videoCodec, bitRate);
+	}
+	else
+	{
+		PyErr_Format(PyExc_RuntimeError, "Device not found.");
+		Py_RETURN_NONE;
+	}
+
+	Py_RETURN_NONE;
+}
+
+PyObject *Video_out_file_manager_Enable_Real_Time_Frame_Rate(Video_out_file_manager *self, PyObject *args)
+{
+	//Process arguments
+	const char *devarg = NULL;
+	int realTimeFrameRate = 0;
+
+	if(PyObject_Length(args) < 2)
+	{
+		PyErr_Format(PyExc_RuntimeError, "Too few arguments.");
+		Py_RETURN_NONE;
+	}
+
+	PyObject *pydev = PyTuple_GetItem(args, 0);
+	devarg = PyString_AsString(pydev);
+
+	PyObject *pyRealTimeFrameRate = PyTuple_GetItem(args, 1);
+	realTimeFrameRate = PyInt_AsLong(pyRealTimeFrameRate);
+
+	std::map<std::string, class Base_Video_Out *>::iterator it = self->threads->find(devarg);
+
+	if(it != self->threads->end())
+	{
+		it->second->EnableRealTimeFrameRate(realTimeFrameRate);
+	}
+	else
+	{
+		PyErr_Format(PyExc_RuntimeError, "Device not found.");
+		Py_RETURN_NONE;
+	}
+
+	Py_RETURN_NONE;
+}

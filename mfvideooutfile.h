@@ -25,6 +25,7 @@ public:
 	virtual void SetOutputPxFmt(const char *fmt);
 	virtual void SetFrameRate(UINT32 frameRateIn);
 	virtual void SetVideoCodec(const char *codec, UINT32 bitrate);
+	virtual void EnableRealTimeFrameRate(int varEnable);
 
 	void MfVideoOutFile::CopyFromBufferToOutFile(int lastFrame = 0);
 	void Run();
@@ -37,9 +38,10 @@ protected:
 	std::string pxFmt;
 	std::string videoCodec;
 	std::wstring fina;
+	int variableFrameRateEnabled;
 
 	int outputWidth, outputHeight;
-	UINT32 bitRate, forceFrameRateFps;
+	UINT32 bitRate, frameRateFps;
 	FILETIME startVideoTime;
 	std::vector<class FrameMetaData> outBufferMeta;
 	std::vector<std::string> outBuffer;
