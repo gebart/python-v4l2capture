@@ -124,10 +124,44 @@ void MfVideoOutFile::OpenFile()
 	if(!this->variableFrameRateEnabled)
 		MFFrameRateToAverageTimePerFrame(this->frameRateFps, 1, &this->rtDuration);
 
-	HRESULT hr = MFCreateSinkWriterFromURL(this->fina.c_str(), NULL, NULL, &pSinkWriter);
-	if (!SUCCEEDED(hr))
+	IMFAttributes *containerAttributes = NULL;
+	HRESULT hr = MFCreateAttributes(&containerAttributes, 0);
+
+	IMFByteStream *pIByteStream = NULL;
+
+	if (SUCCEEDED(hr))
 	{
-		errMsg = "MFCreateSinkWriterFromURL failed";
+		hr = MFCreateFile(MF_ACCESSMODE_READWRITE,
+			MF_OPENMODE_DELETE_IF_EXIST,
+			MF_FILEFLAGS_NONE,
+			this->fina.c_str(),
+			&pIByteStream);
+		if (!SUCCEEDED(hr)) errMsg = "MFCreateFile failed";
+	}
+
+	if(containerAttributes!=NULL)
+	{
+		int len4 = this->fina.size() - 4;
+		if(len4 < 0) len4 = 0;
+		const wchar_t *ext4 = &this->fina.c_str()[len4];
+		if(wcscmp(ext4, L".mp4")==0)
+			containerAttributes->SetGUID(MF_TRANSCODE_CONTAINERTYPE, MFTranscodeContainerType_MPEG4);
+		if(wcscmp(ext4, L".asf")==0)
+			containerAttributes->SetGUID(MF_TRANSCODE_CONTAINERTYPE, MFTranscodeContainerType_ASF);
+		if(wcscmp(ext4, L".wmv")==0)
+			containerAttributes->SetGUID(MF_TRANSCODE_CONTAINERTYPE, MFTranscodeContainerType_ASF);
+		if(wcscmp(ext4, L".mp3")==0)
+			containerAttributes->SetGUID(MF_TRANSCODE_CONTAINERTYPE, MFTranscodeContainerType_MP3);
+#ifdef MFTranscodeContainerType_AVI
+		if(wcscmp(ext4, L".avi")==0)
+			containerAttributes->SetGUID(MF_TRANSCODE_CONTAINERTYPE, MFTranscodeContainerType_AVI);
+#endif
+	}
+
+	if (SUCCEEDED(hr))
+	{
+		hr = MFCreateSinkWriterFromURL(this->fina.c_str(), pIByteStream, containerAttributes, &pSinkWriter);
+		if (!SUCCEEDED(hr)) errMsg = "MFCreateSinkWriterFromURL failed";
 	}
 
 	// Set the output media type.

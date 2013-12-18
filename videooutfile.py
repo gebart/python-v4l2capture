@@ -11,13 +11,13 @@ if __name__=="__main__":
 	print lena.shape
 	w = lena.shape[1]
 	h = lena.shape[0]
-	fina = "test.mp4"
+	fina = "test.wmv"
 
 	realTimeFrames = 0
 
 	outManager.open(fina, 640, 480)
 	print "set_video_codec"
-	outManager.set_video_codec(fina, "WMV3", 800000)
+	outManager.set_video_codec(fina, "H264", 800000)
 	print "set_frame_rate"
 	outManager.set_frame_rate(fina, 25)
 	print "enable_real_time_frames", realTimeFrames
