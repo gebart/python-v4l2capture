@@ -49,11 +49,11 @@ PyObject *Video_out_file_manager_open(Video_out_file_manager *self, PyObject *ar
 
 	//Create worker thread
 	pthread_t thread;
-	MfVideoOutFile *threadArgs = NULL;
 	#ifdef _POSIX
 	//TODO
 	#endif
 	#ifdef _NT
+	MfVideoOutFile *threadArgs = NULL;
 	try
 	{
 		threadArgs = new MfVideoOutFile(devarg);

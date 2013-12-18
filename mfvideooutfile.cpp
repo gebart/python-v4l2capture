@@ -516,7 +516,7 @@ void MfVideoOutFile::SetOutputPxFmt(const char *fmt)
 	this->pxFmt = fmt;
 }
 
-void MfVideoOutFile::SetFrameRate(UINT32 frameRateIn)
+void MfVideoOutFile::SetFrameRate(unsigned int frameRateIn)
 {
 	if(this->pSinkWriter != NULL)
 	{
@@ -525,7 +525,7 @@ void MfVideoOutFile::SetFrameRate(UINT32 frameRateIn)
 	this->frameRateFps = frameRateIn;
 }
 
-void MfVideoOutFile::SetVideoCodec(const char *codec, UINT32 bitrateIn)
+void MfVideoOutFile::SetVideoCodec(const char *codec, unsigned int bitrateIn)
 {
 	if(this->pSinkWriter != NULL)
 	{

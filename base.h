@@ -75,8 +75,8 @@ public:
 	virtual int WaitForStop() {return 1;};
 	virtual void SetOutputSize(int width, int height) {};
 	virtual void SetOutputPxFmt(const char *fmt) {};
-	virtual void SetFrameRate(UINT32 frameRateIn) {};
-	virtual void SetVideoCodec(const char *codec, UINT32 bitrate) {};
+	virtual void SetFrameRate(unsigned int frameRateIn) {};
+	virtual void SetVideoCodec(const char *codec, unsigned int bitrate) {};
 	virtual void EnableRealTimeFrameRate(int varEnable) {};
 
 	void Run() {};
