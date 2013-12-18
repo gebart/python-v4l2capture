@@ -14,8 +14,12 @@ if __name__=="__main__":
 
 	realTimeFrames = 0
 
-	outManager.open("test.wmv", "YV12", 640, 480)
+	outManager.open("test.wmv", 640, 480)
+	print "set_video_codec"
+	outManager.set_video_codec("test.wmv", "H264", 800000)
+	print "set_frame_rate"
 	outManager.set_frame_rate("test.wmv", 25)
+	print "enable_real_time_frames", realTimeFrames
 	outManager.enable_real_time_frame_rate("test.wmv", realTimeFrames)
 
 	imgLen = w * h * 3

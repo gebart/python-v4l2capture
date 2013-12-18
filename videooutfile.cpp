@@ -92,7 +92,7 @@ PyObject *Video_out_file_manager_open(Video_out_file_manager *self, PyObject *ar
 
 PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObject *args)
 {
-	printf("Video_out_manager_Send_frame\n");
+	printf("Video_out_file_manager_Send_frame\n");
 	//dev = '\\dev\\video0', img, pixel_format, width, height
 
 	//Process arguments
@@ -140,6 +140,7 @@ PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObje
 	}
 	else
 	{
+		std::cout << "devarg " << devarg << std::endl;
 		PyErr_Format(PyExc_RuntimeError, "Device not found.");
 		Py_RETURN_NONE;
 	}
