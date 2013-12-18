@@ -229,6 +229,10 @@ int ReadJpegFile(unsigned char * inbuffer,
 	/* This struct contains the JPEG decompression parameters and pointers to
 	 * working space (which is allocated as needed by the JPEG library).
 	 */
+
+	if(inbuffer[0] != 0xFF || inbuffer[1] != 0xD8)
+		return 0;
+
 	struct jpeg_decompress_struct cinfo;
 	struct my_error_mgr jerr;
 	*outBuffer = NULL;
