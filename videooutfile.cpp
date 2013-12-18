@@ -68,8 +68,16 @@ PyObject *Video_out_file_manager_open(Video_out_file_manager *self, PyObject *ar
 
 	#ifdef _NT //TODO Remove ifdef when POSIX approah is established
 	(*self->threads)[devarg] = threadArgs;
-	threadArgs->SetOutputSize(widthIn, heightIn);
-	threadArgs->SetOutputPxFmt(pxFmtIn);
+	try
+	{
+		threadArgs->SetOutputSize(widthIn, heightIn);
+		threadArgs->SetOutputPxFmt(pxFmtIn);
+	}
+	catch(std::exception &err)
+	{
+		PyErr_SetString(PyExc_RuntimeError, err.what());
+		Py_RETURN_NONE;
+	}
 	#endif
 
 	#ifdef _POSIX
@@ -84,7 +92,7 @@ PyObject *Video_out_file_manager_open(Video_out_file_manager *self, PyObject *ar
 
 PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObject *args)
 {
-	//printf("Video_out_manager_Send_frame\n");
+	printf("Video_out_manager_Send_frame\n");
 	//dev = '\\dev\\video0', img, pixel_format, width, height
 
 	//Process arguments
@@ -154,7 +162,16 @@ PyObject *Video_out_file_manager_close(Video_out_file_manager *self, PyObject *a
 
 	if(it != self->threads->end())
 	{
+		try
+		{
 		it->second->Stop();
+		}
+		catch(std::exception &err)
+		{
+			PyErr_Format(PyExc_RuntimeError, err.what());
+			Py_RETURN_NONE;
+		}
+
 	}
 
 	Py_RETURN_NONE;
@@ -182,7 +199,16 @@ PyObject *Video_out_file_manager_Set_Frame_Rate(Video_out_file_manager *self, Py
 
 	if(it != self->threads->end())
 	{
+		try
+		{
 		it->second->SetFrameRate(frameRate);
+		}
+		catch(std::exception &err)
+		{
+			PyErr_Format(PyExc_RuntimeError, err.what());
+			Py_RETURN_NONE;
+		}
+
 	}
 	else
 	{
@@ -225,7 +251,16 @@ PyObject *Video_out_file_manager_Set_Video_Codec(Video_out_file_manager *self, P
 
 	if(it != self->threads->end())
 	{
+		try
+		{
 		it->second->SetVideoCodec(videoCodec, bitRate);
+		}
+		catch(std::exception &err)
+		{
+			PyErr_Format(PyExc_RuntimeError, err.what());
+			Py_RETURN_NONE;
+		}
+
 	}
 	else
 	{
@@ -258,7 +293,16 @@ PyObject *Video_out_file_manager_Enable_Real_Time_Frame_Rate(Video_out_file_mana
 
 	if(it != self->threads->end())
 	{
-		it->second->EnableRealTimeFrameRate(realTimeFrameRate);
+		try
+		{
+			it->second->EnableRealTimeFrameRate(realTimeFrameRate);
+		}
+		catch(std::exception &err)
+		{
+			PyErr_Format(PyExc_RuntimeError, err.what());
+			Py_RETURN_NONE;
+		}
+
 	}
 	else
 	{

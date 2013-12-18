@@ -12,9 +12,11 @@ if __name__=="__main__":
 	w = lena.shape[1]
 	h = lena.shape[0]
 
-	outManager.open("test.wmv", "BGR24", 640, 480)
+	realTimeFrames = 0
+
+	outManager.open("test.wmv", "YV12", 640, 480)
 	outManager.set_frame_rate("test.wmv", 25)
-	outManager.enable_real_time_frame_rate("test.wmv", 1)
+	outManager.enable_real_time_frame_rate("test.wmv", realTimeFrames)
 
 	imgLen = w * h * 3
 	#img = np.ones(shape=(imgLen,), dtype=np.uint8) * 0
@@ -33,5 +35,7 @@ if __name__=="__main__":
 		print "Frame", frNum
 		outManager.send_frame("test.wmv", str(lena.tostring()), "RGB24", w, h)
 
-		time.sleep(frNum / 500.)
-                
+		if realTimeFrames:
+			time.sleep(frNum / 500.)
+		else:
+			time.sleep(0.01)   

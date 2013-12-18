@@ -76,8 +76,6 @@ std::wstring CStringToWString(const char *inStr)
 	return tmpDevName2;
 }
 
-const UINT32 BYTES_PER_TUPLE = 3;
-
 MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
 {
 	HRESULT hr = MFStartup(MF_VERSION);
@@ -91,8 +89,8 @@ MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
 	this->pSinkWriter = NULL;
 	this->streamIndex = 0;
 	this->rtStart = 0;
-	this->pxFmt = "BGR24";
-	this->videoCodec = "WMV3";
+	this->pxFmt = "YV12"; //"BGR24";
+	this->videoCodec = "H264"; //"WMV3";
 
 	this->outputWidth = 640;
 	this->outputHeight = 480;
@@ -100,6 +98,7 @@ MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
 	this->fina = CStringToWString(fiName);
 	this->frameRateFps = 0;
 	this->prevFrameDuration = 0;
+	this->variableFrameRateEnabled = 0;
 	SetTimeToZero(this->startVideoTime);
 }
 
@@ -220,8 +219,10 @@ void MfVideoOutFile::OpenFile()
 	{
 		if(strcmp(this->pxFmt.c_str(), "BGR24")==0)
 			hr = pMediaTypeIn->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB24);	 
-		if(strcmp(this->pxFmt.c_str(), "YUY2")==0) //Supported by H264
-			hr = pMediaTypeIn->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_YUY2);	  
+		if(strcmp(this->pxFmt.c_str(), "I420")==0)
+			hr = pMediaTypeIn->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_I420);	  
+		if(strcmp(this->pxFmt.c_str(), "YV12")==0) //Supported by H264
+			hr = pMediaTypeIn->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_YV12);	  
 		if (!SUCCEEDED(hr)) errMsg = "Set MF_MT_SUBTYPE failed";
 	}
 	if (SUCCEEDED(hr))
@@ -341,9 +342,21 @@ void MfVideoOutFile::CopyFromBufferToOutFile(int lastFrame)
 
 	IMFSample *pSample = NULL;
 	IMFMediaBuffer *pBuffer = NULL;
+	DWORD cbBuffer = 0;
 
-	const LONG cbWidth = BYTES_PER_TUPLE * this->outputWidth;
-	const DWORD cbBuffer = cbWidth * this->outputHeight;
+	if(strcmp(this->pxFmt.c_str(), "BGR24") == 0)
+	{
+		LONG cbWidth = 3 * this->outputWidth;
+		cbBuffer = cbWidth * this->outputHeight;
+	}
+
+	if(strcmp(this->pxFmt.c_str(), "I420") == 0 || strcmp(this->pxFmt.c_str(), "YV12") == 0)
+	{
+		cbBuffer = 1.5 * this->outputHeight * this->outputWidth;
+	}
+
+	if(cbBuffer==0)
+		throw std::runtime_error("Unsupported pixel format");
 
 	BYTE *pData = NULL;
 
@@ -360,7 +373,6 @@ void MfVideoOutFile::CopyFromBufferToOutFile(int lastFrame)
 		if(strcmp(this->pxFmt.c_str(), meta.fmt.c_str())!=0)
 		{
 			//std::cout << (long) pData << std::endl;
-
 			unsigned int outBuffLen = cbBuffer;
 			DecodeAndResizeFrame((const unsigned char *)frame.c_str(), frame.size(), meta.fmt.c_str(),
 				meta.width, meta.height,
@@ -463,8 +475,10 @@ void MfVideoOutFile::SetOutputPxFmt(const char *fmt)
 	{
 		throw std::runtime_error("Set video format before opening video file");
 	}
-	if(strcmp(fmt,"BGR24")!=0)
-		throw std::runtime_error("Only BGR24 is supported");
+	if(strcmp(fmt,"BGR24")!=0 && strcmp(fmt,"I420")!=0 && strcmp(fmt,"YV12")!=0)
+	{
+		throw std::runtime_error("Only BGR24, YV12 and I420 is supported");
+	}
 	this->pxFmt = fmt;
 }
 

@@ -323,7 +323,7 @@ int ReadJpegFile(unsigned char * inbuffer,
 
 // **************************************************************
 
-void ConvertRGBtoYUYVorSimilar(const unsigned char *im, unsigned sizeimage, 
+int ConvertRGBtoYUYVorSimilar(const unsigned char *im, unsigned sizeimage, 
 	unsigned width, unsigned height, const char *targetPxFmt,
 	unsigned char **outIm, unsigned *outImSize)
 {
@@ -405,7 +405,65 @@ void ConvertRGBtoYUYVorSimilar(const unsigned char *im, unsigned sizeimage,
 			cursor += 4;
 		}
 	}
+
+	return 1;
 }
+
+// *********************************************************************
+
+int ConvertRgb24ToI420orYV12(const unsigned char *im, unsigned dataLen, 
+	int width, int height,
+	unsigned char **buffOut,
+	unsigned *buffOutLen,
+	const char *outPxFmt)
+{
+	//Create output buffer if required
+	int requiredSize = width * height * 1.5;
+	if(*buffOutLen != 0 && *buffOutLen != requiredSize)
+		throw std::runtime_error("Output buffer has incorrect size");
+	*buffOutLen = requiredSize;
+	if(*buffOut == NULL)
+		*buffOut = new unsigned char [*buffOutLen];
+
+	memset(*buffOut, 128, *buffOutLen);
+
+	unsigned uPlaneOffset = width * height;
+	unsigned vPlaneOffset = width * height * 1.25;
+
+	for(int x = 0; x < width ; x+=2)
+	{
+		for(int y = 0; y < height; y+=2)
+		{
+			unsigned YOutOffset1 = width * y + x;
+			unsigned rgbInOffset1 = width * y * 3 + x * 3;
+			unsigned YOutOffset2 = width * y + (x+1);
+			unsigned rgbInOffset2 = width * y * 3 + (x+1) * 3;
+			unsigned YOutOffset3 = width * (y+1) + x;
+			unsigned rgbInOffset3 = width * (y+1) * 3 + x * 3;
+			unsigned YOutOffset4 = width * (y+1) + (x+1);
+			unsigned rgbInOffset4 = width * (y+1) * 3 + (x+1) * 3;
+
+			unsigned Y1 = 66 * im[rgbInOffset1] + 129 * im[rgbInOffset1+1] + 25 * im[rgbInOffset1+2];
+			unsigned Y2 = 66 * im[rgbInOffset2] + 129 * im[rgbInOffset1+2] + 25 * im[rgbInOffset2+2];
+			unsigned Y3 = 66 * im[rgbInOffset3] + 129 * im[rgbInOffset1+3] + 25 * im[rgbInOffset3+2];
+			unsigned Y4 = 66 * im[rgbInOffset4] + 129 * im[rgbInOffset1+4] + 25 * im[rgbInOffset4+2];
+
+			Y1 = ((Y1 + 128) >> 8) + 16;
+			Y2 = ((Y2 + 128) >> 8) + 16;
+			Y3 = ((Y3 + 128) >> 8) + 16;
+			Y4 = ((Y4 + 128) >> 8) + 16;
+
+			(*buffOut)[YOutOffset1] = Y1;
+			(*buffOut)[YOutOffset2] = Y2;
+			(*buffOut)[YOutOffset3] = Y3;
+			(*buffOut)[YOutOffset4] = Y4;
+
+		}
+	}
+
+	return 1;
+}
+
 // *********************************************************************
 
 int DecodeFrame(const unsigned char *data, unsigned dataLen, 
@@ -508,14 +566,23 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 	}
 
 	if(strcmp(inPxFmt,"RGB24")==0 && 
+		(strcmp(targetPxFmt, "I420")==0 || strcmp(targetPxFmt, "YV12")==0))
+	{
+		int ret = ConvertRgb24ToI420orYV12(data, dataLen, 
+			width, height,
+			buffOut, buffOutLen, targetPxFmt);
+		return ret;
+	}
+
+	if(strcmp(inPxFmt,"RGB24")==0 && 
 		(strcmp(targetPxFmt, "YUYV")==0
 		|| strcmp(targetPxFmt, "UYVY")==0)
 		)
 	{
-		ConvertRGBtoYUYVorSimilar(data, dataLen, 
+		int ret = ConvertRGBtoYUYVorSimilar(data, dataLen, 
 			width, height, targetPxFmt,
 			buffOut, buffOutLen);
-		return 1;
+		return ret;
 	}
 
 	//RGB24 -> BGR24

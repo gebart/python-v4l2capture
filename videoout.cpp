@@ -110,7 +110,15 @@ PyObject *Video_out_manager_Send_frame(Video_out_manager *self, PyObject *args)
 
 	if(it != self->threads->end())
 	{
-		it->second->SendFrame(imgIn, imgLen, pxFmtIn, widthIn, heightIn);
+		try
+		{
+			it->second->SendFrame(imgIn, imgLen, pxFmtIn, widthIn, heightIn);
+		}
+		catch(std::exception &err)
+		{
+			PyErr_Format(PyExc_RuntimeError, err.what());
+			Py_RETURN_NONE;
+		}
 	}
 	else
 	{
