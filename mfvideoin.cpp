@@ -318,6 +318,9 @@ public:
 		while(this->frameBuff.size() > this->maxNumFrames)
 		{
 			//Drop an old frame if buffer is starting to overflow
+			char *frameToDrop = frameBuff[0];
+			delete [] frameToDrop;
+			frameToDrop = NULL;
 			frameBuff.erase(frameBuff.begin());
 			frameLenBuff.erase(frameLenBuff.begin());
 			hrStatusBuff.erase(hrStatusBuff.begin());
@@ -356,6 +359,7 @@ public:
 			dwStreamIndexBuff.push_back(dwStreamIndex);
 			dwStreamFlagsBuff.push_back(dwStreamFlags);
 			llTimestampBuff.push_back(llTimestamp);
+			std::cout << "Callback buff: " << frameBuff.size() << std::endl;
 
 			this->CheckForBufferOverflow();
 		}
@@ -447,7 +451,9 @@ public:
 			this->dwStreamFlagsBuff.erase(this->dwStreamFlagsBuff.begin());
 			this->llTimestampBuff.erase(this->llTimestampBuff.begin());
 			ret = 1;
+			std::cout << "Callback buff: " << frameBuff.size() << std::endl;
 		}
+
 		LeaveCriticalSection(&lock);
 		return ret;
 	}
@@ -622,6 +628,8 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 	this->dwStreamIndexBuff.erase(this->dwStreamIndexBuff.begin());
 	this->dwStreamFlagsBuff.erase(this->dwStreamFlagsBuff.begin());
 	this->llTimestampBuff.erase(this->llTimestampBuff.begin());
+
+	std::cout << "Vidin buff: " << this->frameBuff.size() << std::endl;
 
 	this->PopFrontMetaDataBuff();
 
@@ -858,6 +866,10 @@ void MfVideoIn::ReadFramesInternal()
 			//Ensure the buffer does not overflow
 			while(this->frameBuff.size() >= this->maxBuffSize)
 			{
+				std::cout << "Dropping frame from vidin buff" << std::endl;
+				char *frameToDrop = this->frameBuff[0];
+				delete [] frameToDrop;
+				frameToDrop = NULL;
 				this->frameBuff.erase(this->frameBuff.begin());
 				this->frameLenBuff.erase(this->frameLenBuff.begin());
 				this->hrStatusBuff.erase(this->hrStatusBuff.begin());
@@ -877,6 +889,7 @@ void MfVideoIn::ReadFramesInternal()
 				this->dwStreamIndexBuff.push_back(dwStreamIndex);
 				this->dwStreamFlagsBuff.push_back(dwStreamFlags);
 				this->llTimestampBuff.push_back(llTimestamp);
+				std::cout << "Vidin buff: " << this->frameBuff.size() << std::endl;
 
 				this->SetSampleMetaData(dwStreamIndex);
 			}
