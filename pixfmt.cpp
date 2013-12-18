@@ -425,10 +425,20 @@ int ConvertRgb24ToI420orYV12(const unsigned char *im, unsigned dataLen,
 	if(*buffOut == NULL)
 		*buffOut = new unsigned char [*buffOutLen];
 
-	memset(*buffOut, 128, *buffOutLen);
+	//memset(*buffOut, 128, *buffOutLen);
+	unsigned uPlaneOffset = 0;
+	unsigned vPlaneOffset = 0;
 
-	unsigned uPlaneOffset = width * height;
-	unsigned vPlaneOffset = width * height * 1.25;
+	if(strcmp(outPxFmt, "I420")==0)
+	{
+		uPlaneOffset = width * height;
+		vPlaneOffset = width * height * 1.25;
+	}
+	else
+	{
+		uPlaneOffset = width * height * 1.25;
+		vPlaneOffset = width * height;
+	}
 
 	for(int x = 0; x < width ; x+=2)
 	{
@@ -443,21 +453,47 @@ int ConvertRgb24ToI420orYV12(const unsigned char *im, unsigned dataLen,
 			unsigned YOutOffset4 = width * (y+1) + (x+1);
 			unsigned rgbInOffset4 = width * (y+1) * 3 + (x+1) * 3;
 
+			unsigned colOffset = (width/2) * (y/2) + (x/2);
+			unsigned UOutOffset = colOffset + uPlaneOffset;
+			unsigned VOutOffset = colOffset + vPlaneOffset;
+
 			unsigned Y1 = 66 * im[rgbInOffset1] + 129 * im[rgbInOffset1+1] + 25 * im[rgbInOffset1+2];
 			unsigned Y2 = 66 * im[rgbInOffset2] + 129 * im[rgbInOffset2+1] + 25 * im[rgbInOffset2+2];
 			unsigned Y3 = 66 * im[rgbInOffset3] + 129 * im[rgbInOffset3+1] + 25 * im[rgbInOffset3+2];
 			unsigned Y4 = 66 * im[rgbInOffset4] + 129 * im[rgbInOffset4+1] + 25 * im[rgbInOffset4+2];
+
+			unsigned U1 = -38 * im[rgbInOffset1] - 74 * im[rgbInOffset1+1] + 112 * im[rgbInOffset1+2];
+			unsigned U2 = -38 * im[rgbInOffset2] - 74 * im[rgbInOffset2+1] + 112 * im[rgbInOffset2+2];
+			unsigned U3 = -38 * im[rgbInOffset3] - 74 * im[rgbInOffset3+1] + 112 * im[rgbInOffset3+2];
+			unsigned U4 = -38 * im[rgbInOffset4] - 74 * im[rgbInOffset4+1] + 112 * im[rgbInOffset4+2];
+
+			unsigned V1 = 112 * im[rgbInOffset1] - 94 * im[rgbInOffset1+1] - 18 * im[rgbInOffset1+2];
+			unsigned V2 = 112 * im[rgbInOffset2] - 94 * im[rgbInOffset2+1] - 18 * im[rgbInOffset2+2];
+			unsigned V3 = 112 * im[rgbInOffset3] - 94 * im[rgbInOffset3+1] - 18 * im[rgbInOffset3+2];
+			unsigned V4 = 112 * im[rgbInOffset4] - 94 * im[rgbInOffset4+1] - 18 * im[rgbInOffset4+2];
 
 			Y1 = ((Y1 + 128) >> 8) + 16;
 			Y2 = ((Y2 + 128) >> 8) + 16;
 			Y3 = ((Y3 + 128) >> 8) + 16;
 			Y4 = ((Y4 + 128) >> 8) + 16;
 
+			U1 = ((U1 + 128) >> 8) + 128;
+			U2 = ((U2 + 128) >> 8) + 128;
+			U3 = ((U3 + 128) >> 8) + 128;
+			U4 = ((U4 + 128) >> 8) + 128;
+
+			V1 = ((V1 + 128) >> 8) + 128;
+			V2 = ((V2 + 128) >> 8) + 128;
+			V3 = ((V3 + 128) >> 8) + 128;
+			V4 = ((V4 + 128) >> 8) + 128;
+
 			(*buffOut)[YOutOffset1] = Y1;
 			(*buffOut)[YOutOffset2] = Y2;
 			(*buffOut)[YOutOffset3] = Y3;
 			(*buffOut)[YOutOffset4] = Y4;
 
+			(*buffOut)[VOutOffset] = (unsigned char)((V1+V2+V3+V4)/4.+0.5);
+			(*buffOut)[UOutOffset] = (unsigned char)((U1+U2+U3+U4)/4.+0.5);
 		}
 	}
 
