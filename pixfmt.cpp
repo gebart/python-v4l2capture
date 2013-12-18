@@ -444,9 +444,9 @@ int ConvertRgb24ToI420orYV12(const unsigned char *im, unsigned dataLen,
 			unsigned rgbInOffset4 = width * (y+1) * 3 + (x+1) * 3;
 
 			unsigned Y1 = 66 * im[rgbInOffset1] + 129 * im[rgbInOffset1+1] + 25 * im[rgbInOffset1+2];
-			unsigned Y2 = 66 * im[rgbInOffset2] + 129 * im[rgbInOffset1+2] + 25 * im[rgbInOffset2+2];
-			unsigned Y3 = 66 * im[rgbInOffset3] + 129 * im[rgbInOffset1+3] + 25 * im[rgbInOffset3+2];
-			unsigned Y4 = 66 * im[rgbInOffset4] + 129 * im[rgbInOffset1+4] + 25 * im[rgbInOffset4+2];
+			unsigned Y2 = 66 * im[rgbInOffset2] + 129 * im[rgbInOffset2+1] + 25 * im[rgbInOffset2+2];
+			unsigned Y3 = 66 * im[rgbInOffset3] + 129 * im[rgbInOffset3+1] + 25 * im[rgbInOffset3+2];
+			unsigned Y4 = 66 * im[rgbInOffset4] + 129 * im[rgbInOffset4+1] + 25 * im[rgbInOffset4+2];
 
 			Y1 = ((Y1 + 128) >> 8) + 16;
 			Y2 = ((Y2 + 128) >> 8) + 16;
