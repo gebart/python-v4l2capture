@@ -498,7 +498,12 @@ void MfVideoOutFile::SetVideoCodec(const char *codec, UINT32 bitrateIn)
 		throw std::runtime_error("Set video parameters before opening video file");
 	}
 	if(codec!=NULL)
+	{
 		this->videoCodec = codec;
+
+
+
+	}
 	if(bitrateIn > 0)
 		this->bitRate = bitrateIn;
 }

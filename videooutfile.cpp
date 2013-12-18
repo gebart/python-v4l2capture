@@ -38,11 +38,10 @@ PyObject *Video_out_file_manager_open(Video_out_file_manager *self, PyObject *ar
 
 	//Process arguments
 	const char *devarg = NULL;
-	const char *pxFmtIn = NULL;
 	int widthIn = 0;
 	int heightIn = 0;
 
-	if(!PyArg_ParseTuple(args, "ssii", &devarg, &pxFmtIn, &widthIn, &heightIn))
+	if(!PyArg_ParseTuple(args, "sii", &devarg, &widthIn, &heightIn))
 	{
 		PyErr_Format(PyExc_RuntimeError, "Incorrect arguments to function.");
 		Py_RETURN_NONE;
@@ -71,7 +70,6 @@ PyObject *Video_out_file_manager_open(Video_out_file_manager *self, PyObject *ar
 	try
 	{
 		threadArgs->SetOutputSize(widthIn, heightIn);
-		threadArgs->SetOutputPxFmt(pxFmtIn);
 	}
 	catch(std::exception &err)
 	{
@@ -92,7 +90,7 @@ PyObject *Video_out_file_manager_open(Video_out_file_manager *self, PyObject *ar
 
 PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObject *args)
 {
-	printf("Video_out_file_manager_Send_frame\n");
+	//printf("Video_out_file_manager_Send_frame\n");
 	//dev = '\\dev\\video0', img, pixel_format, width, height
 
 	//Process arguments
@@ -140,7 +138,6 @@ PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObje
 	}
 	else
 	{
-		std::cout << "devarg " << devarg << std::endl;
 		PyErr_Format(PyExc_RuntimeError, "Device not found.");
 		Py_RETURN_NONE;
 	}

@@ -128,7 +128,7 @@ static PyTypeObject Video_out_manager_type = {
 
 static PyMethodDef Video_out_file_manager_methods[] = {
 	{"open", (PyCFunction)Video_out_file_manager_open, METH_VARARGS,
-			 "open(filename = 'out.wmv', pixel_format, width, height)\n\n"
+			 "open(filename = 'out.wmv', width, height)\n\n"
 			 "Open video output."},
 	{"send_frame", (PyCFunction)Video_out_file_manager_Send_frame, METH_VARARGS,
 			 "send_frame(filename = 'out.wmv', img, pixel_format, width, height)\n\n"
