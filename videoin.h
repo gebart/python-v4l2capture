@@ -7,12 +7,12 @@
 #include <map>
 #include <string>
 
-typedef struct {
+/*typedef struct {
 	PyObject_HEAD
 	int fd;
 	struct buffer *buffers;
 	int buffer_count;
-} Video_device;
+} Video_device;*/
 
 class Device_manager_cl{
 public:
