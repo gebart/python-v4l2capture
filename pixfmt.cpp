@@ -436,6 +436,7 @@ int ConvertRgb24ToI420orYV12(const unsigned char *im, unsigned dataLen,
 	}
 	else
 	{
+		//Assume YV12
 		uPlaneOffset = width * height * 1.25;
 		vPlaneOffset = width * height;
 	}
@@ -500,6 +501,54 @@ int ConvertRgb24ToI420orYV12(const unsigned char *im, unsigned dataLen,
 	return 1;
 }
 
+int ConvertYUYVtoRGB(const unsigned char *im, unsigned dataLen, 
+	int width, int height,
+	unsigned char **buffOut,
+	unsigned *buffOutLen)
+{
+	// Convert buffer from YUYV to RGB.
+	// For the byte order, see: http://v4l2spec.bytesex.org/spec/r4339.htm
+	// For the color conversion, see: http://v4l2spec.bytesex.org/spec/x2123.htm
+	unsigned int outBuffLen = dataLen * 6 / 4;
+	if(*buffOutLen != 0 && *buffOutLen != outBuffLen)
+		throw std::runtime_error("Output buffer has incorrect length");
+	*buffOutLen = outBuffLen;
+	char *rgb = (char*)*buffOut;
+	if(*buffOut == NULL)
+	{
+		rgb = new char[*buffOutLen];
+		*buffOut = (unsigned char*)rgb;
+	}
+
+	char *rgb_max = rgb + *buffOutLen;
+	const unsigned char *yuyv = im;
+
+#define CLAMP(c) ((c) <= 0 ? 0 : (c) >= 65025 ? 255 : (c) >> 8)
+	while(rgb < rgb_max)
+		{
+			int u = yuyv[1] - 128;
+			int v = yuyv[3] - 128;
+			int uv = 100 * u + 208 * v;
+			u *= 516;
+			v *= 409;
+
+			int y = 298 * (yuyv[0] - 16);
+			rgb[0] = CLAMP(y + v);
+			rgb[1] = CLAMP(y - uv);
+			rgb[2] = CLAMP(y + u);
+
+			y = 298 * (yuyv[2] - 16);
+			rgb[3] = CLAMP(y + v);
+			rgb[4] = CLAMP(y - uv);
+			rgb[5] = CLAMP(y + u);
+
+			rgb += 6;
+			yuyv += 4;
+		}
+#undef CLAMP
+	return 1;
+}
+
 // *********************************************************************
 
 int DecodeFrame(const unsigned char *data, unsigned dataLen, 
@@ -509,9 +558,10 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 	unsigned char **buffOut,
 	unsigned *buffOutLen)
 {
+	//Check if input format and output format match
 	if(strcmp(inPxFmt, targetPxFmt) == 0)
 	{
-		//Conversion not required, return a shallow copy
+		//Conversion not required, return a copy
 		if (*buffOutLen != 0 && *buffOutLen != dataLen)
 		{
 			throw std::runtime_error("Output buffer has incorrect size");
@@ -525,6 +575,7 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 		return 1;
 	}
 
+	//MJPEG frame to RGB24
 	if(strcmp(inPxFmt,"MJPEG")==0 && strcmp(targetPxFmt, "RGB24")==0)
 	{
 		std::string jpegBin;
@@ -556,51 +607,17 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 		return 1;
 	}
 
+	//YUYV to RGB24
 	if(strcmp(inPxFmt,"YUYV")==0 && strcmp(targetPxFmt, "RGB24")==0)
 	{
-		// Convert buffer from YUYV to RGB.
-		// For the byte order, see: http://v4l2spec.bytesex.org/spec/r4339.htm
-		// For the color conversion, see: http://v4l2spec.bytesex.org/spec/x2123.htm
-		unsigned int outBuffLen = dataLen * 6 / 4;
-		if(*buffOutLen != 0 && *buffOutLen != outBuffLen)
-			throw std::runtime_error("Output buffer has incorrect length");
-		*buffOutLen = outBuffLen;
-		char *rgb = (char*)*buffOut;
-		if(*buffOut == NULL)
-		{
-			rgb = new char[*buffOutLen];
-			*buffOut = (unsigned char*)rgb;
-		}
-
-		char *rgb_max = rgb + *buffOutLen;
-		const unsigned char *yuyv = data;
-
-	#define CLAMP(c) ((c) <= 0 ? 0 : (c) >= 65025 ? 255 : (c) >> 8)
-		while(rgb < rgb_max)
-			{
-				int u = yuyv[1] - 128;
-				int v = yuyv[3] - 128;
-				int uv = 100 * u + 208 * v;
-				u *= 516;
-				v *= 409;
-
-				int y = 298 * (yuyv[0] - 16);
-				rgb[0] = CLAMP(y + v);
-				rgb[1] = CLAMP(y - uv);
-				rgb[2] = CLAMP(y + u);
-
-				y = 298 * (yuyv[2] - 16);
-				rgb[3] = CLAMP(y + v);
-				rgb[4] = CLAMP(y - uv);
-				rgb[5] = CLAMP(y + u);
-
-				rgb += 6;
-				yuyv += 4;
-			}
-	#undef CLAMP
-		return 1;
+		int ret = ConvertYUYVtoRGB(data, dataLen, 
+			width, height,
+			buffOut,
+			buffOutLen);
+		return ret;
 	}
 
+	//RGB24 to I420 or YV12
 	if(strcmp(inPxFmt,"RGB24")==0 && 
 		(strcmp(targetPxFmt, "I420")==0 || strcmp(targetPxFmt, "YV12")==0))
 	{
@@ -610,6 +627,7 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 		return ret;
 	}
 
+	//RGB24 to YUYV or UYVY
 	if(strcmp(inPxFmt,"RGB24")==0 && 
 		(strcmp(targetPxFmt, "YUYV")==0
 		|| strcmp(targetPxFmt, "UYVY")==0)
@@ -717,7 +735,8 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 
 	return 0;
 }
-// *********************************************************
+
+// ************* Resize Code *******************************
 
 int ResizeRgb24ImageNN(const unsigned char *data, unsigned dataLen, 
 	int widthIn, int heightIn,
@@ -787,6 +806,38 @@ int CropToFitRgb24Image(const unsigned char *data, unsigned dataLen,
 }
 
 //*******************************************************************
+
+int ResizeFrame(const unsigned char *data, 
+	unsigned dataLen, 
+	const char *pxFmt,
+	int srcWidth, int srcHeight,
+	unsigned char **buffOut,
+	unsigned *buffOutLen,
+	int dstWidth, 
+	int dstHeight)
+{
+	if(strcmp(pxFmt,"RGB24")==0 || strcmp(pxFmt,"BGR24")==0)
+	{
+		//Allocate new buffer if needed
+		int dstBuffSize = 3 * dstWidth * dstHeight;
+		if(*buffOutLen != 0 && *buffOutLen != dstBuffSize)
+			throw std::runtime_error("Output buffer has incorrect size");
+		*buffOutLen = dstBuffSize;
+		if(*buffOut == NULL)
+			*buffOut = new unsigned char [*buffOutLen];
+
+		return ResizeRgb24ImageNN(data, dataLen, 
+			srcWidth, srcHeight,
+			*buffOut,
+			*buffOutLen,
+			dstWidth, dstHeight, 0, 3);
+	}
+	//Not supported
+	return 0;
+}
+
+// ****** Combined resize and convert *************************************************
+
 
 int DecodeAndResizeFrame(const unsigned char *data, 
 	unsigned dataLen, 
@@ -883,33 +934,4 @@ int DecodeAndResizeFrame(const unsigned char *data,
 	}
 
 	return resizeRet;
-}
-
-int ResizeFrame(const unsigned char *data, 
-	unsigned dataLen, 
-	const char *pxFmt,
-	int srcWidth, int srcHeight,
-	unsigned char **buffOut,
-	unsigned *buffOutLen,
-	int dstWidth, 
-	int dstHeight)
-{
-	if(strcmp(pxFmt,"RGB24")==0 || strcmp(pxFmt,"BGR24")==0)
-	{
-		//Allocate new buffer if needed
-		int dstBuffSize = 3 * dstWidth * dstHeight;
-		if(*buffOutLen != 0 && *buffOutLen != dstBuffSize)
-			throw std::runtime_error("Output buffer has incorrect size");
-		*buffOutLen = dstBuffSize;
-		if(*buffOut == NULL)
-			*buffOut = new unsigned char [*buffOutLen];
-
-		return ResizeRgb24ImageNN(data, dataLen, 
-			srcWidth, srcHeight,
-			*buffOut,
-			*buffOutLen,
-			dstWidth, dstHeight, 0, 3);
-	}
-	//Not supported
-	return 0;
 }
