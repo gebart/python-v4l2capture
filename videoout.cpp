@@ -46,7 +46,7 @@ PyObject *Video_out_manager_open(Video_out_manager *self, PyObject *args)
 	{
 		std::cout << "err" << std::endl;
 		PyErr_Format(PyExc_RuntimeError, "Incorrect arguments to function.");
-		Py_RETURN_NONE;
+		return NULL;
 	}
 
 	//Create worker thread
@@ -87,7 +87,7 @@ PyObject *Video_out_manager_Send_frame(Video_out_manager *self, PyObject *args)
 	if(PyObject_Length(args) < 5)
 	{
 		PyErr_Format(PyExc_RuntimeError, "Too few arguments.");
-		Py_RETURN_NONE;
+		return NULL;
 	}
 
 	PyObject *pydev = PyTuple_GetItem(args, 0);
@@ -117,13 +117,13 @@ PyObject *Video_out_manager_Send_frame(Video_out_manager *self, PyObject *args)
 		catch(std::exception &err)
 		{
 			PyErr_Format(PyExc_RuntimeError, err.what());
-			Py_RETURN_NONE;
+			return NULL;
 		}
 	}
 	else
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device not found.");
-		Py_RETURN_NONE;
+		return NULL;
 	}
 
 	Py_RETURN_NONE;

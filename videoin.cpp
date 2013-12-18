@@ -47,7 +47,7 @@ PyObject *Device_manager_open(Device_manager *self, PyObject *args)
 	if(it!=self->threadArgStore->end())
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device already opened.");
- 		Py_RETURN_NONE;
+ 		return NULL;
 	}
 
 	pthread_t thread;
@@ -88,7 +88,8 @@ PyObject *Device_manager_set_format(Device_manager *self, PyObject *args)
 
 	if(!PyArg_ParseTuple(args, "sii|s", &devarg, &size_x, &size_y, &fmt))
 	{
-		Py_RETURN_NONE;
+		PyErr_BadArgument();
+		return NULL;
 	}
 
 	//Check this device is valid
@@ -96,7 +97,7 @@ PyObject *Device_manager_set_format(Device_manager *self, PyObject *args)
 	if(it==self->threadArgStore->end())
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device already not ready.");
- 		Py_RETURN_NONE;
+ 		return NULL;
 	}
 
 	class Base_Video_In *threadArgs = (*self->threadArgStore)[devarg];
@@ -128,7 +129,7 @@ PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 	if(it==self->threadArgStore->end())
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device already not ready.");
- 		Py_RETURN_NONE;
+ 		return NULL;
 	}
 
 	class Base_Video_In *threadArgs = (*self->threadArgStore)[devarg];
@@ -153,7 +154,7 @@ PyObject *Device_manager_Get_frame(Device_manager *self, PyObject *args)
 	if(it==self->threadArgStore->end())
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device already not ready.");
- 		Py_RETURN_NONE;
+ 		return NULL;
 	}
 
 	class Base_Video_In *threadArgs = (*self->threadArgStore)[devarg];
@@ -167,7 +168,7 @@ PyObject *Device_manager_Get_frame(Device_manager *self, PyObject *args)
 	catch(std::exception &err)
 	{
 		PyErr_Format(PyExc_RuntimeError, err.what());
- 		Py_RETURN_NONE;
+ 		return NULL;
 	}
 
 	if(ok && buffOut != NULL)
@@ -207,7 +208,7 @@ PyObject *Device_manager_stop(Device_manager *self, PyObject *args)
 	if(it==self->threadArgStore->end())
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device already not ready.");
- 		Py_RETURN_NONE;
+ 		return NULL;
 	}
 
 	class Base_Video_In *threadArgs = (*self->threadArgStore)[devarg];
@@ -231,7 +232,7 @@ PyObject *Device_manager_close(Device_manager *self, PyObject *args)
 	if(it==self->threadArgStore->end())
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device already not ready.");
- 		Py_RETURN_NONE;
+ 		return NULL;
 	}
 
 	class Base_Video_In *threadArgs = (*self->threadArgStore)[devarg];
