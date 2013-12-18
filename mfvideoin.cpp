@@ -359,7 +359,6 @@ public:
 			dwStreamIndexBuff.push_back(dwStreamIndex);
 			dwStreamFlagsBuff.push_back(dwStreamFlags);
 			llTimestampBuff.push_back(llTimestamp);
-			std::cout << "Callback buff: " << frameBuff.size() << std::endl;
 
 			this->CheckForBufferOverflow();
 		}
@@ -451,7 +450,6 @@ public:
 			this->dwStreamFlagsBuff.erase(this->dwStreamFlagsBuff.begin());
 			this->llTimestampBuff.erase(this->llTimestampBuff.begin());
 			ret = 1;
-			std::cout << "Callback buff: " << frameBuff.size() << std::endl;
 		}
 
 		LeaveCriticalSection(&lock);
@@ -628,8 +626,6 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 	this->dwStreamIndexBuff.erase(this->dwStreamIndexBuff.begin());
 	this->dwStreamFlagsBuff.erase(this->dwStreamFlagsBuff.begin());
 	this->llTimestampBuff.erase(this->llTimestampBuff.begin());
-
-	std::cout << "Vidin buff: " << this->frameBuff.size() << std::endl;
 
 	this->PopFrontMetaDataBuff();
 
@@ -866,7 +862,6 @@ void MfVideoIn::ReadFramesInternal()
 			//Ensure the buffer does not overflow
 			while(this->frameBuff.size() >= this->maxBuffSize)
 			{
-				std::cout << "Dropping frame from vidin buff" << std::endl;
 				char *frameToDrop = this->frameBuff[0];
 				delete [] frameToDrop;
 				frameToDrop = NULL;
@@ -889,7 +884,6 @@ void MfVideoIn::ReadFramesInternal()
 				this->dwStreamIndexBuff.push_back(dwStreamIndex);
 				this->dwStreamFlagsBuff.push_back(dwStreamFlags);
 				this->llTimestampBuff.push_back(llTimestamp);
-				std::cout << "Vidin buff: " << this->frameBuff.size() << std::endl;
 
 				this->SetSampleMetaData(dwStreamIndex);
 			}
