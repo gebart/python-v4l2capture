@@ -139,7 +139,7 @@ PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 
 PyObject *Device_manager_Get_frame(Device_manager *self, PyObject *args)
 {
-
+	//std::cout << "Device_manager_Get_frame" << std::endl;
 	//Process arguments
 	const char *devarg = "/dev/video0";
 	if(PyTuple_Size(args) >= 1)
@@ -159,8 +159,17 @@ PyObject *Device_manager_Get_frame(Device_manager *self, PyObject *args)
 	class Base_Video_In *threadArgs = (*self->threadArgStore)[devarg];
 	unsigned char *buffOut = NULL; 
 	class FrameMetaData metaOut;
+	int ok = 0;
+	try
+	{
+		ok = threadArgs->GetFrame(&buffOut, &metaOut);
+	}
+	catch(std::exception &err)
+	{
+		PyErr_Format(PyExc_RuntimeError, err.what());
+ 		Py_RETURN_NONE;
+	}
 
-	int ok = threadArgs->GetFrame(&buffOut, &metaOut);
 	if(ok && buffOut != NULL)
 	{
 		//Format output to python
