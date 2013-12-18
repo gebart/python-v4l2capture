@@ -43,8 +43,9 @@ PyObject *Video_out_file_manager_open(Video_out_file_manager *self, PyObject *ar
 
 	if(!PyArg_ParseTuple(args, "sii", &devarg, &widthIn, &heightIn))
 	{
-		PyErr_Format(PyExc_RuntimeError, "Incorrect arguments to function.");
-		Py_RETURN_NONE;
+		std::cout << "Attempt to throw exception" << std::endl;
+		PyErr_SetString(PyExc_RuntimeError, "Incorrect arguments to function.");
+		return NULL;
 	}
 
 	//Create worker thread
@@ -60,8 +61,8 @@ PyObject *Video_out_file_manager_open(Video_out_file_manager *self, PyObject *ar
 	}
 	catch(std::exception &err)
 	{
-		PyErr_Format(PyExc_RuntimeError, err.what());
-		Py_RETURN_NONE;
+		PyErr_SetString(PyExc_RuntimeError, err.what());
+		return NULL;
 	}
 	#endif
 
@@ -74,7 +75,7 @@ PyObject *Video_out_file_manager_open(Video_out_file_manager *self, PyObject *ar
 	catch(std::exception &err)
 	{
 		PyErr_SetString(PyExc_RuntimeError, err.what());
-		Py_RETURN_NONE;
+		return NULL;
 	}
 	#endif
 
@@ -103,7 +104,7 @@ PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObje
 	if(PyObject_Length(args) < 5)
 	{
 		PyErr_Format(PyExc_RuntimeError, "Too few arguments.");
-		Py_RETURN_NONE;
+		return NULL;
 	}
 
 	PyObject *pydev = PyTuple_GetItem(args, 0);
@@ -133,13 +134,13 @@ PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObje
 		catch (std::exception &err)
 		{
 			PyErr_Format(PyExc_RuntimeError, err.what());
-			Py_RETURN_NONE;
+			return NULL;
 		}
 	}
 	else
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device not found.");
-		Py_RETURN_NONE;
+		return NULL;
 	}
 
 	Py_RETURN_NONE;
@@ -167,7 +168,7 @@ PyObject *Video_out_file_manager_close(Video_out_file_manager *self, PyObject *a
 		catch(std::exception &err)
 		{
 			PyErr_Format(PyExc_RuntimeError, err.what());
-			Py_RETURN_NONE;
+			return NULL;
 		}
 
 	}
@@ -184,7 +185,7 @@ PyObject *Video_out_file_manager_Set_Frame_Rate(Video_out_file_manager *self, Py
 	if(PyObject_Length(args) < 2)
 	{
 		PyErr_Format(PyExc_RuntimeError, "Too few arguments.");
-		Py_RETURN_NONE;
+		return NULL;
 	}
 
 	PyObject *pydev = PyTuple_GetItem(args, 0);
@@ -204,14 +205,14 @@ PyObject *Video_out_file_manager_Set_Frame_Rate(Video_out_file_manager *self, Py
 		catch(std::exception &err)
 		{
 			PyErr_Format(PyExc_RuntimeError, err.what());
-			Py_RETURN_NONE;
+			return NULL;
 		}
 
 	}
 	else
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device not found.");
-		Py_RETURN_NONE;
+		return NULL;
 	}
 
 	Py_RETURN_NONE;
@@ -227,7 +228,7 @@ PyObject *Video_out_file_manager_Set_Video_Codec(Video_out_file_manager *self, P
 	if(PyObject_Length(args) < 2)
 	{
 		PyErr_Format(PyExc_RuntimeError, "Too few arguments.");
-		Py_RETURN_NONE;
+		return NULL;
 	}
 
 	PyObject *pydev = PyTuple_GetItem(args, 0);
@@ -256,14 +257,14 @@ PyObject *Video_out_file_manager_Set_Video_Codec(Video_out_file_manager *self, P
 		catch(std::exception &err)
 		{
 			PyErr_Format(PyExc_RuntimeError, err.what());
-			Py_RETURN_NONE;
+			return NULL;
 		}
 
 	}
 	else
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device not found.");
-		Py_RETURN_NONE;
+		return NULL;
 	}
 
 	Py_RETURN_NONE;
@@ -278,7 +279,7 @@ PyObject *Video_out_file_manager_Enable_Real_Time_Frame_Rate(Video_out_file_mana
 	if(PyObject_Length(args) < 2)
 	{
 		PyErr_Format(PyExc_RuntimeError, "Too few arguments.");
-		Py_RETURN_NONE;
+		return NULL;
 	}
 
 	PyObject *pydev = PyTuple_GetItem(args, 0);
@@ -298,14 +299,14 @@ PyObject *Video_out_file_manager_Enable_Real_Time_Frame_Rate(Video_out_file_mana
 		catch(std::exception &err)
 		{
 			PyErr_Format(PyExc_RuntimeError, err.what());
-			Py_RETURN_NONE;
+			return NULL;
 		}
 
 	}
 	else
 	{
 		PyErr_Format(PyExc_RuntimeError, "Device not found.");
-		Py_RETURN_NONE;
+		return NULL;
 	}
 
 	Py_RETURN_NONE;
