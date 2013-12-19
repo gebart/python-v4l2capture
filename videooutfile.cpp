@@ -113,8 +113,13 @@ PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObje
 	devarg = PyString_AsString(pydev);
 
 	PyObject *pyimg = PyTuple_GetItem(args, 1);
-	imgIn = PyString_AsString(pyimg);
+	if(imgIn==NULL && PyString_Check(pyimg)) imgIn = PyString_AsString(pyimg);
+	if(imgIn==NULL && PyByteArray_Check(pyimg)) imgIn = PyByteArray_AsString(pyimg);
+
 	Py_ssize_t imgLen = PyObject_Length(pyimg);
+
+	if(imgIn == NULL)
+		PyErr_SetString(PyExc_RuntimeError, "Argument 2 must be a string or byte array.");
 
 	PyObject *pyPxFmt = PyTuple_GetItem(args, 2);
 	pxFmtIn = PyString_AsString(pyPxFmt);
@@ -138,12 +143,15 @@ PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObje
 	}
 
 	std::map<std::string, class Base_Video_Out *>::iterator it = self->threads->find(devarg);
+	class Base_Video_Out *vidOut = NULL;
 
 	if(it != self->threads->end())
 	{
 		try
 		{
-			it->second->SendFrame(imgIn, imgLen, pxFmtIn, widthIn, heightIn, time_sec, (unsigned int)(time_usec+0.5));
+			vidOut = it->second;
+			if(imgIn != NULL)
+				vidOut->SendFrame(imgIn, imgLen, pxFmtIn, widthIn, heightIn, time_sec, (unsigned int)(time_usec+0.5));
 		}
 		catch (std::exception &err)
 		{

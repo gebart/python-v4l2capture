@@ -518,7 +518,7 @@ int ConvertRgb24ToI420orYV12(const unsigned char *im, unsigned dataLen,
 			(*buffOut)[UOutOffset] = (unsigned char)((U1+U2+U3+U4)/4.+0.5);
 		}
 	}
-
+	
 	return 1;
 }
 
