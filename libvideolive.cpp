@@ -129,7 +129,7 @@ static PyMethodDef Video_out_file_manager_methods[] = {
 			 "open(filename = 'out.wmv', width, height)\n\n"
 			 "Open video output."},
 	{"send_frame", (PyCFunction)Video_out_file_manager_Send_frame, METH_VARARGS,
-			 "send_frame(filename = 'out.wmv', img, pixel_format, width, height)\n\n"
+			 "send_frame(filename = 'out.wmv', img, pixel_format, width, height, timestamp=None)\n\n"
 			 "Send frame to video stream output."},
 	{"close", (PyCFunction)Video_out_file_manager_close, METH_VARARGS,
 			 "close(filename = 'out.wmv')\n\n"

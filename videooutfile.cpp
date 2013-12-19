@@ -100,8 +100,7 @@ PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObje
 	const char *pxFmtIn = NULL;
 	int widthIn = 0;
 	int heightIn = 0;
-	unsigned long time_sec = 0;
-	double time_usec = 0;
+	double time_sec = 0;
 
 	if(PyObject_Length(args) < 5)
 	{
@@ -133,25 +132,21 @@ PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObje
 	if(PyObject_Length(args) > 5)
 	{
 		PyObject *pyTimeSec = PyTuple_GetItem(args, 5);
-		time_sec = PyInt_AsLong(pyTimeSec);
-	}
-
-	if(PyObject_Length(args) > 6)
-	{
-		PyObject *pyTimeUSec = PyTuple_GetItem(args, 6);
-		time_usec = PyFloat_AsDouble(pyTimeUSec);
+		if(pyTimeSec == Py_None) time_sec = 0;
+		if(PyInt_Check(pyTimeSec)) time_sec = PyInt_AsLong(pyTimeSec);
+		if(PyFloat_Check(pyTimeSec)) time_sec = PyFloat_AsDouble(pyTimeSec);
 	}
 
 	std::map<std::string, class Base_Video_Out *>::iterator it = self->threads->find(devarg);
-	class Base_Video_Out *vidOut = NULL;
 
 	if(it != self->threads->end())
 	{
 		try
 		{
-			vidOut = it->second;
-			if(imgIn != NULL)
-				vidOut->SendFrame(imgIn, imgLen, pxFmtIn, widthIn, heightIn, time_sec, (unsigned int)(time_usec+0.5));
+			unsigned int timeSec = (unsigned int)(time_sec);
+			double time_usec = (time_sec - timeSec) * 1e6;
+
+			it->second->SendFrame(imgIn, imgLen, pxFmtIn, widthIn, heightIn, time_sec, (unsigned int)(time_usec+0.5));
 		}
 		catch (std::exception &err)
 		{
