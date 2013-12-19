@@ -30,8 +30,7 @@ PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 
 	if(PyTuple_Size(args) < 1)
 	{
-		PyErr_BadArgument();
-		PyErr_Format(PyExc_TypeError, "Function requires 1 argument");
+		PyErr_SetString(PyExc_TypeError, "Function requires 1 argument");
  		Py_RETURN_NONE;
 	}
 
@@ -39,8 +38,7 @@ PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 
 	if(!PyString_Check(inBuffer))
 	{
-		PyErr_BadArgument();
-		PyErr_Format(PyExc_TypeError, "Argument 1 must be a string.");
+		PyErr_SetString(PyExc_TypeError, "Argument 1 must be a string.");
 		//PyObject* type = PyObject_Type(inBuffer);
 		//PyObject_Print(type, stdout, Py_PRINT_RAW);
 		//Py_CLEAR(type);

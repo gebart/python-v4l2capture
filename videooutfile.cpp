@@ -103,7 +103,7 @@ PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObje
 
 	if(PyObject_Length(args) < 5)
 	{
-		PyErr_Format(PyExc_RuntimeError, "Too few arguments.");
+		PyErr_SetString(PyExc_RuntimeError, "Too few arguments.");
 		return NULL;
 	}
 
@@ -133,13 +133,13 @@ PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObje
 		}
 		catch (std::exception &err)
 		{
-			PyErr_Format(PyExc_RuntimeError, err.what());
+			PyErr_SetString(PyExc_RuntimeError, err.what());
 			return NULL;
 		}
 	}
 	else
 	{
-		PyErr_Format(PyExc_RuntimeError, "Device not found.");
+		PyErr_SetString(PyExc_RuntimeError, "Device not found.");
 		return NULL;
 	}
 
@@ -167,7 +167,7 @@ PyObject *Video_out_file_manager_close(Video_out_file_manager *self, PyObject *a
 		}
 		catch(std::exception &err)
 		{
-			PyErr_Format(PyExc_RuntimeError, err.what());
+			PyErr_SetString(PyExc_RuntimeError, err.what());
 			return NULL;
 		}
 
@@ -184,7 +184,7 @@ PyObject *Video_out_file_manager_Set_Frame_Rate(Video_out_file_manager *self, Py
 
 	if(PyObject_Length(args) < 2)
 	{
-		PyErr_Format(PyExc_RuntimeError, "Too few arguments.");
+		PyErr_SetString(PyExc_RuntimeError, "Too few arguments.");
 		return NULL;
 	}
 
@@ -204,14 +204,14 @@ PyObject *Video_out_file_manager_Set_Frame_Rate(Video_out_file_manager *self, Py
 		}
 		catch(std::exception &err)
 		{
-			PyErr_Format(PyExc_RuntimeError, err.what());
+			PyErr_SetString(PyExc_RuntimeError, err.what());
 			return NULL;
 		}
 
 	}
 	else
 	{
-		PyErr_Format(PyExc_RuntimeError, "Device not found.");
+		PyErr_SetString(PyExc_RuntimeError, "Device not found.");
 		return NULL;
 	}
 
@@ -227,7 +227,7 @@ PyObject *Video_out_file_manager_Set_Video_Codec(Video_out_file_manager *self, P
 
 	if(PyObject_Length(args) < 2)
 	{
-		PyErr_Format(PyExc_RuntimeError, "Too few arguments.");
+		PyErr_SetString(PyExc_RuntimeError, "Too few arguments.");
 		return NULL;
 	}
 
@@ -256,14 +256,14 @@ PyObject *Video_out_file_manager_Set_Video_Codec(Video_out_file_manager *self, P
 		}
 		catch(std::exception &err)
 		{
-			PyErr_Format(PyExc_RuntimeError, err.what());
+			PyErr_SetString(PyExc_RuntimeError, err.what());
 			return NULL;
 		}
 
 	}
 	else
 	{
-		PyErr_Format(PyExc_RuntimeError, "Device not found.");
+		PyErr_SetString(PyExc_RuntimeError, "Device not found.");
 		return NULL;
 	}
 
@@ -278,7 +278,7 @@ PyObject *Video_out_file_manager_Enable_Real_Time_Frame_Rate(Video_out_file_mana
 
 	if(PyObject_Length(args) < 2)
 	{
-		PyErr_Format(PyExc_RuntimeError, "Too few arguments.");
+		PyErr_SetString(PyExc_RuntimeError, "Too few arguments.");
 		return NULL;
 	}
 
@@ -298,14 +298,14 @@ PyObject *Video_out_file_manager_Enable_Real_Time_Frame_Rate(Video_out_file_mana
 		}
 		catch(std::exception &err)
 		{
-			PyErr_Format(PyExc_RuntimeError, err.what());
+			PyErr_SetString(PyExc_RuntimeError, err.what());
 			return NULL;
 		}
 
 	}
 	else
 	{
-		PyErr_Format(PyExc_RuntimeError, "Device not found.");
+		PyErr_SetString(PyExc_RuntimeError, "Device not found.");
 		return NULL;
 	}
 

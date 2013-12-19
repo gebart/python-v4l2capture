@@ -44,7 +44,7 @@ PyObject *Video_out_manager_open(Video_out_manager *self, PyObject *args)
 
 	if(!PyArg_ParseTuple(args, "ssii", &devarg, &pxFmtIn, &widthIn, &heightIn))
 	{
-		PyErr_Format(PyExc_RuntimeError, "Incorrect arguments to function.");
+		PyErr_SetString(PyExc_RuntimeError, "Incorrect arguments to function.");
 		return NULL;
 	}
 
@@ -85,7 +85,7 @@ PyObject *Video_out_manager_Send_frame(Video_out_manager *self, PyObject *args)
 
 	if(PyObject_Length(args) < 5)
 	{
-		PyErr_Format(PyExc_RuntimeError, "Too few arguments.");
+		PyErr_SetString(PyExc_RuntimeError, "Too few arguments.");
 		return NULL;
 	}
 
@@ -115,13 +115,13 @@ PyObject *Video_out_manager_Send_frame(Video_out_manager *self, PyObject *args)
 		}
 		catch(std::exception &err)
 		{
-			PyErr_Format(PyExc_RuntimeError, err.what());
+			PyErr_SetString(PyExc_RuntimeError, err.what());
 			return NULL;
 		}
 	}
 	else
 	{
-		PyErr_Format(PyExc_RuntimeError, "Device not found.");
+		PyErr_SetString(PyExc_RuntimeError, "Device not found.");
 		return NULL;
 	}
 
