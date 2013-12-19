@@ -421,6 +421,11 @@ int ConvertRgb24ToI420orYV12(const unsigned char *im, unsigned dataLen,
 	unsigned *buffOutLen,
 	const char *outPxFmt)
 {
+	//Check if input buffer is of sufficient size
+	int requiredInputSize = 3 * width * height;
+	if(requiredInputSize != dataLen)
+		throw std::runtime_error("Input buffer has unexpected size");
+
 	//Create output buffer if required
 	int requiredSize = width * height * 1.5;
 	if(*buffOutLen != 0 && *buffOutLen != requiredSize)
@@ -462,14 +467,10 @@ int ConvertRgb24ToI420orYV12(const unsigned char *im, unsigned dataLen,
 			unsigned UOutOffset = colOffset + uPlaneOffset;
 			unsigned VOutOffset = colOffset + vPlaneOffset;
 
-			if(rgbInOffset1+2 >= dataLen)
-				throw std::runtime_error("Internal error (1) in ConvertRgb24ToI420orYV12");
-			if(rgbInOffset2+2 >= dataLen)
-				throw std::runtime_error("Internal error (1) in ConvertRgb24ToI420orYV12");
-			if(rgbInOffset3+2 >= dataLen)
-				throw std::runtime_error("Internal error (1) in ConvertRgb24ToI420orYV12");
-			if(rgbInOffset4+2 >= dataLen)
-				throw std::runtime_error("Internal error (1) in ConvertRgb24ToI420orYV12");
+			if(rgbInOffset1+2 >= dataLen) {throw std::runtime_error("1");}
+			if(rgbInOffset2+2 >= dataLen) {throw std::runtime_error("2");}
+			if(rgbInOffset3+2 >= dataLen) {throw std::runtime_error("3");}
+			if(rgbInOffset4+2 >= dataLen) {throw std::runtime_error("4");}
 
 			unsigned Y1 = 66 * im[rgbInOffset1] + 129 * im[rgbInOffset1+1] + 25 * im[rgbInOffset1+2];
 			unsigned Y2 = 66 * im[rgbInOffset2] + 129 * im[rgbInOffset2+1] + 25 * im[rgbInOffset2+2];
@@ -501,18 +502,12 @@ int ConvertRgb24ToI420orYV12(const unsigned char *im, unsigned dataLen,
 			V3 = ((V3 + 128) >> 8) + 128;
 			V4 = ((V4 + 128) >> 8) + 128;
 
-			if(YOutOffset1 >= *buffOutLen)
-				throw std::runtime_error("Internal error (2) in ConvertRgb24ToI420orYV12");
-			if(YOutOffset2 >= *buffOutLen)
-				throw std::runtime_error("Internal error (2) in ConvertRgb24ToI420orYV12");
-			if(YOutOffset3 >= *buffOutLen)
-				throw std::runtime_error("Internal error (2) in ConvertRgb24ToI420orYV12");
-			if(YOutOffset4 >= *buffOutLen)
-				throw std::runtime_error("Internal error (2) in ConvertRgb24ToI420orYV12");
-			if(VOutOffset >= *buffOutLen)
-				throw std::runtime_error("Internal error (2) in ConvertRgb24ToI420orYV12");
-			if(UOutOffset >= *buffOutLen)
-				throw std::runtime_error("Internal error (2) in ConvertRgb24ToI420orYV12");
+			if(YOutOffset1 >= *buffOutLen) {throw std::runtime_error("5");}
+			if(YOutOffset2 >= *buffOutLen) {throw std::runtime_error("6");}
+			if(YOutOffset3 >= *buffOutLen) {throw std::runtime_error("7");}
+			if(YOutOffset4 >= *buffOutLen) {throw std::runtime_error("8");}
+			if(VOutOffset >= *buffOutLen) {throw std::runtime_error("9");}
+			if(UOutOffset >= *buffOutLen) {throw std::runtime_error("10");}
 
 			(*buffOut)[YOutOffset1] = Y1;
 			(*buffOut)[YOutOffset2] = Y2;

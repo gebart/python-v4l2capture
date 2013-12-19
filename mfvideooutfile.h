@@ -46,6 +46,7 @@ protected:
 	std::vector<class FrameMetaData> outBufferMeta;
 	std::vector<std::string> outBuffer;
 	LONGLONG prevFrameDuration;
+	IMFByteStream *pIByteStream;
 };
 
 void *MfVideoOut_File_Worker_thread(void *arg);

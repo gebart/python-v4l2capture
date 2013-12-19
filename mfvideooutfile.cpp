@@ -98,6 +98,7 @@ MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
 	this->fina = CStringToWString(fiName);
 	this->frameRateFps = 25;
 	this->prevFrameDuration = 0;
+	this->pIByteStream = NULL;
 	SetTimeToZero(this->startVideoTime);
 }
 
@@ -126,7 +127,7 @@ void MfVideoOutFile::OpenFile()
 	IMFAttributes *containerAttributes = NULL;
 	HRESULT hr = MFCreateAttributes(&containerAttributes, 0);
 
-	IMFByteStream *pIByteStream = NULL;
+	this->pIByteStream = NULL;
 
 	if (SUCCEEDED(hr))
 	{
@@ -315,7 +316,10 @@ void MfVideoOutFile::CloseFile()
 	{
 		HRESULT hr = this->pSinkWriter->Finalize();
 	}
+
 	SafeRelease(&pSinkWriter);
+
+	SafeRelease(&pIByteStream);
 }
 
 void MfVideoOutFile::SendFrame(const char *imgIn, 
