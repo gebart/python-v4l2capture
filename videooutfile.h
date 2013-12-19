@@ -24,7 +24,6 @@ PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObje
 PyObject *Video_out_file_manager_close(Video_out_file_manager *self, PyObject *args);
 PyObject *Video_out_file_manager_Set_Frame_Rate(Video_out_file_manager *self, PyObject *args);
 PyObject *Video_out_file_manager_Set_Video_Codec(Video_out_file_manager *self, PyObject *args);
-PyObject *Video_out_file_manager_Enable_Real_Time_Frame_Rate(Video_out_file_manager *self, PyObject *args);
 
 #endif //VIDEOOUTFILE_H
 

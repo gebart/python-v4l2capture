@@ -70,14 +70,19 @@ public:
 	Base_Video_Out() {};
 	virtual ~Base_Video_Out() {};
 
-	virtual void SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height) {};
+	virtual void SendFrame(const char *imgIn, 
+		unsigned imgLen, 
+		const char *pxFmt, 
+		int width, 
+		int height, 
+		unsigned long tv_sec = 0,
+		unsigned long tv_usec = 0) {};
 	virtual void Stop() {};
 	virtual int WaitForStop() {return 1;};
 	virtual void SetOutputSize(int width, int height) {};
 	virtual void SetOutputPxFmt(const char *fmt) {};
 	virtual void SetFrameRate(unsigned int frameRateIn) {};
 	virtual void SetVideoCodec(const char *codec, unsigned int bitrate) {};
-	virtual void EnableRealTimeFrameRate(int varEnable) {};
 
 	void Run() {};
 };

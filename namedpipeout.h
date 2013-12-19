@@ -13,7 +13,9 @@ public:
 	NamedPipeOut(const char *devName);
 	virtual ~NamedPipeOut();
 
-	void SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height);
+	void SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height, 
+		unsigned long tv_sec = 0,
+		unsigned long tv_usec = 0);
 	void Stop();
 	int WaitForStop();
 

@@ -17,15 +17,16 @@ public:
 	void OpenFile();
 	void CloseFile();
 
-	void SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height);
+	void SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height, 
+		unsigned long tv_sec = 0,
+		unsigned long tv_usec = 0);
 	void Stop();
 	int WaitForStop();
 
 	virtual void SetOutputSize(int width, int height);
 	virtual void SetOutputPxFmt(const char *fmt);
-	virtual void SetFrameRate(UINT32 frameRateIn);
-	virtual void SetVideoCodec(const char *codec, UINT32 bitrate);
-	virtual void EnableRealTimeFrameRate(int varEnable);
+	virtual void SetFrameRate(unsigned int frameRateIn);
+	virtual void SetVideoCodec(const char *codec, unsigned int bitrate);
 
 	void MfVideoOutFile::CopyFromBufferToOutFile(int lastFrame = 0);
 	void Run();
@@ -38,7 +39,6 @@ protected:
 	std::string pxFmt;
 	std::string videoCodec;
 	std::wstring fina;
-	int variableFrameRateEnabled;
 
 	int outputWidth, outputHeight;
 	UINT32 bitRate, frameRateFps;

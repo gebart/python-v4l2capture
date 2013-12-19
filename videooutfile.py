@@ -20,8 +20,6 @@ if __name__=="__main__":
 	outManager.set_video_codec(fina, "H264", 800000)
 	print "set_frame_rate"
 	outManager.set_frame_rate(fina, 25)
-	print "enable_real_time_frames", realTimeFrames
-	outManager.enable_real_time_frame_rate(fina, realTimeFrames)
 
 	imgLen = w * h * 3
 	#img = np.ones(shape=(imgLen,), dtype=np.uint8) * 0

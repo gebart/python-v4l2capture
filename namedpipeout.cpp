@@ -295,7 +295,9 @@ NamedPipeOut::~NamedPipeOut()
 	CoUninitialize();
 }
 
-void NamedPipeOut::SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height)
+void NamedPipeOut::SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height,
+	unsigned long tv_sec,
+	unsigned long tv_usec)
 {
 	cout << "NamedPipeOut::SendFrame" << endl;
 

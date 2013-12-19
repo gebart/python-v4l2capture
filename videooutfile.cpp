@@ -92,7 +92,7 @@ PyObject *Video_out_file_manager_open(Video_out_file_manager *self, PyObject *ar
 PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObject *args)
 {
 	//printf("Video_out_file_manager_Send_frame\n");
-	//dev = '\\dev\\video0', img, pixel_format, width, height
+	//dev = '\\dev\\video0', img, pixel_format, width, height, time_sec, time_usec
 
 	//Process arguments
 	const char *devarg = NULL;
@@ -100,6 +100,8 @@ PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObje
 	const char *pxFmtIn = NULL;
 	int widthIn = 0;
 	int heightIn = 0;
+	unsigned long time_sec = 0;
+	unsigned long time_usec = 0;
 
 	if(PyObject_Length(args) < 5)
 	{
@@ -123,13 +125,25 @@ PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObje
 	PyObject *pyHeight = PyTuple_GetItem(args, 4);
 	heightIn = PyInt_AsLong(pyHeight);
 
+	if(PyObject_Length(args) > 5)
+	{
+		PyObject *pyTimeSec = PyTuple_GetItem(args, 5);
+		time_sec = PyInt_AsLong(pyTimeSec);
+	}
+
+	if(PyObject_Length(args) > 6)
+	{
+		PyObject *pyTimeUSec = PyTuple_GetItem(args, 6);
+		time_usec = PyInt_AsLong(pyTimeUSec);
+	}
+
 	std::map<std::string, class Base_Video_Out *>::iterator it = self->threads->find(devarg);
 
 	if(it != self->threads->end())
 	{
 		try
 		{
-			it->second->SendFrame(imgIn, imgLen, pxFmtIn, widthIn, heightIn);
+			it->second->SendFrame(imgIn, imgLen, pxFmtIn, widthIn, heightIn, time_sec, time_usec);
 		}
 		catch (std::exception &err)
 		{
@@ -253,48 +267,6 @@ PyObject *Video_out_file_manager_Set_Video_Codec(Video_out_file_manager *self, P
 		try
 		{
 		it->second->SetVideoCodec(videoCodec, bitRate);
-		}
-		catch(std::exception &err)
-		{
-			PyErr_SetString(PyExc_RuntimeError, err.what());
-			return NULL;
-		}
-
-	}
-	else
-	{
-		PyErr_SetString(PyExc_RuntimeError, "Device not found.");
-		return NULL;
-	}
-
-	Py_RETURN_NONE;
-}
-
-PyObject *Video_out_file_manager_Enable_Real_Time_Frame_Rate(Video_out_file_manager *self, PyObject *args)
-{
-	//Process arguments
-	const char *devarg = NULL;
-	int realTimeFrameRate = 0;
-
-	if(PyObject_Length(args) < 2)
-	{
-		PyErr_SetString(PyExc_RuntimeError, "Too few arguments.");
-		return NULL;
-	}
-
-	PyObject *pydev = PyTuple_GetItem(args, 0);
-	devarg = PyString_AsString(pydev);
-
-	PyObject *pyRealTimeFrameRate = PyTuple_GetItem(args, 1);
-	realTimeFrameRate = PyInt_AsLong(pyRealTimeFrameRate);
-
-	std::map<std::string, class Base_Video_Out *>::iterator it = self->threads->find(devarg);
-
-	if(it != self->threads->end())
-	{
-		try
-		{
-			it->second->EnableRealTimeFrameRate(realTimeFrameRate);
 		}
 		catch(std::exception &err)
 		{

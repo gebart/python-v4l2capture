@@ -98,7 +98,6 @@ MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
 	this->fina = CStringToWString(fiName);
 	this->frameRateFps = 25;
 	this->prevFrameDuration = 0;
-	this->variableFrameRateEnabled = 0;
 	SetTimeToZero(this->startVideoTime);
 }
 
@@ -121,7 +120,7 @@ void MfVideoOutFile::OpenFile()
 	IMFMediaType	*pMediaTypeIn = NULL;
 	this->rtDuration = 1;
 	std::string errMsg;
-	if(!this->variableFrameRateEnabled)
+	if(this->frameRateFps > 0)
 		MFFrameRateToAverageTimePerFrame(this->frameRateFps, 1, &this->rtDuration);
 
 	IMFAttributes *containerAttributes = NULL;
@@ -319,7 +318,13 @@ void MfVideoOutFile::CloseFile()
 	SafeRelease(&pSinkWriter);
 }
 
-void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height)
+void MfVideoOutFile::SendFrame(const char *imgIn, 
+	unsigned imgLen, 
+	const char *pxFmt, 
+	int width, 
+	int height,
+	unsigned long tv_sec,
+	unsigned long tv_usec)
 {
 	if(this->pSinkWriter == NULL)
 		this->OpenFile();
@@ -330,22 +335,12 @@ void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *p
 		this->startVideoTime = timeNow;
 	}
 
-	//Time since video start
-	unsigned long elapseSec = 0;
-	unsigned long elapseUSec = 0;
-	if(!this->variableFrameRateEnabled)
+	if(tv_sec == 0 && tv_usec == 0)
 	{
-		//Fixed frame rate
-		elapseSec = (unsigned long)(this->rtStart / 1e7);
-		elapseUSec = (unsigned long)((this->rtStart - elapseSec * 1e7)/10. + 0.5);
+		//Using fixed frame rate and generate time stamps
+		tv_sec = (unsigned long)(this->rtStart / 1e7);
+		tv_usec = (unsigned long)((this->rtStart - tv_sec * 1e7)/10. + 0.5);
 		this->rtStart += this->rtDuration;
-	}
-	else
-	{
-		//Real time frames
-		double elapse = SubtractTimes(timeNow, this->startVideoTime);
-		elapseSec = (unsigned long)elapse;
-		elapseUSec = (unsigned long)(((elapse - (double)elapseSec) / (double)1e6) + 0.5);
 	}
 
 	//Add frame to output buffer
@@ -356,8 +351,8 @@ void MfVideoOutFile::SendFrame(const char *imgIn, unsigned imgLen, const char *p
 	meta.width = width;
 	meta.height = height;
 	meta.buffLen = imgLen;
-	meta.tv_sec = elapseSec;
-	meta.tv_usec = elapseUSec;
+	meta.tv_sec = tv_sec;
+	meta.tv_usec = tv_usec;
 	std::string img(imgIn, imgLen);
 	this->outBuffer.push_back(img);
 
@@ -543,15 +538,6 @@ void MfVideoOutFile::SetVideoCodec(const char *codec, unsigned int bitrateIn)
 	}
 	if(bitrateIn > 0)
 		this->bitRate = bitrateIn;
-}
-
-void MfVideoOutFile::EnableRealTimeFrameRate(int varEnable)
-{
-	if(this->pSinkWriter != NULL)
-	{
-		throw std::runtime_error("Set video parameters before opening video file");
-	}
-	this->variableFrameRateEnabled = varEnable;
 }
 
 void MfVideoOutFile::Run()
