@@ -96,7 +96,7 @@ MfVideoOutFile::MfVideoOutFile(const char *fiName) : Base_Video_Out()
 	this->outputHeight = 480;
 	this->bitRate = 800000;
 	this->fina = CStringToWString(fiName);
-	this->frameRateFps = 0;
+	this->frameRateFps = 25;
 	this->prevFrameDuration = 0;
 	this->variableFrameRateEnabled = 0;
 	SetTimeToZero(this->startVideoTime);
@@ -136,7 +136,10 @@ void MfVideoOutFile::OpenFile()
 			MF_FILEFLAGS_NONE,
 			this->fina.c_str(),
 			&pIByteStream);
-		if (!SUCCEEDED(hr)) errMsg = "MFCreateFile failed";
+		if (!SUCCEEDED(hr))
+		{
+			errMsg = "MFCreateFile failed";
+		}
 	}
 
 	if(containerAttributes!=NULL)

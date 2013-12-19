@@ -44,7 +44,6 @@ PyObject *Video_out_manager_open(Video_out_manager *self, PyObject *args)
 
 	if(!PyArg_ParseTuple(args, "ssii", &devarg, &pxFmtIn, &widthIn, &heightIn))
 	{
-		std::cout << "err" << std::endl;
 		PyErr_Format(PyExc_RuntimeError, "Incorrect arguments to function.");
 		return NULL;
 	}
