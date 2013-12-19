@@ -91,7 +91,7 @@ PyObject *Video_out_file_manager_open(Video_out_file_manager *self, PyObject *ar
 
 PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObject *args)
 {
-	//printf("Video_out_file_manager_Send_frame\n");
+	//std::cout << "Video_out_file_manager_Send_frame" << std::endl;
 	//dev = '\\dev\\video0', img, pixel_format, width, height, time_sec, time_usec
 
 	//Process arguments
@@ -101,7 +101,7 @@ PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObje
 	int widthIn = 0;
 	int heightIn = 0;
 	unsigned long time_sec = 0;
-	unsigned long time_usec = 0;
+	double time_usec = 0;
 
 	if(PyObject_Length(args) < 5)
 	{
@@ -134,7 +134,7 @@ PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObje
 	if(PyObject_Length(args) > 6)
 	{
 		PyObject *pyTimeUSec = PyTuple_GetItem(args, 6);
-		time_usec = PyInt_AsLong(pyTimeUSec);
+		time_usec = PyFloat_AsDouble(pyTimeUSec);
 	}
 
 	std::map<std::string, class Base_Video_Out *>::iterator it = self->threads->find(devarg);
@@ -143,7 +143,7 @@ PyObject *Video_out_file_manager_Send_frame(Video_out_file_manager *self, PyObje
 	{
 		try
 		{
-			it->second->SendFrame(imgIn, imgLen, pxFmtIn, widthIn, heightIn, time_sec, time_usec);
+			it->second->SendFrame(imgIn, imgLen, pxFmtIn, widthIn, heightIn, time_sec, (unsigned int)(time_usec+0.5));
 		}
 		catch (std::exception &err)
 		{
