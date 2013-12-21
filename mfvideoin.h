@@ -31,6 +31,8 @@ public:
 	virtual void CloseDevice();
 	virtual int GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut);
 
+	virtual int GetMfParameter(long prop = 0);
+
 	void Run();
 protected:
 	

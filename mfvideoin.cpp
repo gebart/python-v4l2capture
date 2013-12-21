@@ -9,9 +9,13 @@ using namespace std;
 #include <mfapi.h>
 #include <Mferror.h>
 #include <Shlwapi.h>
+#include <Dshow.h>
 
 #include "mfvideoin.h"
 #include "pixfmt.h"
+
+//See also:
+//https://github.com/Itseez/opencv/blob/master/modules/highgui/src/cap_msmf.cpp
 
 #define MAX_DEVICE_ID_LEN 100
 int EnumDevices(IMFActivate ***ppDevicesOut);
@@ -769,7 +773,50 @@ void MfVideoIn::StartDeviceInternal()
 
 	this->reader = readerTmp;
 
+	this->GetMfParameter();
+
 	SafeRelease(&pAttributes);
+}
+
+int MfVideoIn::GetMfParameter(long prop)
+{
+	long CurrentValue = 0;
+	long Min = 0;
+	long Max = 0;
+	long Step = 0;
+	long Default = 0;
+	long Flag = 0;
+
+	if(prop==0)
+		prop = CameraControl_Exposure;
+
+	IAMCameraControl *pProcControl = NULL;
+	HRESULT hr = this->source->QueryInterface(IID_PPV_ARGS(&pProcControl));
+	if(!SUCCEEDED(hr))
+		throw runtime_error("IAMCameraControl interface not available");
+
+	hr = pProcControl->GetRange(prop, &Min, &Max, &Step, &Default, &Flag);
+	if(!SUCCEEDED(hr))
+	{
+		SafeRelease(&pProcControl);
+		return 0;
+	}
+
+	std::cout << "CurrentValue " << CurrentValue << std::endl;
+	std::cout << "Min " << Min << std::endl;
+	std::cout << "Max " << Max << std::endl;
+	std::cout << "Step " << Step << std::endl;
+	std::cout << "Default " << Default << std::endl;
+	std::cout << "Flag " << Flag << std::endl;
+
+	long val = 0, flags = 0;
+	hr = pProcControl->Get(prop, &val, &flags);
+
+	std::cout << "Value " << val << std::endl;
+	std::cout << "Flag " << flags << std::endl;
+
+	SafeRelease(&pProcControl);
+	return 1;
 }
 
 void MfVideoIn::SetSampleMetaData(DWORD streamIndex)
@@ -810,6 +857,7 @@ void MfVideoIn::SetSampleMetaData(DWORD streamIndex)
 }
 
 void MfVideoIn::PopFrontMetaDataBuff()
+
 {
 	if(this->plStrideBuff.size()>0) this->plStrideBuff.erase(this->plStrideBuff.begin());
 	if(this->majorTypeBuff.size()>0) this->majorTypeBuff.erase(this->majorTypeBuff.begin());
