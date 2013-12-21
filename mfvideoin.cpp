@@ -779,6 +779,16 @@ void MfVideoIn::StartDeviceInternal()
 	//this->SetMfControl(CameraControl_Exposure, -3, 1);
 	//this->GetMfControl(CameraControl_Exposure, 1);
 
+	/*try
+	{
+		int ret = this->SetMfControl(CameraControl_Exposure, -3, CameraControl_Flags_Manual);
+		std::cout << "ret" << ret << std::endl;
+	}
+	catch(std::runtime_error &err)
+	{
+		std::cout << "exception " << err.what() << std::endl;
+	}*/
+	
 	SafeRelease(&pAttributes);
 }
 
@@ -1019,7 +1029,7 @@ void MfVideoIn::ReadFramesInternal()
 
 			//for(long i=VideoProcAmp_Brightness;i<=VideoProcAmp_Gain;i++)
 			//	this->GetMfParameter(i, 0);
-			int ret = this->SetMfControl(CameraControl_Exposure, -3, CameraControl_Flags_Manual);
+			/*int ret = this->SetMfControl(CameraControl_Exposure, -3, CameraControl_Flags_Manual);
 			std::cout << "ret" << ret << std::endl;
 			this->GetMfControl(CameraControl_Exposure, 1);
 			this->SetMfParameter(VideoProcAmp_Gain, 0, VideoProcAmp_Flags_Auto);
@@ -1027,7 +1037,7 @@ void MfVideoIn::ReadFramesInternal()
 			this->GetMfParameter(VideoProcAmp_Gain, 0);
 			this->SetMfParameter(VideoProcAmp_Gamma, 72, VideoProcAmp_Flags_Auto);
 			std::cout << "ret" << ret << std::endl;
-			this->GetMfParameter(VideoProcAmp_Gamma, 0);
+			this->GetMfParameter(VideoProcAmp_Gamma, 0);*/
 			//for(long i=CameraControl_Pan;i<=CameraControl_Focus;i++)
 			//	this->GetMfControl(i, 0);
 
