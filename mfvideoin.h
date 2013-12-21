@@ -32,6 +32,7 @@ public:
 	virtual int GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut);
 
 	virtual int GetMfParameter(long prop = 0);
+	virtual int SetMfParameter(long prop = 0, long value = 0, long flags = 0);
 
 	void Run();
 protected:

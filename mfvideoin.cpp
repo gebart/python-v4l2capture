@@ -773,7 +773,9 @@ void MfVideoIn::StartDeviceInternal()
 
 	this->reader = readerTmp;
 
-	this->GetMfParameter();
+	//this->GetMfParameter();
+	//this->SetMfParameter(CameraControl_Exposure, -6, 2);
+	//this->GetMfParameter();
 
 	SafeRelease(&pAttributes);
 }
@@ -816,7 +818,26 @@ int MfVideoIn::GetMfParameter(long prop)
 	std::cout << "Flag " << flags << std::endl;
 
 	SafeRelease(&pProcControl);
-	return 1;
+	return SUCCEEDED(hr);
+}
+
+int MfVideoIn::SetMfParameter(long prop, long value, long flags)
+{
+	if(prop==0)
+		prop = CameraControl_Exposure;
+	if(flags==0)
+		flags = CameraControl_Flags_Manual;
+
+	IAMCameraControl *pProcControl = NULL;
+	HRESULT hr = this->source->QueryInterface(IID_PPV_ARGS(&pProcControl));
+	if(!SUCCEEDED(hr))
+		throw runtime_error("IAMCameraControl interface not available");
+
+	hr = pProcControl->Set(prop, value, flags);
+
+	SafeRelease(&pProcControl);
+	return SUCCEEDED(hr);
+
 }
 
 void MfVideoIn::SetSampleMetaData(DWORD streamIndex)
