@@ -591,7 +591,9 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 
 	if(wcscmp(this->subTypeBuff[0].c_str(), L"MFVideoFormat_YUY2")==0)
 		currentPixFmt = "YUYV"; //YUYV = YUY2
-	
+	if(wcscmp(this->subTypeBuff[0].c_str(), L"MFVideoFormat_RGB24")==0)
+		currentPixFmt = "RGB24";
+
 	//Do conversion to rgb
 	unsigned char *buffConv = NULL;
 	unsigned buffConvLen = 0;
@@ -773,24 +775,20 @@ void MfVideoIn::StartDeviceInternal()
 
 	this->reader = readerTmp;
 
-	//this->GetMfParameter();
-	//this->SetMfParameter(CameraControl_Exposure, -6, 2);
-	//this->GetMfParameter();
+	//this->GetMfControl(CameraControl_Exposure);
+	//this->SetMfControl(CameraControl_Exposure, -3, 1);
+	//this->GetMfControl(CameraControl_Exposure, 1);
 
 	SafeRelease(&pAttributes);
 }
 
-int MfVideoIn::GetMfParameter(long prop)
+int MfVideoIn::GetMfControl(long prop, int range)
 {
-	long CurrentValue = 0;
 	long Min = 0;
 	long Max = 0;
 	long Step = 0;
 	long Default = 0;
 	long Flag = 0;
-
-	if(prop==0)
-		prop = CameraControl_Exposure;
 
 	IAMCameraControl *pProcControl = NULL;
 	HRESULT hr = this->source->QueryInterface(IID_PPV_ARGS(&pProcControl));
@@ -804,27 +802,27 @@ int MfVideoIn::GetMfParameter(long prop)
 		return 0;
 	}
 
-	std::cout << "CurrentValue " << CurrentValue << std::endl;
-	std::cout << "Min " << Min << std::endl;
-	std::cout << "Max " << Max << std::endl;
-	std::cout << "Step " << Step << std::endl;
-	std::cout << "Default " << Default << std::endl;
-	std::cout << "Flag " << Flag << std::endl;
+	if(range)
+	{
+		std::cout << "Min " << Min << std::endl;
+		std::cout << "Max " << Max << std::endl;
+		std::cout << "Step " << Step << std::endl;
+		std::cout << "Default " << Default << std::endl;
+		std::cout << "Allowed Flag " << Flag << std::endl;
+	}
 
 	long val = 0, flags = 0;
 	hr = pProcControl->Get(prop, &val, &flags);
 
-	std::cout << "Value " << val << std::endl;
-	std::cout << "Flag " << flags << std::endl;
+	std::cout << "Current Value " << prop << " " << val << std::endl;
+	std::cout << "Current Flag " << prop << " " << flags << std::endl;
 
 	SafeRelease(&pProcControl);
 	return SUCCEEDED(hr);
 }
 
-int MfVideoIn::SetMfParameter(long prop, long value, long flags)
+int MfVideoIn::SetMfControl(long prop, long value, long flags)
 {
-	if(prop==0)
-		prop = CameraControl_Exposure;
 	if(flags==0)
 		flags = CameraControl_Flags_Manual;
 
@@ -836,6 +834,62 @@ int MfVideoIn::SetMfParameter(long prop, long value, long flags)
 	hr = pProcControl->Set(prop, value, flags);
 
 	SafeRelease(&pProcControl);
+	return SUCCEEDED(hr);
+
+}
+
+int MfVideoIn::GetMfParameter(long param, int range)
+{
+	long Min = 0;
+	long Max = 0;
+	long Step = 0;
+	long Default = 0;
+	long Flag = 0;
+
+	IAMVideoProcAmp *pProcAmp = NULL;
+	HRESULT hr = this->source->QueryInterface(IID_PPV_ARGS(&pProcAmp));
+	if(!SUCCEEDED(hr))
+		throw runtime_error("IAMCameraControl interface not available");
+
+	hr = pProcAmp->GetRange(param, &Min, &Max, &Step, &Default, &Flag);
+	if(!SUCCEEDED(hr))
+	{
+		SafeRelease(&pProcAmp);
+		return 0;
+	}
+
+	if(range)
+	{
+		std::cout << "param "<< param << " Min " << Min << std::endl;
+		std::cout << "param "<< param << " Max " << Max << std::endl;
+		std::cout << "param "<< param << " Step " << Step << std::endl;
+		std::cout << "param "<< param << " Default " << Default << std::endl;
+		std::cout << "param "<< param << " Allowed Flag " << Flag << std::endl;
+	}
+
+	long val = 0, flags = 0;
+	hr = pProcAmp->Get(param, &val, &flags);
+
+	std::cout << "param "<< param << " Current Value " << val << std::endl;
+	std::cout << "param "<< param << " Current Flag " << flags << std::endl;
+
+	SafeRelease(&pProcAmp);
+	return SUCCEEDED(hr);
+}
+
+int MfVideoIn::SetMfParameter(long param, long value, long flags)
+{
+	if(flags==0)
+		flags = CameraControl_Flags_Manual;
+
+	IAMVideoProcAmp *pProcAmp = NULL;
+	HRESULT hr = this->source->QueryInterface(IID_PPV_ARGS(&pProcAmp));
+	if(!SUCCEEDED(hr))
+		throw runtime_error("IAMCameraControl interface not available");
+
+	hr = pProcAmp->Set(param, value, flags);
+
+	SafeRelease(&pProcAmp);
 	return SUCCEEDED(hr);
 
 }
@@ -961,7 +1015,22 @@ void MfVideoIn::ReadFramesInternal()
 				delete [] frame;
 			}
 
-			LeaveCriticalSection(&lock);			
+			LeaveCriticalSection(&lock);
+
+			//for(long i=VideoProcAmp_Brightness;i<=VideoProcAmp_Gain;i++)
+			//	this->GetMfParameter(i, 0);
+			int ret = this->SetMfControl(CameraControl_Exposure, -3, CameraControl_Flags_Manual);
+			std::cout << "ret" << ret << std::endl;
+			this->GetMfControl(CameraControl_Exposure, 1);
+			this->SetMfParameter(VideoProcAmp_Gain, 0, VideoProcAmp_Flags_Auto);
+			std::cout << "ret" << ret << std::endl;
+			this->GetMfParameter(VideoProcAmp_Gain, 0);
+			this->SetMfParameter(VideoProcAmp_Gamma, 72, VideoProcAmp_Flags_Auto);
+			std::cout << "ret" << ret << std::endl;
+			this->GetMfParameter(VideoProcAmp_Gamma, 0);
+			//for(long i=CameraControl_Pan;i<=CameraControl_Focus;i++)
+			//	this->GetMfControl(i, 0);
+
 			return;
 		}
 		else
