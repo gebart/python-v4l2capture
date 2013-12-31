@@ -36,6 +36,11 @@ int ResizeRgb24ImageNN(const unsigned char *data, unsigned dataLen,
 	unsigned buffOutLen,
 	int widthOut, int heightOut, int invertVertical = 0, int tupleLen = 3);
 
+int VerticalFlipRgb24(const unsigned char *im, unsigned dataLen, 
+	int width, int height,
+	unsigned char **buffOut,
+	unsigned *buffOutLen);
+
 int InsertHuffmanTableCTypes(const unsigned char* inBufferPtr, unsigned inBufferLen, std::string &outBuffer);
 
 #endif //_PIXFMT_H_

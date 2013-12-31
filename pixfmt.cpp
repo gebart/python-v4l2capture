@@ -703,6 +703,52 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 		}
 	}
 
+	//Destination of RGB24INV, so convert to RGB24 first
+	if(strcmp(targetPxFmt, "RGB24INV")==0)
+	{
+		unsigned char *rgbBuff = NULL;
+		unsigned rgbBuffLen = 0;
+		int ret = DecodeFrame(data, dataLen, 
+			inPxFmt,
+			width, height,
+			"RGB24",
+			&rgbBuff,
+			&rgbBuffLen);
+
+		if(ret>0)
+		{
+			int ret2 = VerticalFlipRgb24(rgbBuff, rgbBuffLen, 
+				width, height,
+				buffOut,
+				buffOutLen);
+			delete [] rgbBuff;
+			if(ret2>0) return ret2;
+		}
+	}
+
+	//Vertical flip of RGB24
+	if(strcmp(inPxFmt, "RGB24INV")==0)
+	{
+		unsigned char *rgbBuff = NULL;
+		unsigned rgbBuffLen = 0;
+		int ret = VerticalFlipRgb24(data, dataLen, 
+				width, height,
+				&rgbBuff,
+				&rgbBuffLen);
+
+		if(ret>0)
+		{
+			int ret2 = DecodeFrame(rgbBuff, rgbBuffLen,
+				"RGB24",
+				width, height,
+				targetPxFmt,
+				buffOut,
+				buffOutLen);
+			delete [] rgbBuff;
+			if(ret2>0) return ret2;
+		}
+	}
+
 	/*
 	//Untested code
 	if((strcmp(inPxFmt,"YUV2")==0 || strcmp(inPxFmt,"YVU2")==0) 
@@ -826,8 +872,6 @@ int CropToFitRgb24Image(const unsigned char *data, unsigned dataLen,
 	return 1;
 }
 
-//*******************************************************************
-
 int ResizeFrame(const unsigned char *data, 
 	unsigned dataLen, 
 	const char *pxFmt,
@@ -855,6 +899,34 @@ int ResizeFrame(const unsigned char *data,
 	}
 	//Not supported
 	return 0;
+}
+
+/// **************************************************************
+
+int VerticalFlipRgb24(const unsigned char *im, unsigned dataLen, 
+	int width, int height,
+	unsigned char **buffOut,
+	unsigned *buffOutLen)
+{
+	//RGB24 -> RGB24INV
+	//RGB24INV -> RGB24
+
+	if(dataLen != width * height * 3)
+		throw std::runtime_error("Input buffer has incorrect size");
+	if(*buffOutLen != 0 && *buffOutLen != dataLen)
+		throw std::runtime_error("Output buffer has incorrect size");
+	if(*buffOut == NULL)
+		*buffOut = new unsigned char[dataLen];
+	*buffOutLen = dataLen;
+
+	for(int y = 0; y < height; y++)
+	{
+		int invy = height - y - 1;
+		const unsigned char *inRow = &im[y * width * 3];
+		unsigned char *outRow = &((*buffOut)[invy * width * 3]);
+		memcpy(outRow, inRow, width * 3);
+	}
+	return 1;
 }
 
 // ****** Combined resize and convert *************************************************
