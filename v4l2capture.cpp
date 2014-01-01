@@ -52,8 +52,8 @@ int my_ioctl(int fd, int request, void *arg, int utimeout = -1)
 			FD_SET (fd, &fds);
 
 			struct timeval tv;
-				tv.tv_sec = 0;
-				tv.tv_usec = utimeout;
+			tv.tv_sec = 0;
+			tv.tv_usec = utimeout;
 			int r = select(fd+1, &fds, NULL, NULL, &tv);
 			
 			if(r == 0)
@@ -61,11 +61,15 @@ int my_ioctl(int fd, int request, void *arg, int utimeout = -1)
 				printf("Time out\n");
 				return 1; //Timed out
 			}
+			else
+				printf("r %d %d\n", request, r);
 		}
 
 		//printf("call\n");
+		if(request==VIDIOC_DQBUF) printf("VIDIOC_DQBUF\n");
+		printf("VIDIOC_DQBUF = %d\n", VIDIOC_DQBUF);
 		int result = v4l2_ioctl(fd, request, arg);
-		printf("v4l2_ioctl %d\n", result);
+		printf("v4l2_ioctl %d %d\n", request, result);
 
 		if(!result)
 		{
@@ -255,13 +259,16 @@ int Video_in_Manager::ReadFrame()
 	buffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	buffer.memory = V4L2_MEMORY_MMAP;
 
+	printf("Start VIDIOC_DQBUF\n");
 	if(my_ioctl(this->fd, VIDIOC_DQBUF, &buffer, 10000))
 	{
 		return 0;
 	}
+	printf("rx %d\n", buffer.bytesused);
 
 	unsigned char *rgbBuff = NULL;
 	unsigned rgbBuffLen = 0;
+	printf("buff index %d\n", buffer.index);
 	int ok = DecodeFrame((const unsigned char*)this->buffers[buffer.index].start, buffer.bytesused, 
 		this->pxFmt.c_str(),
 		this->frameWidth,

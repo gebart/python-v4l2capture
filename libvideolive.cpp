@@ -18,6 +18,7 @@
 #include "videoout.h"
 #include "videoin.h"
 #include "videooutfile.h"
+#include "pixfmt.h"
 
 // *********************************************************************
 
@@ -31,7 +32,7 @@ PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 	if(PyTuple_Size(args) < 1)
 	{
 		PyErr_SetString(PyExc_TypeError, "Function requires 1 argument");
- 		Py_RETURN_NONE;
+ 		return NULL;
 	}
 
 	PyObject *inBuffer = PyTuple_GetItem(args, 0);
@@ -43,7 +44,7 @@ PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 		//PyObject_Print(type, stdout, Py_PRINT_RAW);
 		//Py_CLEAR(type);
 		
- 		Py_RETURN_NONE;
+ 		return NULL;
 	}
 
 	unsigned char* inBufferPtr = (unsigned char*)PyString_AsString(inBuffer);
@@ -56,6 +57,83 @@ PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 
 	return outBufferPy;
 }
+
+PyObject *DecodeAndResizeFrame(PyObject *self, PyObject *args)
+{
+	//0 string src pixFormat
+	//1 int src width
+	//2 int src height
+	//3 ByteArray src data
+	//4 string out pixFormat
+	//5 int out width
+	//6 int out height
+	//7 ByteArray out data
+
+	if(PyTuple_Size(args) < 8)
+	{
+		PyErr_SetString(PyExc_TypeError, "Function requires 8 arguments");
+ 		return NULL;
+	}
+
+	//Input image
+	PyObject *inPixFmt = PyTuple_GetItem(args, 0);
+	if(!PyString_Check(inPixFmt)) {PyErr_SetString(PyExc_TypeError, "Argument 1 must be a string."); Py_RETURN_NONE;}
+	PyObject *inWidth = PyTuple_GetItem(args, 1);
+	if(!PyInt_Check(inWidth)) {PyErr_SetString(PyExc_TypeError, "Argument 2 must be an int."); Py_RETURN_NONE;}
+	PyObject *inHeight = PyTuple_GetItem(args, 2);
+	if(!PyInt_Check(inHeight)) {PyErr_SetString(PyExc_TypeError, "Argument 3 must be an int."); Py_RETURN_NONE;}
+	PyObject *inData = PyTuple_GetItem(args, 3);
+	if(!PyByteArray_Check(inData)) {PyErr_SetString(PyExc_TypeError, "Argument 4 must be a byte array."); Py_RETURN_NONE;}
+
+	//Output image
+	PyObject *outPixFmt = PyTuple_GetItem(args, 4);
+	if(!PyString_Check(outPixFmt)) {PyErr_SetString(PyExc_TypeError, "Argument 5 must be a string."); Py_RETURN_NONE;}
+	PyObject *outWidth = PyTuple_GetItem(args, 5);
+	if(!PyInt_Check(outWidth)) {PyErr_SetString(PyExc_TypeError, "Argument 6 must be an int."); Py_RETURN_NONE;}
+	PyObject *outHeight = PyTuple_GetItem(args, 6);
+	if(!PyInt_Check(outHeight)) {PyErr_SetString(PyExc_TypeError, "Argument 7 must be an int."); Py_RETURN_NONE;}
+	PyObject *outData = PyTuple_GetItem(args, 7);
+	if(!PyByteArray_Check(outData)) {PyErr_SetString(PyExc_TypeError, "Argument 8 must be a byte array."); Py_RETURN_NONE;}
+
+	unsigned char *buffOut = NULL;
+	unsigned buffOutLen = 0;
+	int useExistingBuff = 0;
+	if(PyByteArray_Size(outData) > 0)
+	{
+		buffOut = (unsigned char *)PyString_AsString(outData);
+		buffOutLen = PyByteArray_Size(outData);
+		useExistingBuff = 1;
+	}
+
+	int ret = 0;
+	try
+	{
+	ret = DecodeAndResizeFrame((unsigned char*)PyString_AsString(inData), 
+		PyString_Size(inData),
+		PyString_AsString(inPixFmt),
+		PyInt_AsLong(inWidth), PyInt_AsLong(inHeight),
+		PyString_AsString(outPixFmt),
+		&buffOut,
+		&buffOutLen, 
+		PyInt_AsLong(outWidth), 
+		PyInt_AsLong(outHeight));
+	}
+	catch(std::exception &err)
+	{
+		PyErr_SetString(PyExc_RuntimeError, err.what());
+ 		return NULL;
+	}
+
+	if(!useExistingBuff && ret > 0)
+	{
+		PyByteArray_Resize(outData, buffOutLen);
+		memcpy(PyString_AsString(outData), buffOut, buffOutLen);
+		delete [] buffOut;
+	}
+	
+	return PyInt_FromLong(ret);
+}
+
 
 // *********************************************************************
 
@@ -158,6 +236,7 @@ static PyTypeObject Video_out_file_manager_type = {
 
 static PyMethodDef module_methods[] = {
 	{ "InsertHuffmanTable", (PyCFunction)InsertHuffmanTable, METH_VARARGS, NULL },
+	{ "DecodeAndResizeFrame", (PyCFunction)DecodeAndResizeFrame, METH_VARARGS, NULL },
 	{ NULL, NULL, 0, NULL }
 };
 

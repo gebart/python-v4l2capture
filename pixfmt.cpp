@@ -153,6 +153,7 @@ int InsertHuffmanTableCTypes(const unsigned char* inBufferPtr, unsigned inBuffer
 	int parsing = 1;
 	unsigned frameStartPos = 0;
 	int huffFound = 0;
+	int huffAdded = 0;
 
 	outBuffer.clear();
 
@@ -177,13 +178,14 @@ int InsertHuffmanTableCTypes(const unsigned char* inBufferPtr, unsigned inBuffer
 		//Stop if there is a serious error
 		if(!ok)
 		{
-			return 0;
+			return -1;
 		}
 	
 		//Check if this segment is the compressed data
 		if(twoBytes[0] == 0xff && twoBytes[1] == 0xda && !huffFound)
 		{
 			outBuffer.append(huffmanSegment, HUFFMAN_SEGMENT_LEN);
+			huffAdded = 1;
 		}
 
 		//Check the type of frame
@@ -196,7 +198,8 @@ int InsertHuffmanTableCTypes(const unsigned char* inBufferPtr, unsigned inBuffer
 		//Move cursor
 		frameStartPos = frameEndPos;
 	}
-	return 1;
+	if(huffAdded) return 1;
+	return 0;
 }
 
 // *********************************************************************
@@ -600,11 +603,19 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 	if(strcmp(inPxFmt,"MJPEG")==0 && strcmp(targetPxFmt, "RGB24")==0)
 	{
 		std::string jpegBin;
-		InsertHuffmanTableCTypes(data, dataLen, jpegBin);
+		int huffRet = InsertHuffmanTableCTypes(data, dataLen, jpegBin);
 
 		unsigned char *decodedBuff = NULL;
 		unsigned decodedBuffSize = 0;
 		int widthActual = 0, heightActual = 0, channelsActual = 0;
+
+		if(0)
+		{
+			//Save bin data to file for debug
+			FILE *jpegout = fopen("debug.jpg","wb");
+			fwrite(jpegBin.c_str(), 1, jpegBin.length(), jpegout);
+			fclose(jpegout);
+		}
 
 		int jpegOk = ReadJpegFile((unsigned char*)jpegBin.c_str(), jpegBin.length(), 
 			&decodedBuff, 
