@@ -246,7 +246,9 @@ int ReadJpegFile(unsigned char * inbuffer,
 		return 0;
 
 	struct jpeg_decompress_struct cinfo;
+	memset(&cinfo, 0x00, sizeof(struct jpeg_decompress_struct));
 	struct my_error_mgr jerr;
+	memset(&jerr, 0x00, sizeof(struct my_error_mgr));
 	*outBuffer = NULL;
 	*outBufferSize = 0;
 	*widthOut = 0;
