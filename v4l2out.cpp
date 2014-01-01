@@ -41,12 +41,16 @@ public:
 	std::string pxFmt;
 	unsigned width;
 	unsigned height;
+	unsigned long tv_sec;
+	unsigned long tv_usec;
 
 	SendFrameArgs()
 	{
 		imgLen = 0;
 		width = 0;
 		height = 0;
+		tv_sec = 0;
+		tv_usec = 0;
 	}
 
 	SendFrameArgs(const SendFrameArgs &in)
@@ -60,6 +64,8 @@ public:
 		height = in.height;
 		imgLen = in.imgLen;
 		pxFmt = in.pxFmt;
+		tv_sec = in.tv_sec;
+		tv_usec = in.tv_usec;
 		return *this;
 	}
 };
@@ -80,7 +86,8 @@ Video_out::Video_out(const char *devNameIn) : Base_Video_Out()
 	outputHeight = 480;
 	outputPxFmt = "YUYV";
 
-	clock_gettime(CLOCK_MONOTONIC, &lastFrameTime);
+	lastFrameTime_sec = 0;
+	lastFrameTime_usec = 0;
 
 	struct sigevent sevp;
 	memset(&sevp, 0, sizeof(struct sigevent));
@@ -122,10 +129,8 @@ void Video_out::SendFrameInternal()
 	pthread_mutex_unlock(&this->lock);
 
 	//Check time since previous frame send
-	struct timespec tp;
-	clock_gettime(CLOCK_MONOTONIC, &tp);
-	long int secSinceLastFrame = tp.tv_sec - this->lastFrameTime.tv_sec;
-	long int nsecSinceLastFrame = tp.tv_nsec - this->lastFrameTime.tv_nsec;
+	long int secSinceLastFrame = args.tv_sec - this->lastFrameTime_sec;
+	long int nsecSinceLastFrame = args.tv_usec - this->lastFrameTime_usec;
 	if(nsecSinceLastFrame < 0)
 	{
 		secSinceLastFrame -= 1;
@@ -187,7 +192,8 @@ void Video_out::SendFrameInternal()
 			printf("Write frame due to elapse time\n");
 		write(this->fdwr, this->currentFrame, this->framesize);
 
-		this->lastFrameTime = tp;
+		this->lastFrameTime_sec = args.tv_sec;
+		this->lastFrameTime_usec = args.tv_usec;
 	}
 
 	//Free image buffer
@@ -292,7 +298,9 @@ void Video_out::Run()
 	pthread_mutex_unlock(&this->lock);
 }
 
-void Video_out::SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height)
+void Video_out::SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt, int width, int height, 
+		unsigned long tv_sec,
+		unsigned long tv_usec)
 {
 	pthread_mutex_lock(&this->lock);
 	if(verbose) printf("SendFrame %i %s %i %i\n", imgLen, pxFmt, width, height);
@@ -306,7 +314,8 @@ void Video_out::SendFrame(const char *imgIn, unsigned imgLen, const char *pxFmt,
 	sendFrameArgsTmp.imgLen = imgLen;
 	sendFrameArgsTmp.pxFmt = pxFmt;
 	sendFrameArgsTmp.width = width;
-	sendFrameArgsTmp.height = height;
+	sendFrameArgsTmp.tv_sec = tv_sec;
+	sendFrameArgsTmp.tv_usec = tv_usec;
 	this->sendFrameArgs.push_back(sendFrameArgsTmp);
 
 	pthread_mutex_unlock(&this->lock);

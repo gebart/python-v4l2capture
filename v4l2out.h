@@ -16,7 +16,7 @@ public:
 	int verbose;
 	std::vector<class SendFrameArgs> sendFrameArgs;
 	std::vector<const char *> sendFrameBuffer;
-	struct timespec lastFrameTime;
+	unsigned long lastFrameTime_sec, lastFrameTime_usec;
 	int fdwr;
 	int framesize;
 	unsigned char *currentFrame;

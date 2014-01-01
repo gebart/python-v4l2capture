@@ -62,7 +62,7 @@ int my_ioctl(int fd, int request, void *arg, int utimeout = -1)
 
 		//printf("call\n");
 		int result = v4l2_ioctl(fd, request, arg);
-		//printf("%d\n", result);
+		printf("v4l2_ioctl %d\n", result);
 
 		if(!result)
 		{
