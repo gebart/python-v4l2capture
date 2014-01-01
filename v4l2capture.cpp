@@ -57,7 +57,10 @@ int my_ioctl(int fd, int request, void *arg, int utimeout = -1)
 			int r = select(fd+1, &fds, NULL, NULL, &tv);
 			
 			if(r == 0)
+			{
+				printf("Time out\n");
 				return 1; //Timed out
+			}
 		}
 
 		//printf("call\n");
