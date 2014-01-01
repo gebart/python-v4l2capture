@@ -108,7 +108,7 @@ PyObject *DecodeAndResizeFrame(PyObject *self, PyObject *args)
 	int ret = 0;
 	try
 	{
-	ret = DecodeAndResizeFrame((unsigned char*)PyString_AsString(inData), 
+	ret = DecodeAndResizeFrame((unsigned char*)PyByteArray_AsString(inData), 
 		PyString_Size(inData),
 		PyString_AsString(inPixFmt),
 		PyInt_AsLong(inWidth), PyInt_AsLong(inHeight),

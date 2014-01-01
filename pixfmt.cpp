@@ -54,6 +54,9 @@ int ReadJpegFrame(const unsigned char *data, unsigned offset, const unsigned cha
 	//Based on http://www.gdcl.co.uk/2013/05/02/Motion-JPEG.html
 	//and https://en.wikipedia.org/wiki/JPEG
 
+	if(data == NULL)
+		throw std::runtime_error("Input data is null pointer");
+
 	*twoBytesOut = NULL;
 	*frameStartPosOut = 0;
 	*cursorOut = 0;
@@ -150,6 +153,9 @@ int ReadJpegFrame(const unsigned char *data, unsigned offset, const unsigned cha
 
 int InsertHuffmanTableCTypes(const unsigned char* inBufferPtr, unsigned inBufferLen, std::string &outBuffer)
 {
+	if(inBufferPtr == NULL)
+		throw std::runtime_error("Input data is null pointer");
+
 	int parsing = 1;
 	unsigned frameStartPos = 0;
 	int huffFound = 0;
@@ -232,6 +238,9 @@ int ReadJpegFile(unsigned char * inbuffer,
 	/* This struct contains the JPEG decompression parameters and pointers to
 	 * working space (which is allocated as needed by the JPEG library).
 	 */
+
+	if(inbuffer == NULL)
+		throw std::runtime_error("Input data is null pointer");
 
 	if(inbuffer[0] != 0xFF || inbuffer[1] != 0xD8)
 		return 0;
