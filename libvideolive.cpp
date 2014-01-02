@@ -127,7 +127,7 @@ PyObject *DecodeAndResizeFrame(PyObject *self, PyObject *args)
 	if(!useExistingBuff && ret > 0)
 	{
 		PyByteArray_Resize(outData, buffOutLen);
-		memcpy(PyString_AsString(outData), buffOut, buffOutLen);
+		memcpy(PyByteArray_AsString(outData), buffOut, buffOutLen);
 		delete [] buffOut;
 	}
 	
