@@ -254,7 +254,6 @@ int ReadJpegFile(unsigned char * inbuffer,
 	*channelsOut = 0;
 
 	/* More stuff */
-	JSAMPARRAY buffer;		/* Output row buffer */
 	int row_stride;		/* physical row width in output buffer */
 
 	/* Step 1: initialize the JPEG decompression object. */
@@ -294,9 +293,6 @@ int ReadJpegFile(unsigned char * inbuffer,
 	jpeg_start_decompress(&cinfo);
 	/* JSAMPLEs per row in output buffer */
 	row_stride = cinfo.output_width * cinfo.output_components;
-	/* Make a one-row-high sample array that will go away when done with image */
-	buffer = (*cinfo.mem->alloc_sarray)
-		((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
 
 	/* Step 6: while (scan lines remain to be read) */
 	/*					 jpeg_read_scanlines(...); */
@@ -309,15 +305,11 @@ int ReadJpegFile(unsigned char * inbuffer,
 		 * Here the array is only one element long, but you could ask for
 		 * more than one scanline at a time if that's more convenient.
 		 */
-		jpeg_read_scanlines(&cinfo, buffer, 1);
-		/* Assume put_scanline_someplace wants a pointer and sample count. */
-		//put_scanline_someplace(buffer[0], row_stride);
+		unsigned char *buffer_array[1];
+		buffer_array[0] = *outBuffer + cinfo.output_scanline * row_stride;
+		jpeg_read_scanlines(&cinfo, buffer_array, 1);
+
 		assert(row_stride = cinfo.image_width * cinfo.num_components);
-		//printf("%ld\n", (long)buffer);
-		//printf("%ld\n", (long)buffer[0]);
-		//printf("%d %d\n", (cinfo.output_scanline-1) * row_stride, *outBufferSize);
-		//printf("%ld %ld\n", (long)outBuffer, (long)&outBuffer[(cinfo.output_scanline-1) * row_stride]);
-		memcpy(&(*outBuffer)[(cinfo.output_scanline-1) * row_stride], buffer[0], row_stride);
 	}
 
 	/* Step 7: Finish decompression */
