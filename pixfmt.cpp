@@ -249,8 +249,6 @@ int ReadJpegFile(unsigned char * inbuffer,
 	memset(&cinfo, 0x00, sizeof(struct jpeg_decompress_struct));
 	struct my_error_mgr jerr;
 	memset(&jerr, 0x00, sizeof(struct my_error_mgr));
-	*outBuffer = NULL;
-	*outBufferSize = 0;
 	*widthOut = 0;
 	*heightOut = 0;
 	*channelsOut = 0;
@@ -282,11 +280,9 @@ int ReadJpegFile(unsigned char * inbuffer,
 	unsigned int outBuffLen = cinfo.image_width * cinfo.image_height * cinfo.num_components;
 	if(*outBufferSize != 0 && *outBufferSize != outBuffLen)
 		throw std::runtime_error("Output buffer has incorrect size");
-	if(*outBuffer == NULL)
-	{
-		*outBuffer = new unsigned char[*outBufferSize];
-	}
 	*outBufferSize = outBuffLen;
+	if(*outBuffer == NULL)
+		*outBuffer = new unsigned char[*outBufferSize];
 	*widthOut = cinfo.image_width;
 	*heightOut = cinfo.image_height;
 	*channelsOut = cinfo.num_components;
