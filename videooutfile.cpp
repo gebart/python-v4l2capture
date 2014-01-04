@@ -52,6 +52,8 @@ PyObject *Video_out_file_manager_open(Video_out_file_manager *self, PyObject *ar
 	pthread_t thread;
 	#ifdef _POSIX
 	//TODO
+	PyErr_SetString(PyExc_RuntimeError, "Not implemented");
+	return NULL;
 	#endif
 	#ifdef _NT
 	MfVideoOutFile *threadArgs = NULL;
