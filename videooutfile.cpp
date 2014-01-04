@@ -34,7 +34,7 @@ void Video_out_file_manager_dealloc(Video_out_file_manager *self)
 
 PyObject *Video_out_file_manager_open(Video_out_file_manager *self, PyObject *args)
 {
-	std::cout << "Video_out_file_manager_open" << std::endl;
+	//std::cout << "Video_out_file_manager_open" << std::endl;
 
 	//Process arguments
 	const char *devarg = NULL;
@@ -43,7 +43,6 @@ PyObject *Video_out_file_manager_open(Video_out_file_manager *self, PyObject *ar
 
 	if(!PyArg_ParseTuple(args, "sii", &devarg, &widthIn, &heightIn))
 	{
-		std::cout << "Attempt to throw exception" << std::endl;
 		PyErr_SetString(PyExc_RuntimeError, "Incorrect arguments to function.");
 		return NULL;
 	}
