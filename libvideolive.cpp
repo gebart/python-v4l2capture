@@ -75,7 +75,7 @@ PyObject *DecodeAndResizeFrameHighLevel(PyObject *self, PyObject *args)
 
 	if(PyTuple_Size(args) < 8)
 	{
-		PyErr_SetString(PyExc_TypeError, "Function requires 8 arguments");
+		PyErr_SetString(PyExc_TypeError, "Function requires 8 arguments (and 1 optional)");
  		return NULL;
 	}
 
@@ -98,6 +98,17 @@ PyObject *DecodeAndResizeFrameHighLevel(PyObject *self, PyObject *args)
 	if(!PyInt_Check(outHeight)) {PyErr_SetString(PyExc_TypeError, "Argument 7 must be an int."); return NULL;}
 	PyObject *outData = PyTuple_GetItem(args, 7);
 	if(!PyByteArray_Check(outData)) {PyErr_SetString(PyExc_TypeError, "Argument 8 must be a byte array."); return NULL;}
+
+	//Optional arguments
+	PyObject *metaOut = NULL;
+	if(PyTuple_Size(args) >= 8)
+	{
+		PyObject *metaOut = PyTuple_GetItem(args, 8);
+		if(!PyDict_Check(metaOut) && metaOut != Py_None) 
+		{PyErr_SetString(PyExc_TypeError, "Argument 9 (if set) must be a dict or None."); return NULL;}
+		if(metaOut==Py_None)
+			metaOut = NULL;
+	}
 
 	unsigned char *buffOut = NULL;
 	unsigned buffOutLen = 0;
@@ -129,6 +140,13 @@ PyObject *DecodeAndResizeFrameHighLevel(PyObject *self, PyObject *args)
 			&buffOutLen, 
 			outWidthInt, 
 			outHeightInt);
+
+		if(metaOut!=NULL && ret > 0)
+		{
+			PyDict_SetItemString(metaOut, "width", PyInt_FromLong(outWidthInt));
+			PyDict_SetItemString(metaOut, "height", PyInt_FromLong(outHeightInt));
+			PyDict_SetItemString(metaOut, "format", PyString_FromString(outPixFmtC);
+		}
 
 	}
 	catch(std::exception &err)
