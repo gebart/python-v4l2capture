@@ -64,6 +64,8 @@ PyObject *DecodeAndResizeFrame(PyObject *self, PyObject *args)
 	if (PyErr_Occurred() != NULL)
 		throw std::runtime_error("Python error set with unexpected state.");
 
+	std::cout << "a" << (PyErr_Occurred() != NULL) << std::endl;
+
 	//0 string src pixFormat
 	//1 int src width
 	//2 int src height
@@ -99,6 +101,8 @@ PyObject *DecodeAndResizeFrame(PyObject *self, PyObject *args)
 	PyObject *outData = PyTuple_GetItem(args, 7);
 	if(!PyByteArray_Check(outData)) {PyErr_SetString(PyExc_TypeError, "Argument 8 must be a byte array."); return NULL;}
 
+	std::cout << "b" << (PyErr_Occurred() != NULL) << std::endl;
+
 	unsigned char *buffOut = NULL;
 	unsigned buffOutLen = 0;
 	int useExistingBuff = 0;
@@ -131,12 +135,16 @@ PyObject *DecodeAndResizeFrame(PyObject *self, PyObject *args)
  		return NULL;
 	}
 
+	std::cout << "c" << (PyErr_Occurred() != NULL) << std::endl;
+
 	if(!useExistingBuff && ret > 0)
 	{
 		PyByteArray_Resize(outData, buffOutLen);
 		memcpy(PyByteArray_AsString(outData), buffOut, buffOutLen);
 		delete [] buffOut;
 	}
+
+	std::cout << "d" << (PyErr_Occurred() != NULL) << std::endl;
 	
 	if (PyErr_Occurred() != NULL)
 		throw std::runtime_error("Python error set with unexpected state.");
