@@ -963,7 +963,6 @@ int DecodeAndResizeFrame(const unsigned char *data,
 	unsigned char *tmpBuff = NULL;
 	unsigned tmpBuffLen = 0;
 
-	std::cout << "a" << std::endl;
 	if(currentWidth==0 || currentHeight==0)
 	{
 		//Source has unknown dimensions
@@ -989,8 +988,6 @@ int DecodeAndResizeFrame(const unsigned char *data,
 		decallocateWhenDone = 1;
 	}
 
-	std::cout << "b" << std::endl;
-
 	if((currentWidth==dstWidth && currentHeight==dstHeight) || dstWidth == 0 || dstHeight == 0)
 	{
 		//Resize is not required
@@ -1012,7 +1009,6 @@ int DecodeAndResizeFrame(const unsigned char *data,
 		dstWidth = currentWidth;
 		dstHeight = currentHeight;
 
-		std::cout << "c" << std::endl;
 		return ret;
 	}
 

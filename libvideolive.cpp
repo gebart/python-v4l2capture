@@ -61,7 +61,9 @@ PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 
 PyObject *DecodeAndResizeFrame(PyObject *self, PyObject *args)
 {
-	std::cout << "DecodeAndResizeFrame start" << std::endl;
+	if (PyErr_Occurred() != NULL)
+		throw std::runtime_error("Python error set with unexpected state.");
+
 	//0 string src pixFormat
 	//1 int src width
 	//2 int src height
@@ -136,7 +138,8 @@ PyObject *DecodeAndResizeFrame(PyObject *self, PyObject *args)
 		delete [] buffOut;
 	}
 	
-	std::cout << "DecodeAndResizeFrame end" << std::endl;
+	if (PyErr_Occurred() != NULL)
+		throw std::runtime_error("Python error set with unexpected state.");
 
 	return PyInt_FromLong(ret);
 }
