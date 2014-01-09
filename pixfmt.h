@@ -18,8 +18,8 @@ int DecodeAndResizeFrame(const unsigned char *data,
 	const char *targetPxFmt,
 	unsigned char **buffOut,
 	unsigned *buffOutLen, 
-	int dstWidth, 
-	int dstHeight);
+	int &dstWidth, 
+	int &dstHeight);
 
 int ResizeFrame(const unsigned char *data, 
 	unsigned dataLen, 

@@ -951,8 +951,8 @@ int DecodeAndResizeFrame(const unsigned char *data,
 	const char *targetPxFmt,
 	unsigned char **buffOut,
 	unsigned *buffOutLen, 
-	int dstWidth, 
-	int dstHeight)
+	int &dstWidth, 
+	int &dstHeight)
 {
 	const unsigned char *currentImg = data;
 	int decallocateWhenDone = 0;
@@ -1008,6 +1008,9 @@ int DecodeAndResizeFrame(const unsigned char *data,
 			currentImg = NULL;
 			currentLen = 0;
 		}
+
+		dstWidth = currentWidth;
+		dstHeight = currentHeight;
 
 		std::cout << "c" << std::endl;
 		return ret;

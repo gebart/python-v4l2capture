@@ -13,6 +13,7 @@
 #include <map>
 #include <vector>
 #include <stdexcept>
+#include <iostream>
 #include <pthread.h>
 #include "pixfmt.h"
 #include "videoout.h"
@@ -60,6 +61,7 @@ PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 
 PyObject *DecodeAndResizeFrame(PyObject *self, PyObject *args)
 {
+	std::cout << "DecodeAndResizeFrame start" << std::endl;
 	//0 string src pixFormat
 	//1 int src width
 	//2 int src height
@@ -108,15 +110,18 @@ PyObject *DecodeAndResizeFrame(PyObject *self, PyObject *args)
 	int ret = 0;
 	try
 	{
-	ret = DecodeAndResizeFrame((unsigned char*)PyByteArray_AsString(inData), 
-		PyString_Size(inData),
-		PyString_AsString(inPixFmt),
-		PyInt_AsLong(inWidth), PyInt_AsLong(inHeight),
-		PyString_AsString(outPixFmt),
-		&buffOut,
-		&buffOutLen, 
-		PyInt_AsLong(outWidth), 
-		PyInt_AsLong(outHeight));
+		int outWidthInt = PyInt_AsLong(outWidth);
+		int outHeightInt = PyInt_AsLong(outHeight);
+
+		ret = DecodeAndResizeFrame((unsigned char*)PyByteArray_AsString(inData), 
+			PyString_Size(inData),
+			PyString_AsString(inPixFmt),
+			PyInt_AsLong(inWidth), PyInt_AsLong(inHeight),
+			PyString_AsString(outPixFmt),
+			&buffOut,
+			&buffOutLen, 
+			outWidthInt, 
+			outHeightInt);
 	}
 	catch(std::exception &err)
 	{
@@ -131,6 +136,8 @@ PyObject *DecodeAndResizeFrame(PyObject *self, PyObject *args)
 		delete [] buffOut;
 	}
 	
+	std::cout << "DecodeAndResizeFrame end" << std::endl;
+
 	return PyInt_FromLong(ret);
 }
 
