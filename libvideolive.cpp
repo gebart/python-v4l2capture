@@ -101,11 +101,14 @@ PyObject *DecodeAndResizeFrameHighLevel(PyObject *self, PyObject *args)
 
 	//Optional arguments
 	PyObject *metaOut = NULL;
-	if(PyTuple_Size(args) >= 8)
+	if(PyTuple_Size(args) >= 9)
 	{
-		PyObject *metaOut = PyTuple_GetItem(args, 8);
+		metaOut = PyTuple_GetItem(args, 8);
 		if(!PyDict_Check(metaOut) && metaOut != Py_None) 
-		{PyErr_SetString(PyExc_TypeError, "Argument 9 (if set) must be a dict or None."); return NULL;}
+		{
+			PyErr_SetString(PyExc_TypeError, "Argument 9 (if set) must be a dict or None."); 
+			return NULL;
+		}
 		if(metaOut==Py_None)
 			metaOut = NULL;
 	}
@@ -145,7 +148,7 @@ PyObject *DecodeAndResizeFrameHighLevel(PyObject *self, PyObject *args)
 		{
 			PyDict_SetItemString(metaOut, "width", PyInt_FromLong(outWidthInt));
 			PyDict_SetItemString(metaOut, "height", PyInt_FromLong(outHeightInt));
-			PyDict_SetItemString(metaOut, "format", PyString_FromString(outPixFmtC);
+			PyDict_SetItemString(metaOut, "format", PyString_FromString(outPixFmtC));
 		}
 
 	}
