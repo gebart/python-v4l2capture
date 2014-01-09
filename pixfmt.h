@@ -6,7 +6,7 @@
 
 int DecodeFrame(const unsigned char *data, unsigned dataLen, 
 	const char *inPxFmt,
-	int width, int height,
+	int &width, int &height,
 	const char *targetPxFmt,
 	unsigned char **buffOut,
 	unsigned *buffOutLen);

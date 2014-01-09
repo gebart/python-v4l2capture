@@ -99,7 +99,7 @@ PyObject *Video_out_manager_Send_frame(Video_out_manager *self, PyObject *args)
 	Py_ssize_t imgLen = PyObject_Length(pyimg);
 
 	if(imgIn == NULL)
-		PyErr_SetString(PyExc_RuntimeError, "Argument 2 must be a string or bytearray.");
+		{PyErr_SetString(PyExc_RuntimeError, "Argument 2 must be a string or bytearray."); return NULL;}
 
 	PyObject *pyPxFmt = PyTuple_GetItem(args, 2);
 	pxFmtIn = PyString_AsString(pyPxFmt);

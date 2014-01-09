@@ -576,7 +576,7 @@ int ConvertYUYVtoRGB(const unsigned char *im, unsigned dataLen,
 
 int DecodeFrame(const unsigned char *data, unsigned dataLen, 
 	const char *inPxFmt,
-	int width, int height,
+	int &width, int &height,
 	const char *targetPxFmt,
 	unsigned char **buffOut,
 	unsigned *buffOutLen)
@@ -624,11 +624,13 @@ int DecodeFrame(const unsigned char *data, unsigned dataLen,
 		if (!jpegOk)
 			throw std::runtime_error("Error decoding jpeg");
 
-		if(widthActual == width && heightActual == height)
+		if((widthActual == width && heightActual == height) || width == 0 || height == 0)
 		{
 			assert(channelsActual == 3);
 			*buffOut = decodedBuff;
 			*buffOutLen = decodedBuffSize;
+			width = widthActual;
+			height = heightActual;
 		}
 		else
 		{
@@ -952,26 +954,65 @@ int DecodeAndResizeFrame(const unsigned char *data,
 	int dstWidth, 
 	int dstHeight)
 {
-	if(srcWidth==dstWidth && srcHeight==dstHeight)
-	{
-		//Resize is not required
-		int ret = DecodeFrame(data, dataLen, 
-			inPxFmt,
-			srcWidth, srcHeight,
-			targetPxFmt,
-			buffOut,
-			buffOutLen);
-		return ret;
-	}
-
 	const unsigned char *currentImg = data;
+	int decallocateWhenDone = 0;
 	unsigned currentLen = dataLen;
 	std::string currentPxFmt = inPxFmt;
 	int currentWidth = srcWidth;
 	int currentHeight = srcHeight;
-
 	unsigned char *tmpBuff = NULL;
 	unsigned tmpBuffLen = 0;
+
+	std::cout << "a" << std::endl;
+	if(currentWidth==0 || currentHeight==0)
+	{
+		//Source has unknown dimensions
+		int ret = DecodeFrame(currentImg, currentLen, 
+			currentPxFmt.c_str(),
+			currentWidth, currentHeight,
+			targetPxFmt,
+			&tmpBuff,
+			&tmpBuffLen);
+
+		//Free intermediate buff
+		//probably not needed at this stage but good consistency
+		if(decallocateWhenDone && currentImg != NULL)
+		{
+			delete [] currentImg;
+			currentImg = NULL;
+			currentLen = 0;
+		}
+
+		currentImg = tmpBuff;
+		currentLen = tmpBuffLen;
+		currentPxFmt = targetPxFmt;
+		decallocateWhenDone = 1;
+	}
+
+	std::cout << "b" << std::endl;
+
+	if((currentWidth==dstWidth && currentHeight==dstHeight) || dstWidth == 0 || dstHeight == 0)
+	{
+		//Resize is not required
+		int ret = DecodeFrame(currentImg, currentLen, 
+			currentPxFmt.c_str(),
+			currentWidth, currentHeight,
+			targetPxFmt,
+			buffOut,
+			buffOutLen);
+
+		//Free intermediate buff
+		if(decallocateWhenDone && currentImg != NULL)
+		{
+			delete [] currentImg;
+			currentImg = NULL;
+			currentLen = 0;
+		}
+
+		std::cout << "c" << std::endl;
+		return ret;
+	}
+
 	int resizeRet = ResizeFrame(currentImg, 
 		currentLen, 
 		currentPxFmt.c_str(),
@@ -983,8 +1024,17 @@ int DecodeAndResizeFrame(const unsigned char *data,
 
 	if(resizeRet > 0)
 	{
+		//Free intermediate buff
+		if(decallocateWhenDone && currentImg != NULL)
+		{
+			delete [] currentImg;
+			currentImg = NULL;
+			currentLen = 0;
+		}
+
 		//Resize succeeded
 		currentImg = tmpBuff;
+		decallocateWhenDone = 1;
 		currentLen = tmpBuffLen;
 		currentWidth = dstWidth;
 		currentHeight = dstHeight;
@@ -997,10 +1047,11 @@ int DecodeAndResizeFrame(const unsigned char *data,
 			buffOutLen);
 
 		//Free intermediate buff
-		if(tmpBuff != NULL)
+		if(decallocateWhenDone && currentImg != NULL)
 		{
-			delete [] tmpBuff;
-			tmpBuff = NULL;
+			delete [] currentImg;
+			currentImg = NULL;
+			currentLen = 0;
 		}
 
 		return decodeRet;
@@ -1017,7 +1068,16 @@ int DecodeAndResizeFrame(const unsigned char *data,
 		&tmpBuffLen);
 
 	if(decodeRet <= 0)
+	{
+		//Free intermediate buff
+		if(decallocateWhenDone && currentImg != NULL)
+		{
+			delete [] currentImg;
+			currentImg = NULL;
+			currentLen = 0;
+		}
 		return 0; //Conversion failed
+	}
 
 	//Now resize
 	resizeRet = ResizeFrame(tmpBuff, 
@@ -1030,10 +1090,11 @@ int DecodeAndResizeFrame(const unsigned char *data,
 		dstHeight);
 
 	//Free intermediate buff
-	if(tmpBuff != NULL)
+	if(decallocateWhenDone && currentImg != NULL)
 	{
-		delete [] tmpBuff;
-		tmpBuff = NULL;
+		delete [] currentImg;
+		currentImg = NULL;
+		currentLen = 0;
 	}
 
 	return resizeRet;

@@ -77,23 +77,23 @@ PyObject *DecodeAndResizeFrame(PyObject *self, PyObject *args)
 
 	//Input image
 	PyObject *inPixFmt = PyTuple_GetItem(args, 0);
-	if(!PyString_Check(inPixFmt)) {PyErr_SetString(PyExc_TypeError, "Argument 1 must be a string."); Py_RETURN_NONE;}
+	if(!PyString_Check(inPixFmt)) {PyErr_SetString(PyExc_TypeError, "Argument 1 must be a string."); return NULL;}
 	PyObject *inWidth = PyTuple_GetItem(args, 1);
-	if(!PyInt_Check(inWidth)) {PyErr_SetString(PyExc_TypeError, "Argument 2 must be an int."); Py_RETURN_NONE;}
+	if(!PyInt_Check(inWidth)) {PyErr_SetString(PyExc_TypeError, "Argument 2 must be an int."); return NULL;}
 	PyObject *inHeight = PyTuple_GetItem(args, 2);
-	if(!PyInt_Check(inHeight)) {PyErr_SetString(PyExc_TypeError, "Argument 3 must be an int."); Py_RETURN_NONE;}
+	if(!PyInt_Check(inHeight)) {PyErr_SetString(PyExc_TypeError, "Argument 3 must be an int."); return NULL;}
 	PyObject *inData = PyTuple_GetItem(args, 3);
-	if(!PyByteArray_Check(inData)) {PyErr_SetString(PyExc_TypeError, "Argument 4 must be a byte array."); Py_RETURN_NONE;}
+	if(!PyByteArray_Check(inData)) {PyErr_SetString(PyExc_TypeError, "Argument 4 must be a byte array."); return NULL;}
 
 	//Output image
 	PyObject *outPixFmt = PyTuple_GetItem(args, 4);
-	if(!PyString_Check(outPixFmt)) {PyErr_SetString(PyExc_TypeError, "Argument 5 must be a string."); Py_RETURN_NONE;}
+	if(!PyString_Check(outPixFmt)) {PyErr_SetString(PyExc_TypeError, "Argument 5 must be a string."); return NULL;}
 	PyObject *outWidth = PyTuple_GetItem(args, 5);
-	if(!PyInt_Check(outWidth)) {PyErr_SetString(PyExc_TypeError, "Argument 6 must be an int."); Py_RETURN_NONE;}
+	if(!PyInt_Check(outWidth)) {PyErr_SetString(PyExc_TypeError, "Argument 6 must be an int."); return NULL;}
 	PyObject *outHeight = PyTuple_GetItem(args, 6);
-	if(!PyInt_Check(outHeight)) {PyErr_SetString(PyExc_TypeError, "Argument 7 must be an int."); Py_RETURN_NONE;}
+	if(!PyInt_Check(outHeight)) {PyErr_SetString(PyExc_TypeError, "Argument 7 must be an int."); return NULL;}
 	PyObject *outData = PyTuple_GetItem(args, 7);
-	if(!PyByteArray_Check(outData)) {PyErr_SetString(PyExc_TypeError, "Argument 8 must be a byte array."); Py_RETURN_NONE;}
+	if(!PyByteArray_Check(outData)) {PyErr_SetString(PyExc_TypeError, "Argument 8 must be a byte array."); return NULL;}
 
 	unsigned char *buffOut = NULL;
 	unsigned buffOutLen = 0;
