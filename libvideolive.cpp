@@ -59,12 +59,10 @@ PyObject *InsertHuffmanTable(PyObject *self, PyObject *args)
 	return outBufferPy;
 }
 
-PyObject *DecodeAndResizeFrame(PyObject *self, PyObject *args)
+PyObject *DecodeAndResizeFrameHighLevel(PyObject *self, PyObject *args)
 {
 	if (PyErr_Occurred() != NULL)
 		throw std::runtime_error("Python error set with unexpected state.");
-
-	std::cout << "a" << (PyErr_Occurred() != NULL) << std::endl;
 
 	//0 string src pixFormat
 	//1 int src width
@@ -101,8 +99,6 @@ PyObject *DecodeAndResizeFrame(PyObject *self, PyObject *args)
 	PyObject *outData = PyTuple_GetItem(args, 7);
 	if(!PyByteArray_Check(outData)) {PyErr_SetString(PyExc_TypeError, "Argument 8 must be a byte array."); return NULL;}
 
-	std::cout << "b" << (PyErr_Occurred() != NULL) << std::endl;
-
 	unsigned char *buffOut = NULL;
 	unsigned buffOutLen = 0;
 	int useExistingBuff = 0;
@@ -119,23 +115,27 @@ PyObject *DecodeAndResizeFrame(PyObject *self, PyObject *args)
 		int outWidthInt = PyInt_AsLong(outWidth);
 		int outHeightInt = PyInt_AsLong(outHeight);
 
-		ret = DecodeAndResizeFrame((unsigned char*)PyByteArray_AsString(inData), 
-			PyString_Size(inData),
-			PyString_AsString(inPixFmt),
+		unsigned char *inDataC = (unsigned char*)PyByteArray_AsString(inData);
+		long inDataLen = PyByteArray_Size(inData);
+		char *inPixFmtC = PyString_AsString(inPixFmt);
+		char *outPixFmtC = PyString_AsString(outPixFmt);
+
+		ret = DecodeAndResizeFrame(inDataC, 
+			inDataLen,
+			inPixFmtC,
 			PyInt_AsLong(inWidth), PyInt_AsLong(inHeight),
-			PyString_AsString(outPixFmt),
+			outPixFmtC,
 			&buffOut,
 			&buffOutLen, 
 			outWidthInt, 
 			outHeightInt);
+
 	}
 	catch(std::exception &err)
 	{
 		PyErr_SetString(PyExc_RuntimeError, err.what());
  		return NULL;
 	}
-
-	std::cout << "c" << (PyErr_Occurred() != NULL) << std::endl;
 
 	if(!useExistingBuff && ret > 0)
 	{
@@ -144,8 +144,6 @@ PyObject *DecodeAndResizeFrame(PyObject *self, PyObject *args)
 		delete [] buffOut;
 	}
 
-	std::cout << "d" << (PyErr_Occurred() != NULL) << std::endl;
-	
 	if (PyErr_Occurred() != NULL)
 		throw std::runtime_error("Python error set with unexpected state.");
 
@@ -254,7 +252,7 @@ static PyTypeObject Video_out_file_manager_type = {
 
 static PyMethodDef module_methods[] = {
 	{ "InsertHuffmanTable", (PyCFunction)InsertHuffmanTable, METH_VARARGS, NULL },
-	{ "DecodeAndResizeFrame", (PyCFunction)DecodeAndResizeFrame, METH_VARARGS, NULL },
+	{ "DecodeAndResizeFrame", (PyCFunction)DecodeAndResizeFrameHighLevel, METH_VARARGS, NULL },
 	{ NULL, NULL, 0, NULL }
 };
 
