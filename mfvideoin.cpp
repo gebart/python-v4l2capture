@@ -597,9 +597,11 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 	//Do conversion to rgb
 	unsigned char *buffConv = NULL;
 	unsigned buffConvLen = 0;
+	int widthTmp = this->widthBuff[0];
+	int heightTmp = this->heightBuff[0];
 	int ok = DecodeFrame(currentBuff, currentBuffLen, 
 		currentPixFmt.c_str(),
-		this->widthBuff[0], this->heightBuff[0],
+		widthTmp, heightTmp,
 		"RGB24",
 		&buffConv,
 		&buffConvLen);
