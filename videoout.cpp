@@ -93,7 +93,7 @@ PyObject *Video_out_manager_Send_frame(Video_out_manager *self, PyObject *args)
 	devarg = PyString_AsString(pydev);
 
 	PyObject *pyimg = PyTuple_GetItem(args, 1);
-	imgIn = PyString_AsString(pyimg);
+	imgIn = NULL;
 	if(imgIn==NULL && PyString_Check(pyimg)) imgIn = PyString_AsString(pyimg);
 	if(imgIn==NULL && PyByteArray_Check(pyimg)) imgIn = PyByteArray_AsString(pyimg);
 	Py_ssize_t imgLen = PyObject_Length(pyimg);

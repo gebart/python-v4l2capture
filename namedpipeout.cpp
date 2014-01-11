@@ -207,6 +207,7 @@ VOID GetAnswerToRequest(char *pReply, LPDWORD pchBytes, class InstanceConfig &in
 		parent->Lock();
 
 		//Copy and resize frame if necessary (and invert y)
+		//TODO use bilinear sampling?
 		ResizeRgb24ImageNN(parent->currentFrame, parent->currentFrameLen, 
 			parent->currentFrameWidth, 
 			parent->currentFrameHeight,
@@ -302,7 +303,6 @@ void NamedPipeOut::SendFrame(const char *imgIn, unsigned imgLen, const char *pxF
 	cout << "NamedPipeOut::SendFrame" << endl;
 
 	//Convert from input pxFmt to BGR24.
-
 	unsigned char *bgrBuff = NULL;
 	unsigned bgrBuffLen = 0;
 	int ret = DecodeFrame((unsigned char*)imgIn, imgLen, 
@@ -312,19 +312,26 @@ void NamedPipeOut::SendFrame(const char *imgIn, unsigned imgLen, const char *pxF
 		&bgrBuff,
 		&bgrBuffLen);
 
-	if(ret>0)
+	if(ret>0 && bgrBuff != NULL)
 	{
 		this->Lock();
 		if(bgrBuffLen > this->currentFrameAlloc || this->currentFrame == NULL)
 		{
-			delete [] this->currentFrame;
+			//Resize current frame buffer
+			if(this->currentFrame != NULL) delete [] this->currentFrame;
 			this->currentFrame = new unsigned char [bgrBuffLen];
 			this->currentFrameAlloc = bgrBuffLen;
 		}
 
+		//Copy new frame to local storage
 		memcpy(this->currentFrame, bgrBuff, bgrBuffLen);
 		this->currentFrameWidth = width;
 		this->currentFrameHeight = height;
+
+		//Free temporary buffer
+		delete [] bgrBuff;
+		bgrBuff = NULL;
+		bgrBuffLen = 0;
 
 		this->currentFrameLen = bgrBuffLen;
 		this->UnLock();
