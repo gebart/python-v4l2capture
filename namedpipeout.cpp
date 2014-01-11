@@ -327,13 +327,13 @@ void NamedPipeOut::SendFrame(const char *imgIn, unsigned imgLen, const char *pxF
 		memcpy(this->currentFrame, bgrBuff, bgrBuffLen);
 		this->currentFrameWidth = width;
 		this->currentFrameHeight = height;
+		this->currentFrameLen = bgrBuffLen;
 
 		//Free temporary buffer
 		delete [] bgrBuff;
 		bgrBuff = NULL;
 		bgrBuffLen = 0;
 
-		this->currentFrameLen = bgrBuffLen;
 		this->UnLock();
 	}
 	else
