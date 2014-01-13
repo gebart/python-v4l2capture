@@ -10,6 +10,10 @@
 # 2013, Tim Sheerman-Chase
 # See README for license
 
+#SET VS90COMNTOOLS=%VS100COMNTOOLS%
+#python setup.py build -c msvc
+#python setup.py install
+
 from distutils.core import Extension, setup
 import os
 
