@@ -18,7 +18,7 @@ if __name__=="__main__":
 	inManager.start(devs[0][0])
 	count = 0	
 
-	while count < 10:
+	while 1:
 		time.sleep(0.01)
 		frame = inManager.get_frame(devs[0][0])
 		if frame is None: continue
