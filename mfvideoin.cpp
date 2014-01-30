@@ -635,7 +635,7 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 		cout << "Cannot convert from pix format ";
 		wcout << this->subTypeBuff[0] << endl;
 	}
-
+	/*
 	*buffOut = currentBuff;
 	metaOut->fmt = currentPixFmt;
 	metaOut->width = this->widthBuff[0];
@@ -644,6 +644,8 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 	metaOut->sequence = 0;
 	metaOut->tv_sec = (unsigned long)(this->llTimestampBuff[0] / 1e7); //in 100-nanosecond units
 	metaOut->tv_usec = (unsigned long)((this->llTimestampBuff[0] - metaOut->tv_sec * 1e7) / 10);
+	*/
+	delete [] currentBuff;
 
 	this->frameBuff.erase(this->frameBuff.begin());
 	this->frameLenBuff.erase(this->frameLenBuff.begin());
@@ -655,6 +657,7 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 	this->PopFrontMetaDataBuff();
 
 	LeaveCriticalSection(&lock);
+	return 0;
 
 	return 1;
 }
