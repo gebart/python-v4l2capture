@@ -2,7 +2,7 @@
 import videolive, time
 
 if __name__=="__main__":
-	inManager = videolive.Video_in_manager()
+	inManager = videolive.Video_in_stream_manager()
 	print inManager
 
 	devs = inManager.list_devices()
