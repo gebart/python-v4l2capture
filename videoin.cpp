@@ -171,10 +171,13 @@ PyObject *Device_manager_Get_frame(Device_manager *self, PyObject *args)
  		return NULL;
 	}
 
+	if(buffOut!= NULL)
+		delete [] buffOut;
+
 	if(ok && buffOut != NULL)
 	{
 		//Format output to python
-		PyObject *pymeta = PyDict_New();
+		/*PyObject *pymeta = PyDict_New();
 		PyDict_SetItemString(pymeta, "width", PyInt_FromLong(metaOut.width));
 		PyDict_SetItemString(pymeta, "height", PyInt_FromLong(metaOut.height));
 		PyDict_SetItemString(pymeta, "format", PyString_FromString(metaOut.fmt.c_str()));
@@ -187,6 +190,13 @@ PyObject *Device_manager_Get_frame(Device_manager *self, PyObject *args)
 		PyTuple_SetItem(out, 1, pymeta);
 
 		delete [] buffOut;
+		return out;*/
+
+		PyObject *out = PyTuple_New(2);
+		PyObject *test = PyDict_New();
+		PyTuple_SetItem(out, 0, test);
+		PyObject *pymeta = PyDict_New();
+		PyTuple_SetItem(out, 1, pymeta);
 		return out;
 	}
 	
