@@ -583,23 +583,6 @@ int MfVideoIn::GetFrame(unsigned char **buffOut, class FrameMetaData *metaOut)
 		return 0;
 	}
 
-	//TEMP CODE TO DELETE BUFFER AND RETURN 0
-	/*while(this->frameBuff.size() > 0)
-	{
-		delete [] this->frameBuff[0];
-		this->frameBuff.erase(this->frameBuff.begin());
-		this->frameLenBuff.erase(this->frameLenBuff.begin());
-		this->hrStatusBuff.erase(this->hrStatusBuff.begin());
-		this->dwStreamIndexBuff.erase(this->dwStreamIndexBuff.begin());
-		this->dwStreamFlagsBuff.erase(this->dwStreamFlagsBuff.begin());
-		this->llTimestampBuff.erase(this->llTimestampBuff.begin());
-
-		this->PopFrontMetaDataBuff();
-	}
-	LeaveCriticalSection(&lock);
-	return 0;*/
-	//END OF TEMP CODE
-
 	unsigned char* currentBuff = (unsigned char *)this->frameBuff[0];
 	std::string currentPixFmt = "Unknown";
 	unsigned currentBuffLen = this->frameLenBuff[0];

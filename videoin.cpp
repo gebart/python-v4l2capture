@@ -189,11 +189,7 @@ PyObject *Device_manager_Get_frame(Device_manager *self, PyObject *args)
 		PyDict_SetItemString_Decref(pymeta, "tv_usec", PyInt_FromLong(metaOut.tv_usec));
 
 		PyObject *out = PyTuple_New(2);
-
 		PyTuple_SetItem(out, 0, PyByteArray_FromStringAndSize((char *)buffOut, metaOut.buffLen));
-		//PyObject *test = PyDict_New();
-		//PyTuple_SetItem(out, 0, test);
-
 		PyTuple_SetItem(out, 1, pymeta);
 
 		delete [] buffOut;
