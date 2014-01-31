@@ -138,6 +138,12 @@ PyObject *Device_manager_Start(Device_manager *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+void PyDict_SetItemString_Decref(PyObject *dic, const char *key, PyObject *val)
+{
+	PyDict_SetItemString(dic, key, val);
+	Py_DECREF(val);
+}
+
 PyObject *Device_manager_Get_frame(Device_manager *self, PyObject *args)
 {
 	//std::cout << "Device_manager_Get_frame" << std::endl;
@@ -171,34 +177,31 @@ PyObject *Device_manager_Get_frame(Device_manager *self, PyObject *args)
  		return NULL;
 	}
 
-	if(buffOut!= NULL)
-		delete [] buffOut;
-
 	if(ok && buffOut != NULL)
 	{
 		//Format output to python
-		/*PyObject *pymeta = PyDict_New();
-		PyDict_SetItemString(pymeta, "width", PyInt_FromLong(metaOut.width));
-		PyDict_SetItemString(pymeta, "height", PyInt_FromLong(metaOut.height));
-		PyDict_SetItemString(pymeta, "format", PyString_FromString(metaOut.fmt.c_str()));
-		PyDict_SetItemString(pymeta, "sequence", PyInt_FromLong(metaOut.sequence));
-		PyDict_SetItemString(pymeta, "tv_sec", PyInt_FromLong(metaOut.tv_sec));
-		PyDict_SetItemString(pymeta, "tv_usec", PyInt_FromLong(metaOut.tv_usec));
+		PyObject *pymeta = PyDict_New();
+		PyDict_SetItemString_Decref(pymeta, "width", PyInt_FromLong(metaOut.width));
+		PyDict_SetItemString_Decref(pymeta, "height", PyInt_FromLong(metaOut.height));
+		PyDict_SetItemString_Decref(pymeta, "format", PyString_FromString(metaOut.fmt.c_str()));
+		PyDict_SetItemString_Decref(pymeta, "sequence", PyInt_FromLong(metaOut.sequence));
+		PyDict_SetItemString_Decref(pymeta, "tv_sec", PyInt_FromLong(metaOut.tv_sec));
+		PyDict_SetItemString_Decref(pymeta, "tv_usec", PyInt_FromLong(metaOut.tv_usec));
 
 		PyObject *out = PyTuple_New(2);
+
 		PyTuple_SetItem(out, 0, PyByteArray_FromStringAndSize((char *)buffOut, metaOut.buffLen));
+		//PyObject *test = PyDict_New();
+		//PyTuple_SetItem(out, 0, test);
+
 		PyTuple_SetItem(out, 1, pymeta);
 
 		delete [] buffOut;
-		return out;*/
-
-		PyObject *out = PyTuple_New(2);
-		PyObject *test = PyDict_New();
-		PyTuple_SetItem(out, 0, test);
-		PyObject *pymeta = PyDict_New();
-		PyTuple_SetItem(out, 1, pymeta);
 		return out;
 	}
+
+	if(!ok && buffOut!= NULL) //This generally should not happen
+		delete [] buffOut;
 	
 	Py_RETURN_NONE;
 }
