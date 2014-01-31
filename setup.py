@@ -2,27 +2,58 @@
 #
 # python-v4l2capture
 #
-# 2009, 2010, 2011 Fredrik Portstrom
+# python-v4l2capture
+# Python extension to capture video with video4linux2
 #
-# I, the copyright holder of this file, hereby release it into the
-# public domain. This applies worldwide. In case this is not legally
-# possible: I grant anyone the right to use this work for any
-# purpose, without any conditions, unless such conditions are
-# required by law.
+# 2009, 2010, 2011 Fredrik Portstrom, released into the public domain
+# 2011, Joakim Gebart
+# 2013, Tim Sheerman-Chase
+# See README for license
+
+#SET VS90COMNTOOLS=%VS100COMNTOOLS%
+#python setup.py build -c msvc
+#python setup.py install
 
 from distutils.core import Extension, setup
+import os
+
+debug = 0
+
+if os.name == "nt":
+    if debug:
+        c_args=['/Zi', '/EHsc']
+	l_args=["/MANIFEST", "/DEBUG"]
+    else:
+        c_args=[]
+        l_args=["/MANIFEST"]
+    
+    videolive = Extension("videolive", ["mfvideooutfile.cpp", "pixfmt.cpp", "libvideolive.cpp", "videoout.cpp", "videoin.cpp", "mfvideoin.cpp", "namedpipeout.cpp",
+											"videooutfile.cpp"],
+						define_macros=[('_'+os.name.upper(), None)],
+                          library_dirs=['C:\Dev\Lib\libjpeg-turbo-win\lib', "C:\Dev\Lib\pthreads\pthreads.2"],
+                        include_dirs=['C:\Dev\Lib\libjpeg-turbo-win\include', "C:\Dev\Lib\pthreads\pthreads.2"],
+                          extra_compile_args=c_args,
+						extra_link_args=l_args,
+			libraries = ["pthreadVC2", "jpeg", "Mfplat", "Mf", "Mfreadwrite", "Ole32", "mfuuid", "Shlwapi"])
+
+else:
+    videolive = Extension("videolive", ["v4l2capture.cpp", "v4l2out.cpp", "pixfmt.cpp", "libvideolive.cpp", "videoout.cpp", "videoin.cpp",
+								"videooutfile.cpp"], 
+			define_macros=[('_'+os.name.upper(), None)],
+			libraries = ["v4l2", "pthread", "jpeg"])
+    
 setup(
-    name = "v4l2capture",
-    version = "1.4",
-    author = "Fredrik Portstrom",
-    author_email = "fredrik@jemla.se",
-    url = "http://fredrik.jemla.eu/v4l2capture",
-    description = "Capture video with video4linux2",
-    long_description = "python-v4l2capture is a slim and easy to use Python "
-    "extension for capturing video with video4linux2.",
-    license = "Public Domain",
+    name = "videolive",
+    version = "1.0",
+    author = "Tim Sheerman-Chase",
+    author_email = "info@kinatomic",
+    url = "http://www.kinatomic.com",
+    description = "Capture and stream video",
+    long_description = "Capture and stream video in python",
+    license = "GPL v2 or later",
     classifiers = [
-        "License :: Public Domain",
-        "Programming Language :: C"],
-    ext_modules = [
-        Extension("v4l2capture", ["v4l2capture.c"], libraries = ["v4l2"])])
+        "License :: GPL",
+        "Programming Language :: C++"],
+    ext_modules = [videolive]
+    )
+
