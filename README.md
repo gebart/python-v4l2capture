@@ -27,22 +27,38 @@ Installation
 
 v4l2capture requires libv4l by default. You can compile v4l2capture
 without libv4l, but that reduces image format support to YUYV input
-and RGB output only. You can do so by erasing ', libraries = ["v4l2"]'
-in setup.py and erasing '#define USE_LIBV4L' in v4l2capture.c.
+and RGB output only. You can do so by commenting the line:
 
-python-v4l2capture uses distutils.
-To build: ./setup.py build
-To build and install: ./setup.py install
+	libraries=["v4l2"], extra_compile_args=['-DUSE_LIBV4L', ],
+
+in setup.py.
+
+python-v4l2capture uses distutils. To build:
+
+	./setup.py build
+
+To build and install:
+
+	./setup.py install
 
 Example
 =======
 
 See capture_picture.py, capture_picture_delayed.py and list_devices.py.
 
+The program filmroller.py provided a gui to take captures from a webcam. It
+switches resolution between lowest resolution (for a live view) and highest
+resolution (for the snapshot). It is quite useful to be used with slide and
+negative film scanners.
+
+![Sample picture of scanner](filmroller.device.jpg)
+
 Change log
 ==========
 
 (see git log for latest changes)
+
+(2014-12-26) - Added framesize and frameinterval getters.
 
 1.4 (2011-03-18) - Added support for YUV420 output.
 
