@@ -344,6 +344,268 @@ static PyObject *Video_device_get_fourcc(Video_device *self, PyObject *args)
   return Py_BuildValue("i", fourcc);
 }
 
+static PyObject *Video_device_set_hue(Video_device *self, PyObject *args)
+{
+#ifdef V4L2_CID_HUE  
+  int value;
+  if(!PyArg_ParseTuple(args, "i", &value))
+    {
+      return NULL;
+    }
+
+  struct v4l2_control ctrl;
+  CLEAR(ctrl);
+  ctrl.id    = V4L2_CID_HUE;
+  ctrl.value = value;
+  if(my_ioctl(self->fd, VIDIOC_S_CTRL, &ctrl)){
+  	return NULL;
+  }
+  return Py_BuildValue("i",ctrl.value);
+#else
+  return NULL;
+#endif
+}
+
+static PyObject *Video_device_get_hue(Video_device *self)
+{
+#ifdef V4L2_CID_HUE
+  struct v4l2_control ctrl;
+  CLEAR(ctrl);
+  ctrl.id    = V4L2_CID_HUE;
+  if(my_ioctl(self->fd, VIDIOC_G_CTRL, &ctrl)){
+  	return NULL;
+  }
+  return Py_BuildValue("i",ctrl.value);
+#else
+  return NULL;
+#endif
+}
+
+static PyObject *Video_device_set_saturation(Video_device *self, PyObject *args)
+{
+#ifdef V4L2_CID_SATURATION  
+  int value;
+  if(!PyArg_ParseTuple(args, "i", &value))
+    {
+      return NULL;
+    }
+
+  struct v4l2_control ctrl;
+  CLEAR(ctrl);
+  ctrl.id    = V4L2_CID_SATURATION;
+  ctrl.value = value;
+  if(my_ioctl(self->fd, VIDIOC_S_CTRL, &ctrl)){
+  	return NULL;
+  }
+  return Py_BuildValue("i",ctrl.value);
+#else
+  return NULL;
+#endif
+}
+
+static PyObject *Video_device_get_saturation(Video_device *self)
+{
+#ifdef V4L2_CID_SATURATION
+  struct v4l2_control ctrl;
+  CLEAR(ctrl);
+  ctrl.id    = V4L2_CID_SATURATION;
+  if(my_ioctl(self->fd, VIDIOC_G_CTRL, &ctrl)){
+  	return NULL;
+  }
+  return Py_BuildValue("i",ctrl.value);
+#else
+  return NULL;
+#endif
+}
+
+static PyObject *Video_device_set_contrast(Video_device *self, PyObject *args)
+{
+#ifdef V4L2_CID_CONTRAST  
+  int value;
+  if(!PyArg_ParseTuple(args, "i", &value))
+    {
+      return NULL;
+    }
+
+  struct v4l2_control ctrl;
+  CLEAR(ctrl);
+  ctrl.id    = V4L2_CID_CONTRAST;
+  ctrl.value = value;
+  if(my_ioctl(self->fd, VIDIOC_S_CTRL, &ctrl)){
+  	return NULL;
+  }
+  return Py_BuildValue("i",ctrl.value);
+#else
+  return NULL;
+#endif
+}
+
+static PyObject *Video_device_get_contrast(Video_device *self)
+{
+#ifdef V4L2_CID_CONTRAST
+  struct v4l2_control ctrl;
+  CLEAR(ctrl);
+  ctrl.id    = V4L2_CID_CONTRAST;
+  if(my_ioctl(self->fd, VIDIOC_G_CTRL, &ctrl)){
+  	return NULL;
+  }
+  return Py_BuildValue("i",ctrl.value);
+#else
+  return NULL;
+#endif
+}
+
+
+static PyObject *Video_device_set_gamma(Video_device *self, PyObject *args)
+{
+#ifdef V4L2_CID_GAMMA  
+  int value;
+  if(!PyArg_ParseTuple(args, "i", &value))
+    {
+      return NULL;
+    }
+
+  struct v4l2_control ctrl;
+  CLEAR(ctrl);
+  ctrl.id    = V4L2_CID_GAMMA;
+  ctrl.value = value;
+  if(my_ioctl(self->fd, VIDIOC_S_CTRL, &ctrl)){
+  	return NULL;
+  }
+  return Py_BuildValue("i",ctrl.value);
+#else
+  return NULL;
+#endif
+}
+
+static PyObject *Video_device_get_gamma(Video_device *self)
+{
+#ifdef V4L2_CID_GAMMA
+  struct v4l2_control ctrl;
+  CLEAR(ctrl);
+  ctrl.id    = V4L2_CID_GAMMA;
+  if(my_ioctl(self->fd, VIDIOC_G_CTRL, &ctrl)){
+  	return NULL;
+  }
+  return Py_BuildValue("i",ctrl.value);
+#else
+  return NULL;
+#endif
+}
+
+
+static PyObject *Video_device_set_sharpness(Video_device *self, PyObject *args)
+{
+#ifdef V4L2_CID_SHARPNESS  
+  int value;
+  if(!PyArg_ParseTuple(args, "i", &value))
+    {
+      return NULL;
+    }
+
+  struct v4l2_control ctrl;
+  CLEAR(ctrl);
+  ctrl.id    = V4L2_CID_SHARPNESS;
+  ctrl.value = value;
+  if(my_ioctl(self->fd, VIDIOC_S_CTRL, &ctrl)){
+  	return NULL;
+  }
+  return Py_BuildValue("i",ctrl.value);
+#else
+  return NULL;
+#endif
+}
+
+static PyObject *Video_device_get_sharpness(Video_device *self)
+{
+#ifdef V4L2_CID_SHARPNESS
+  struct v4l2_control ctrl;
+  CLEAR(ctrl);
+  ctrl.id    = V4L2_CID_SHARPNESS;
+  if(my_ioctl(self->fd, VIDIOC_G_CTRL, &ctrl)){
+  	return NULL;
+  }
+  return Py_BuildValue("i",ctrl.value);
+#else
+  return NULL;
+#endif
+}
+
+
+static PyObject *Video_device_set_zoom(Video_device *self, PyObject *args)
+{
+#ifdef V4L2_CID_ZOOM_ABSOLUTE    
+  int value;
+  if(!PyArg_ParseTuple(args, "i", &value))
+    {
+      return NULL;
+    }
+
+  struct v4l2_control ctrl;
+  CLEAR(ctrl);
+  ctrl.id    = V4L2_CID_ZOOM_ABSOLUTE;
+  ctrl.value = value;
+  if(my_ioctl(self->fd, VIDIOC_S_CTRL, &ctrl)){
+  	return NULL;
+  }
+  return Py_BuildValue("i",ctrl.value);
+#else
+  return NULL;
+#endif
+}
+
+static PyObject *Video_device_get_zoom(Video_device *self)
+{
+#ifdef V4L2_CID_ZOOM_ABSOLUTE
+  struct v4l2_control ctrl;
+  CLEAR(ctrl);
+  ctrl.id    = V4L2_CID_ZOOM_ABSOLUTE;
+  if(my_ioctl(self->fd, VIDIOC_G_CTRL, &ctrl)){
+  	return NULL;
+  }
+  return Py_BuildValue("i",ctrl.value);
+#else
+  return NULL;
+#endif
+}
+
+static PyObject *Video_device_set_brightness(Video_device *self, PyObject *args)
+{
+#ifdef V4L2_CID_BRIGHTNESS  
+  int value;
+  if(!PyArg_ParseTuple(args, "i", &value))
+    {
+      return NULL;
+    }
+
+  struct v4l2_control ctrl;
+  CLEAR(ctrl);
+  ctrl.id    = V4L2_CID_BRIGHTNESS;
+  ctrl.value = value;
+  if(my_ioctl(self->fd, VIDIOC_S_CTRL, &ctrl)){
+  	return NULL;
+  }
+  return Py_BuildValue("i",ctrl.value);
+#else
+  return NULL;
+#endif
+}
+
+static PyObject *Video_device_get_brightness(Video_device *self)
+{
+#ifdef V4L2_CID_BRIGHTNESS
+  struct v4l2_control ctrl;
+  CLEAR(ctrl);
+  ctrl.id    = V4L2_CID_BRIGHTNESS;
+  if(my_ioctl(self->fd, VIDIOC_G_CTRL, &ctrl)){
+  	return NULL;
+  }
+  return Py_BuildValue("i",ctrl.value);
+#else
+  return NULL;
+#endif
+}
+
 static PyObject *Video_device_set_auto_white_balance(Video_device *self, PyObject *args)
 {
 #ifdef V4L2_CID_AUTO_WHITE_BALANCE
@@ -777,7 +1039,49 @@ static PyMethodDef Video_device_methods[] = {
        "set_fps(fps) -> fps \n\n"
        "Request the video device to set frame per seconds.The device may "
        "choose another frame rate than requested and will return its choice. " },
-  {"set_auto_white_balance", (PyCFunction)Video_device_set_auto_white_balance, METH_VARARGS,
+  {"set_saturation", (PyCFunction)Video_device_set_saturation, METH_VARARGS,
+       "set_saturation(value) -> value \n\n"
+       "" },
+  {"get_saturation", (PyCFunction)Video_device_get_saturation, METH_NOARGS,
+       "get_saturation() -> value \n\n"
+       "" },
+  {"set_contrast", (PyCFunction)Video_device_set_contrast, METH_VARARGS,
+       "set_contrast(value) -> value \n\n"
+       " " },
+  {"get_contrast", (PyCFunction)Video_device_get_contrast, METH_NOARGS,
+       "get_contrast() -> value \n\n"
+       "" },
+  {"set_gamma", (PyCFunction)Video_device_set_gamma, METH_VARARGS,
+       "set_gamma(value) -> value \n\n"
+       "" },
+  {"get_gamma", (PyCFunction)Video_device_get_gamma, METH_NOARGS,
+       "get_gamma() -> value \n\n"
+       " " },
+  {"set_zoom", (PyCFunction)Video_device_set_zoom, METH_VARARGS,
+       "set_zoom(value) -> value \n\n"
+       "" },
+  {"get_zoom", (PyCFunction)Video_device_get_zoom, METH_NOARGS,
+       "get_zoom() -> value \n\n"
+       " " },
+  {"set_sharpness", (PyCFunction)Video_device_set_sharpness, METH_VARARGS,
+       "set_sharpness(value) -> value \n\n"
+       " " },
+  {"get_sharpness", (PyCFunction)Video_device_get_sharpness, METH_NOARGS,
+       "get_sharpness() -> value \n\n"
+       "" },
+  {"set_hue", (PyCFunction)Video_device_set_hue, METH_VARARGS,
+       "set_hue(value) -> value \n\n"
+       " " },
+  {"get_hue", (PyCFunction)Video_device_get_hue, METH_NOARGS,
+       "get_hue() -> value \n\n"
+       " " },
+  {"set_brightness", (PyCFunction)Video_device_set_brightness, METH_VARARGS,
+       "set_brightness(value) -> value \n\n"
+       "" },
+  {"get_brightness", (PyCFunction)Video_device_get_brightness, METH_NOARGS,
+       "get_brightness() -> value \n\n"
+       "" },
+{"set_auto_white_balance", (PyCFunction)Video_device_set_auto_white_balance, METH_VARARGS,
        "set_auto_white_balance(autowb) -> autowb \n\n"
        "Request the video device to set auto white balance to value. The device may "
        "choose another value than requested and will return its choice. " },
