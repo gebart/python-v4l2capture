@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
 # python-v4l2capture
 #
@@ -12,17 +12,29 @@
 
 import os
 import v4l2capture
-file_names = [x for x in os.listdir("/dev") if x.startswith("video")]
-file_names.sort()
-for file_name in file_names:
-    path = "/dev/" + file_name
-    print path
-    try:
-        video = v4l2capture.Video_device(path)
-        driver, card, bus_info, capabilities = video.get_info()
-        print "    driver:       %s\n    card:         %s" \
-            "\n    bus info:     %s\n    capabilities: %s" % (
-                driver, card, bus_info, ", ".join(capabilities))
-        video.close()
-    except IOError, e:
-        print "    " + str(e)
+
+
+def get_devices():
+    file_names = [x for x in os.listdir("/dev") if x.startswith("video")]
+    file_names.sort()
+    devices = {}
+    for file_name in file_names:
+        path = "/dev/" + file_name
+        print(path)
+        try:
+            video = v4l2capture.Video_device(path)
+            print(video)
+            driver, card, bus_info, capabilities = video.get_info()
+            devices[path] = {}
+            devices[path]['driver'] = driver
+            devices[path]['card'] = card
+            devices[path]['bus_info'] = bus_info
+            devices[path]['capabilities'] = capabilities
+            video.close()
+        except IOError as e:
+            print(e)
+    return devices
+
+
+if __name__ == '__main__':
+    print(get_devices())

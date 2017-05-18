@@ -1,0 +1,19 @@
+Source: python3-v4l2capture
+Section: utils
+Priority: extra
+Maintainer: Lorenzo Carbonell Cerezo <lorenzo.carbonell.cerezo@gmail.com>
+Build-Depends: debhelper (>= 9), python3, python3-dev, libv4l-dev, python3-distutils-extra
+Standards-Version: 3.9.3
+Homepage: http://www.atareao.es
+
+Package: python3-v4l2capture
+Architecture: all
+Depends: ${misc:Depends}, ${python:Depends},
+	python3-pil
+Description: A Python3 library for capture with webcam
+ python-v4l2capture is a slim and easy to use Python extension for
+ capturing video with video4linux2. It supports libv4l to convert any
+ image format to RGB or YUV420.
+ this fork of python-v4l2capture: https://github.com/gebart/python-v4l2capture
+ original python-v4l2capture: http://fredrik.jemla.eu/v4l2capture
+ libv4l: http://freshmeat.net/projects/libv4l
