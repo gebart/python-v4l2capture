@@ -701,7 +701,11 @@ static PyObject *Video_device_read_internal(Video_device *self, int queue)
       return NULL;
     }
 
+#if PY_MAJOR_VERSION < 3
   char *rgb = PyString_AS_STRING(result);
+#else
+  char *rgb = PyBytes_AS_STRING(result);
+#endif
   char *rgb_max = rgb + length;
   unsigned char *yuyv = self->buffers[buffer.index].start;
 
