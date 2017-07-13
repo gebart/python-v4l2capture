@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
 # python-v4l2capture
 #
@@ -17,7 +17,7 @@
 # purpose, without any conditions, unless such conditions are
 # required by law.
 
-import Image
+from PIL import Image
 import select
 import time
 import v4l2capture
@@ -49,6 +49,6 @@ select.select((video,), (), ())
 # The rest is easy :-)
 image_data = video.read()
 video.close()
-image = Image.fromstring("RGB", (size_x, size_y), image_data)
+image = Image.frombytes("RGB", (size_x, size_y), image_data)
 image.save("image.jpg")
-print "Saved image.jpg (Size: " + str(size_x) + " x " + str(size_y) + ")"
+print("Saved image.jpg (Size: " + str(size_x) + " x " + str(size_y) + ")")

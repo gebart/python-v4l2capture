@@ -1,0 +1,5 @@
+python3-v4l2capture (1.4.0-0extras16.04.6) zesty; urgency=medium
+
+  * First release
+
+ -- Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>  Thu, 18 May 2017 23:21:00 +0200
