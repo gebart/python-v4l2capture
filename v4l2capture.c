@@ -133,15 +133,14 @@ static int Video_device_init(Video_device *self, PyObject *args,
       return -1;
     }
 
-  int fd = v4l2_open(device_path, O_RDWR | O_NONBLOCK);
+  self->fd = v4l2_open(device_path, O_RDWR | O_NONBLOCK);
 
-  if(fd < 0)
+  if(self->fd < 0)
     {
       PyErr_SetFromErrnoWithFilename(PyExc_IOError, (char *)device_path);
       return -1;
     }
 
-  self->fd = fd;
   self->buffers = NULL;
   return 0;
 }
