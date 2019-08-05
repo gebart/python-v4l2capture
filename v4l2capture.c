@@ -11,7 +11,7 @@
 
 #define USE_LIBV4L
 
-#include <Python.h>
+#include <python3.5m/Python.h>
 #include <fcntl.h>
 #include <linux/videodev2.h>
 #include <sys/mman.h>
