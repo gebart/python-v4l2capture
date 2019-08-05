@@ -44,6 +44,8 @@ Change log
 
 (see git log for latest changes)
 
+1.5 (2019-08-05) - Added support for python3.
+
 1.4 (2011-03-18) - Added support for YUV420 output.
 
 1.3 (2010-07-21) - Added set of capabilities to the return value of
@@ -55,3 +57,5 @@ Change log
 1.1 (2009-11-03) - Updated URL and documentation.
 
 1.0 (2009-02-28) - Initial release.
+
+
